@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="25098" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="lVC-00-001">
+    <device id="retina6_12" orientation="landscape" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="25073"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Landscape Chart View Controller-->
+        <scene sceneID="lSc-00-001">
+            <objects>
+                <viewController id="lVC-00-001" customClass="LandscapeChartViewController" customModule="ChartTest" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="lVw-00-001">
+                        <rect key="frame" x="0.0" y="0.0" width="852" height="393"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="lCn-00-001">
+                                <rect key="frame" x="0.0" y="0.0" width="852" height="393"/>
+                                <connections>
+                                    <segue destination="sVC-00-001" kind="embed" id="lSg-00-001"/>
+                                </connections>
+                            </containerView>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="lFt-00-001" userLabel="Footer View" customClass="ChartFooterView" customModule="ChartTest" customModuleProvider="target">
+                                <rect key="frame" x="0.0" y="774" width="393" height="78"/>
+                                <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                            </view>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="lSf-00-001"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstItem="lCn-00-001" firstAttribute="top" secondItem="lVw-00-001" secondAttribute="top" id="lCt-00-001"/>
+                            <constraint firstAttribute="bottom" secondItem="lCn-00-001" secondAttribute="bottom" id="lCt-00-002"/>
+                            <constraint firstItem="lCn-00-001" firstAttribute="leading" secondItem="lVw-00-001" secondAttribute="leading" id="lCt-00-003"/>
+                            <constraint firstAttribute="trailing" secondItem="lCn-00-001" secondAttribute="trailing" id="lCt-00-004"/>
+                            <constraint firstItem="lFt-00-001" firstAttribute="leading" secondItem="lSf-00-001" secondAttribute="leading" id="lCt-00-005"/>
+                            <constraint firstItem="lSf-00-001" firstAttribute="trailing" secondItem="lFt-00-001" secondAttribute="trailing" id="lCt-00-006"/>
+                            <constraint firstAttribute="bottom" secondItem="lFt-00-001" secondAttribute="bottom" id="lCt-00-007"/>
+                            <constraint firstItem="lSf-00-001" firstAttribute="bottom" secondItem="lFt-00-001" secondAttribute="top" constant="44" id="lCt-00-008"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="footerView" destination="lFt-00-001" id="lOt-00-002"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="lFR-00-001" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="138" y="137"/>
+        </scene>
+        <!--Stock Chart View Controller-->
+        <scene sceneID="sSc-00-001">
+            <objects>
+                <viewController id="sVC-00-001" customClass="StockChartViewController" customModule="ChartTest" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="sVw-00-001">
+                        <rect key="frame" x="0.0" y="0.0" width="852" height="393"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <viewLayoutGuide key="safeArea" id="sSf-00-001"/>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="sFR-00-001" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="137" y="1037"/>
+        </scene>
+    </scenes>
+</document>

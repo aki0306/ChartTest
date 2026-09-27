@@ -1,0 +1,2990 @@
+[
+ {
+  "kEnd": 5509,
+  "kHeight": 5530,
+  "kLow": 5501,
+  "kStart": 5525,
+  "kTimestamp": "2000/01/01 09:00",
+  "kTurnover": "",
+  "kVWAP": "5519.1087"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5503,
+  "kStart": 5506,
+  "kTimestamp": "2000/01/01 09:01",
+  "kTurnover": "",
+  "kVWAP": "5518.2987"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5511,
+  "kLow": 5505,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 09:02",
+  "kTurnover": "",
+  "kVWAP": "5517.8438"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5530,
+  "kLow": 5501,
+  "kStart": 5525,
+  "kTimestamp": "2000/01/01 09:03",
+  "kTurnover": "",
+  "kVWAP": "5519.1087"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5503,
+  "kStart": 5506,
+  "kTimestamp": "2000/01/01 09:04",
+  "kTurnover": "",
+  "kVWAP": "5518.2987"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5511,
+  "kLow": 5505,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 09:05",
+  "kTurnover": "",
+  "kVWAP": "5517.8438"
+ },
+ {
+  "kEnd": 5517,
+  "kHeight": 5521,
+  "kLow": 5510,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 09:06",
+  "kTurnover": "",
+  "kVWAP": "5517.7791"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5518,
+  "kLow": 5507,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:07",
+  "kTurnover": "",
+  "kVWAP": "5517.2333"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5518,
+  "kLow": 5511,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:08",
+  "kTurnover": "",
+  "kVWAP": "5517.0932"
+ },
+ {
+  "kEnd": 5524,
+  "kHeight": 5524,
+  "kLow": 5514,
+  "kStart": 5514,
+  "kTimestamp": "2000/01/01 09:09",
+  "kTurnover": "",
+  "kVWAP": "5517.1984"
+ },
+ {
+  "kEnd": 5524,
+  "kHeight": 5526,
+  "kLow": 5522,
+  "kStart": 5524,
+  "kTimestamp": "2000/01/01 09:10",
+  "kTurnover": "",
+  "kVWAP": "5517.4207"
+ },
+ {
+  "kEnd": 5529,
+  "kHeight": 5535,
+  "kLow": 5522,
+  "kStart": 5523,
+  "kTimestamp": "2000/01/01 09:11",
+  "kTurnover": "",
+  "kVWAP": "5517.9739"
+ },
+ {
+  "kEnd": 5532,
+  "kHeight": 5535,
+  "kLow": 5526,
+  "kStart": 5526,
+  "kTimestamp": "2000/01/01 09:12",
+  "kTurnover": "",
+  "kVWAP": "5518.4247"
+ },
+ {
+  "kEnd": 5537,
+  "kHeight": 5537,
+  "kLow": 5530,
+  "kStart": 5532,
+  "kTimestamp": "2000/01/01 09:13",
+  "kTurnover": "",
+  "kVWAP": "5518.8349"
+ },
+ {
+  "kEnd": 5529,
+  "kHeight": 5535,
+  "kLow": 5528,
+  "kStart": 5535,
+  "kTimestamp": "2000/01/01 09:14",
+  "kTurnover": "",
+  "kVWAP": "5519.3735"
+ },
+ {
+  "kEnd": 5523,
+  "kHeight": 5528,
+  "kLow": 5521,
+  "kStart": 5528,
+  "kTimestamp": "2000/01/01 09:15",
+  "kTurnover": "",
+  "kVWAP": "5519.5778"
+ },
+ {
+  "kEnd": 5526,
+  "kHeight": 5526,
+  "kLow": 5522,
+  "kStart": 5522,
+  "kTimestamp": "2000/01/01 09:16",
+  "kTurnover": "",
+  "kVWAP": "5519.6519"
+ },
+ {
+  "kEnd": 5523,
+  "kHeight": 5526,
+  "kLow": 5523,
+  "kStart": 5526,
+  "kTimestamp": "2000/01/01 09:17",
+  "kTurnover": "",
+  "kVWAP": "5519.7116"
+ },
+ {
+  "kEnd": 5520,
+  "kHeight": 5523,
+  "kLow": 5517,
+  "kStart": 5523,
+  "kTimestamp": "2000/01/01 09:18",
+  "kTurnover": "",
+  "kVWAP": "5519.7187"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5520,
+  "kLow": 5513,
+  "kStart": 5517,
+  "kTimestamp": "2000/01/01 09:19",
+  "kTurnover": "",
+  "kVWAP": "5519.4492"
+ },
+ {
+  "kEnd": 5516,
+  "kHeight": 5520,
+  "kLow": 5514,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:20",
+  "kTurnover": "",
+  "kVWAP": "5519.3666"
+ },
+ {
+  "kEnd": 5524,
+  "kHeight": 5524,
+  "kLow": 5516,
+  "kStart": 5517,
+  "kTimestamp": "2000/01/01 09:21",
+  "kTurnover": "",
+  "kVWAP": "5519.3653"
+ },
+ {
+  "kEnd": 5516,
+  "kHeight": 5523,
+  "kLow": 5516,
+  "kStart": 5523,
+  "kTimestamp": "2000/01/01 09:22",
+  "kTurnover": "",
+  "kVWAP": "5519.3457"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5517,
+  "kLow": 5512,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:23",
+  "kTurnover": "",
+  "kVWAP": "5519.1961"
+ },
+ {
+  "kEnd": 5518,
+  "kHeight": 5520,
+  "kLow": 5512,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:24",
+  "kTurnover": "",
+  "kVWAP": "5519.1228"
+ },
+ {
+  "kEnd": 5520,
+  "kHeight": 5520,
+  "kLow": 5517,
+  "kStart": 5519,
+  "kTimestamp": "2000/01/01 09:25",
+  "kTurnover": "",
+  "kVWAP": "5519.1226"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5519,
+  "kLow": 5513,
+  "kStart": 5519,
+  "kTimestamp": "2000/01/01 09:26",
+  "kTurnover": "",
+  "kVWAP": "5519.0594"
+ },
+ {
+  "kEnd": 5516,
+  "kHeight": 5516,
+  "kLow": 5513,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:27",
+  "kTurnover": "",
+  "kVWAP": "5518.9877"
+ },
+ {
+  "kEnd": 5517,
+  "kHeight": 5519,
+  "kLow": 5514,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:28",
+  "kTurnover": "",
+  "kVWAP": "5518.9496"
+ },
+ {
+  "kEnd": 5516,
+  "kHeight": 5518,
+  "kLow": 5515,
+  "kStart": 5517,
+  "kTimestamp": "2000/01/01 09:29",
+  "kTurnover": "",
+  "kVWAP": "5518.9231"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5516,
+  "kLow": 5513,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:30",
+  "kTurnover": "",
+  "kVWAP": "5518.8344"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5516,
+  "kLow": 5511,
+  "kStart": 5514,
+  "kTimestamp": "2000/01/01 09:31",
+  "kTurnover": "",
+  "kVWAP": "5518.6472"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5514,
+  "kLow": 5511,
+  "kStart": 5514,
+  "kTimestamp": "2000/01/01 09:32",
+  "kTurnover": "",
+  "kVWAP": "5518.5746"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5514,
+  "kLow": 5511,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:33",
+  "kTurnover": "",
+  "kVWAP": "5518.5063"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5513,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 09:34",
+  "kTurnover": "",
+  "kVWAP": "5518.3886"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5514,
+  "kLow": 5510,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 09:35",
+  "kTurnover": "",
+  "kVWAP": "5518.3088"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5512,
+  "kLow": 5508,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 09:36",
+  "kTurnover": "",
+  "kVWAP": "5518.1151"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5513,
+  "kLow": 5508,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 09:37",
+  "kTurnover": "",
+  "kVWAP": "5518.0117"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 09:38",
+  "kTurnover": "",
+  "kVWAP": "5517.954"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5512,
+  "kLow": 5509,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 09:39",
+  "kTurnover": "",
+  "kVWAP": "5517.8898"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 09:40",
+  "kTurnover": "",
+  "kVWAP": "5517.854"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 09:41",
+  "kTurnover": "",
+  "kVWAP": "5517.8223"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 09:42",
+  "kTurnover": "",
+  "kVWAP": "5517.8075"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 09:43",
+  "kTurnover": "",
+  "kVWAP": "5517.7881"
+ },
+ {
+  "kEnd": 5513,
+  "kHeight": 5514,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 09:44",
+  "kTurnover": "",
+  "kVWAP": "5517.7545"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5517,
+  "kLow": 5512,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:45",
+  "kTurnover": "",
+  "kVWAP": "5517.7372"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5516,
+  "kLow": 5513,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:46",
+  "kTurnover": "",
+  "kVWAP": "5517.7171"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5517,
+  "kLow": 5513,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:47",
+  "kTurnover": "",
+  "kVWAP": "5517.6966"
+ },
+ {
+  "kEnd": 5516,
+  "kHeight": 5517,
+  "kLow": 5515,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:48",
+  "kTurnover": "",
+  "kVWAP": "5517.6925"
+ },
+ {
+  "kEnd": 5517,
+  "kHeight": 5517,
+  "kLow": 5515,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:49",
+  "kTurnover": "",
+  "kVWAP": "5517.6898"
+ },
+ {
+  "kEnd": 5513,
+  "kHeight": 5517,
+  "kLow": 5513,
+  "kStart": 5517,
+  "kTimestamp": "2000/01/01 09:50",
+  "kTurnover": "",
+  "kVWAP": "5517.6675"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5516,
+  "kLow": 5513,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 09:51",
+  "kTurnover": "",
+  "kVWAP": "5517.6231"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5515,
+  "kLow": 5514,
+  "kStart": 5514,
+  "kTimestamp": "2000/01/01 09:52",
+  "kTurnover": "",
+  "kVWAP": "5517.6187"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5517,
+  "kLow": 5514,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:53",
+  "kTurnover": "",
+  "kVWAP": "5517.5997"
+ },
+ {
+  "kEnd": 5515,
+  "kHeight": 5516,
+  "kLow": 5512,
+  "kStart": 5515,
+  "kTimestamp": "2000/01/01 09:54",
+  "kTurnover": "",
+  "kVWAP": "5517.567"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5516,
+  "kLow": 5513,
+  "kStart": 5516,
+  "kTimestamp": "2000/01/01 09:55",
+  "kTurnover": "",
+  "kVWAP": "5517.5558"
+ },
+ {
+  "kEnd": 5514,
+  "kHeight": 5515,
+  "kLow": 5513,
+  "kStart": 5514,
+  "kTimestamp": "2000/01/01 09:56",
+  "kTurnover": "",
+  "kVWAP": "5517.539"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5513,
+  "kLow": 5510,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 09:57",
+  "kTurnover": "",
+  "kVWAP": "5517.4934"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5512,
+  "kLow": 5508,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 09:58",
+  "kTurnover": "",
+  "kVWAP": "5517.3729"
+ },
+ {
+  "kEnd": 5506,
+  "kHeight": 5509,
+  "kLow": 5505,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 09:59",
+  "kTurnover": "",
+  "kVWAP": "5517.1577"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5505,
+  "kStart": 5506,
+  "kTimestamp": "2000/01/01 10:00",
+  "kTurnover": "",
+  "kVWAP": "5516.9013"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5506,
+  "kTimestamp": "2000/01/01 10:01",
+  "kTurnover": "",
+  "kVWAP": "5516.8453"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5508,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:02",
+  "kTurnover": "",
+  "kVWAP": "5516.8305"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:03",
+  "kTurnover": "",
+  "kVWAP": "5516.7473"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5511,
+  "kLow": 5506,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:04",
+  "kTurnover": "",
+  "kVWAP": "5516.6388"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5507,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:05",
+  "kTurnover": "",
+  "kVWAP": "5516.6119"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5508,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:06",
+  "kTurnover": "",
+  "kVWAP": "5516.5791"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5509,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:07",
+  "kTurnover": "",
+  "kVWAP": "5516.5633"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5509,
+  "kLow": 5507,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:08",
+  "kTurnover": "",
+  "kVWAP": "5516.5086"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5510,
+  "kLow": 5508,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:09",
+  "kTurnover": "",
+  "kVWAP": "5516.4941"
+ },
+ {
+  "kEnd": 5513,
+  "kHeight": 5514,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:10",
+  "kTurnover": "",
+  "kVWAP": "5516.442"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5513,
+  "kLow": 5510,
+  "kStart": 5513,
+  "kTimestamp": "2000/01/01 10:11",
+  "kTurnover": "",
+  "kVWAP": "5516.4333"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 10:12",
+  "kTurnover": "",
+  "kVWAP": "5516.4169"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:13",
+  "kTurnover": "",
+  "kVWAP": "5516.4031"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5512,
+  "kLow": 5508,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:14",
+  "kTurnover": "",
+  "kVWAP": "5516.3394"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5511,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:15",
+  "kTurnover": "",
+  "kVWAP": "5516.3368"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5512,
+  "kLow": 5511,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 10:16",
+  "kTurnover": "",
+  "kVWAP": "5516.3322"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5513,
+  "kLow": 5509,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 10:17",
+  "kTurnover": "",
+  "kVWAP": "5516.2846"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5510,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:18",
+  "kTurnover": "",
+  "kVWAP": "5516.2735"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5508,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:19",
+  "kTurnover": "",
+  "kVWAP": "5516.2534"
+ },
+ {
+  "kEnd": 5506,
+  "kHeight": 5510,
+  "kLow": 5506,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:20",
+  "kTurnover": "",
+  "kVWAP": "5516.1487"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:21",
+  "kTurnover": "",
+  "kVWAP": "5516.1242"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5507,
+  "kLow": 5506,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:22",
+  "kTurnover": "",
+  "kVWAP": "5516.0514"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:23",
+  "kTurnover": "",
+  "kVWAP": "5516.0288"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:24",
+  "kTurnover": "",
+  "kVWAP": "5515.9877"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5509,
+  "kLow": 5507,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:25",
+  "kTurnover": "",
+  "kVWAP": "5515.9506"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5508,
+  "kLow": 5507,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:26",
+  "kTurnover": "",
+  "kVWAP": "5515.9428"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5505,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:27",
+  "kTurnover": "",
+  "kVWAP": "5515.8129"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5506,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:28",
+  "kTurnover": "",
+  "kVWAP": "5515.7371"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5513,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:29",
+  "kTurnover": "",
+  "kVWAP": "5515.7029"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 10:30",
+  "kTurnover": "",
+  "kVWAP": "5515.6755"
+ },
+ {
+  "kEnd": 5512,
+  "kHeight": 5514,
+  "kLow": 5511,
+  "kStart": 5512,
+  "kTimestamp": "2000/01/01 10:31",
+  "kTurnover": "",
+  "kVWAP": "5515.6559"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:32",
+  "kTurnover": "",
+  "kVWAP": "5515.6337"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:33",
+  "kTurnover": "",
+  "kVWAP": "5515.617"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:34",
+  "kTurnover": "",
+  "kVWAP": "5515.5959"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:35",
+  "kTurnover": "",
+  "kVWAP": "5515.5776"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:36",
+  "kTurnover": "",
+  "kVWAP": "5515.5689"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:37",
+  "kTurnover": "",
+  "kVWAP": "5515.5444"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5510,
+  "kLow": 5508,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:38",
+  "kTurnover": "",
+  "kVWAP": "5515.5086"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:39",
+  "kTurnover": "",
+  "kVWAP": "5515.4866"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:40",
+  "kTurnover": "",
+  "kVWAP": "5515.4705"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5511,
+  "kLow": 5509,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:41",
+  "kTurnover": "",
+  "kVWAP": "5515.439"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5510,
+  "kStart": 5510,
+  "kTimestamp": "2000/01/01 10:42",
+  "kTurnover": "",
+  "kVWAP": "5515.4265"
+ },
+ {
+  "kEnd": 5511,
+  "kHeight": 5512,
+  "kLow": 5511,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:43",
+  "kTurnover": "",
+  "kVWAP": "5515.4207"
+ },
+ {
+  "kEnd": 5510,
+  "kHeight": 5511,
+  "kLow": 5510,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:44",
+  "kTurnover": "",
+  "kVWAP": "5515.4195"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5511,
+  "kLow": 5507,
+  "kStart": 5511,
+  "kTimestamp": "2000/01/01 10:45",
+  "kTurnover": "",
+  "kVWAP": "5515.3538"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5509,
+  "kLow": 5508,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:46",
+  "kTurnover": "",
+  "kVWAP": "5515.3205"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5509,
+  "kLow": 5507,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:47",
+  "kTurnover": "",
+  "kVWAP": "5515.3041"
+ },
+ {
+  "kEnd": 5509,
+  "kHeight": 5509,
+  "kLow": 5507,
+  "kStart": 5508,
+  "kTimestamp": "2000/01/01 10:48",
+  "kTurnover": "",
+  "kVWAP": "5515.2833"
+ },
+ {
+  "kEnd": 5508,
+  "kHeight": 5509,
+  "kLow": 5507,
+  "kStart": 5509,
+  "kTimestamp": "2000/01/01 10:49",
+  "kTurnover": "",
+  "kVWAP": "5515.2605"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:50",
+  "kTurnover": "",
+  "kVWAP": "5515.2051"
+ },
+ {
+  "kEnd": 5507,
+  "kHeight": 5508,
+  "kLow": 5506,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:51",
+  "kTurnover": "",
+  "kVWAP": "5515.1823"
+ },
+ {
+  "kEnd": 5505,
+  "kHeight": 5507,
+  "kLow": 5503,
+  "kStart": 5507,
+  "kTimestamp": "2000/01/01 10:52",
+  "kTurnover": "",
+  "kVWAP": "5514.8664"
+ },
+ {
+  "kEnd": 5505,
+  "kHeight": 5505,
+  "kLow": 5503,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 10:53",
+  "kTurnover": "",
+  "kVWAP": "5514.8555"
+ },
+ {
+  "kEnd": 5506,
+  "kHeight": 5507,
+  "kLow": 5504,
+  "kStart": 5505,
+  "kTimestamp": "2000/01/01 10:54",
+  "kTurnover": "",
+  "kVWAP": "5514.8216"
+ },
+ {
+  "kEnd": 5506,
+  "kHeight": 5506,
+  "kLow": 5505,
+  "kStart": 5505,
+  "kTimestamp": "2000/01/01 10:55",
+  "kTurnover": "",
+  "kVWAP": "5514.8181"
+ },
+ {
+  "kEnd": 5504,
+  "kHeight": 5507,
+  "kLow": 5504,
+  "kStart": 5506,
+  "kTimestamp": "2000/01/01 10:56",
+  "kTurnover": "",
+  "kVWAP": "5514.7934"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5505,
+  "kLow": 5502,
+  "kStart": 5505,
+  "kTimestamp": "2000/01/01 10:57",
+  "kTurnover": "",
+  "kVWAP": "5514.7039"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 10:58",
+  "kTurnover": "",
+  "kVWAP": "5514.5032"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 10:59",
+  "kTurnover": "",
+  "kVWAP": "5514.4068"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5502,
+  "kLow": 5500,
+  "kStart": 5501,
+  "kTimestamp": "2000/01/01 11:00",
+  "kTurnover": "",
+  "kVWAP": "5513.9582"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5501,
+  "kTimestamp": "2000/01/01 11:01",
+  "kTurnover": "",
+  "kVWAP": "5513.8868"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5502,
+  "kLow": 5502,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:02",
+  "kTurnover": "",
+  "kVWAP": "5513.8729"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:03",
+  "kTurnover": "",
+  "kVWAP": "5513.8206"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5502,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 11:04",
+  "kTurnover": "",
+  "kVWAP": "5513.7847"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5500,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 11:05",
+  "kTurnover": "",
+  "kVWAP": "5513.6454"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5502,
+  "kLow": 5495,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:06",
+  "kTurnover": "",
+  "kVWAP": "5512.9655"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5497,
+  "kLow": 5494,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 11:07",
+  "kTurnover": "",
+  "kVWAP": "5512.8564"
+ },
+ {
+  "kEnd": 5499,
+  "kHeight": 5499,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 11:08",
+  "kTurnover": "",
+  "kVWAP": "5512.6963"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5499,
+  "kLow": 5497,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 11:09",
+  "kTurnover": "",
+  "kVWAP": "5512.6629"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5498,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 11:10",
+  "kTurnover": "",
+  "kVWAP": "5512.6354"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5500,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 11:11",
+  "kTurnover": "",
+  "kVWAP": "5512.5846"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5501,
+  "kLow": 5498,
+  "kStart": 5500,
+  "kTimestamp": "2000/01/01 11:12",
+  "kTurnover": "",
+  "kVWAP": "5512.552"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5503,
+  "kLow": 5500,
+  "kStart": 5501,
+  "kTimestamp": "2000/01/01 11:13",
+  "kTurnover": "",
+  "kVWAP": "5512.5192"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5504,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:14",
+  "kTurnover": "",
+  "kVWAP": "5512.4881"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5502,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:15",
+  "kTurnover": "",
+  "kVWAP": "5512.4767"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:16",
+  "kTurnover": "",
+  "kVWAP": "5512.4639"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5502,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 11:17",
+  "kTurnover": "",
+  "kVWAP": "5512.4621"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5502,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:18",
+  "kTurnover": "",
+  "kVWAP": "5512.4584"
+ },
+ {
+  "kEnd": 5505,
+  "kHeight": 5505,
+  "kLow": 5502,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 11:19",
+  "kTurnover": "",
+  "kVWAP": "5512.4261"
+ },
+ {
+  "kEnd": 5504,
+  "kHeight": 5506,
+  "kLow": 5504,
+  "kStart": 5505,
+  "kTimestamp": "2000/01/01 11:20",
+  "kTurnover": "",
+  "kVWAP": "5512.4067"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5505,
+  "kLow": 5503,
+  "kStart": 5505,
+  "kTimestamp": "2000/01/01 11:21",
+  "kTurnover": "",
+  "kVWAP": "5512.3984"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5502,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 11:22",
+  "kTurnover": "",
+  "kVWAP": "5512.3748"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5503,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 11:23",
+  "kTurnover": "",
+  "kVWAP": "5512.3562"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5502,
+  "kLow": 5500,
+  "kStart": 5501,
+  "kTimestamp": "2000/01/01 11:24",
+  "kTurnover": "",
+  "kVWAP": "5512.3377"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5501,
+  "kLow": 5498,
+  "kStart": 5501,
+  "kTimestamp": "2000/01/01 11:25",
+  "kTurnover": "",
+  "kVWAP": "5512.2836"
+ },
+ {
+  "kEnd": 5499,
+  "kHeight": 5500,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 11:26",
+  "kTurnover": "",
+  "kVWAP": "5512.2379"
+ },
+ {
+  "kEnd": 5499,
+  "kHeight": 5501,
+  "kLow": 5499,
+  "kStart": 5500,
+  "kTimestamp": "2000/01/01 11:27",
+  "kTurnover": "",
+  "kVWAP": "5512.2125"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5500,
+  "kLow": 5497,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 11:28",
+  "kTurnover": "",
+  "kVWAP": "5512.1717"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5498,
+  "kLow": 5495,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 11:29",
+  "kTurnover": "",
+  "kVWAP": "5512.1053"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5495,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 11:30",
+  "kTurnover": "",
+  "kVWAP": "5512.0539"
+ },
+ {
+  "kEnd": 5476,
+  "kHeight": 5488,
+  "kLow": 5476,
+  "kStart": 5486,
+  "kTimestamp": "2000/01/01 12:30",
+  "kTurnover": "",
+  "kVWAP": "5508.6247"
+ },
+ {
+  "kEnd": 5485,
+  "kHeight": 5485,
+  "kLow": 5475,
+  "kStart": 5476,
+  "kTimestamp": "2000/01/01 12:31",
+  "kTurnover": "",
+  "kVWAP": "5508.3991"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5492,
+  "kLow": 5484,
+  "kStart": 5484,
+  "kTimestamp": "2000/01/01 12:32",
+  "kTurnover": "",
+  "kVWAP": "5508.3339"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5488,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 12:33",
+  "kTurnover": "",
+  "kVWAP": "5508.2555"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5499,
+  "kLow": 5494,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 12:34",
+  "kTurnover": "",
+  "kVWAP": "5508.2184"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5498,
+  "kLow": 5494,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 12:35",
+  "kTurnover": "",
+  "kVWAP": "5508.1936"
+ },
+ {
+  "kEnd": 5499,
+  "kHeight": 5499,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 12:36",
+  "kTurnover": "",
+  "kVWAP": "5508.1715"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5502,
+  "kLow": 5495,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 12:37",
+  "kTurnover": "",
+  "kVWAP": "5508.1246"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5505,
+  "kLow": 5496,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 12:38",
+  "kTurnover": "",
+  "kVWAP": "5508.0935"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5498,
+  "kLow": 5495,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 12:39",
+  "kTurnover": "",
+  "kVWAP": "5508.0654"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5497,
+  "kLow": 5490,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 12:40",
+  "kTurnover": "",
+  "kVWAP": "5507.9774"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5496,
+  "kLow": 5491,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 12:41",
+  "kTurnover": "",
+  "kVWAP": "5507.9106"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5498,
+  "kLow": 5494,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 12:42",
+  "kTurnover": "",
+  "kVWAP": "5507.8926"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5499,
+  "kLow": 5496,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 12:43",
+  "kTurnover": "",
+  "kVWAP": "5507.8815"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5497,
+  "kLow": 5494,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 12:44",
+  "kTurnover": "",
+  "kVWAP": "5507.854"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5496,
+  "kLow": 5492,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 12:45",
+  "kTurnover": "",
+  "kVWAP": "5507.7986"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5495,
+  "kLow": 5493,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 12:46",
+  "kTurnover": "",
+  "kVWAP": "5507.7806"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 12:47",
+  "kTurnover": "",
+  "kVWAP": "5507.7538"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 12:48",
+  "kTurnover": "",
+  "kVWAP": "5507.7248"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5498,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 12:49",
+  "kTurnover": "",
+  "kVWAP": "5507.6818"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5499,
+  "kLow": 5498,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 12:50",
+  "kTurnover": "",
+  "kVWAP": "5507.6725"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5500,
+  "kLow": 5498,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 12:51",
+  "kTurnover": "",
+  "kVWAP": "5507.6409"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5499,
+  "kLow": 5492,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 12:52",
+  "kTurnover": "",
+  "kVWAP": "5507.5382"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5499,
+  "kLow": 5495,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 12:53",
+  "kTurnover": "",
+  "kVWAP": "5507.5054"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5499,
+  "kLow": 5497,
+  "kStart": 5499,
+  "kTimestamp": "2000/01/01 12:54",
+  "kTurnover": "",
+  "kVWAP": "5507.4941"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5499,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 12:55",
+  "kTurnover": "",
+  "kVWAP": "5507.4861"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5496,
+  "kLow": 5492,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 12:56",
+  "kTurnover": "",
+  "kVWAP": "5507.4296"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5496,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 12:57",
+  "kTurnover": "",
+  "kVWAP": "5507.4226"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5495,
+  "kLow": 5491,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 12:58",
+  "kTurnover": "",
+  "kVWAP": "5507.3629"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 12:59",
+  "kTurnover": "",
+  "kVWAP": "5507.3043"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5492,
+  "kLow": 5489,
+  "kStart": 5489,
+  "kTimestamp": "2000/01/01 13:00",
+  "kTurnover": "",
+  "kVWAP": "5507.2877"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:01",
+  "kTurnover": "",
+  "kVWAP": "5507.2675"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:02",
+  "kTurnover": "",
+  "kVWAP": "5507.2353"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5490,
+  "kLow": 5488,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:03",
+  "kTurnover": "",
+  "kVWAP": "5507.1928"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5490,
+  "kLow": 5489,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:04",
+  "kTurnover": "",
+  "kVWAP": "5507.1857"
+ },
+ {
+  "kEnd": 5485,
+  "kHeight": 5490,
+  "kLow": 5485,
+  "kStart": 5489,
+  "kTimestamp": "2000/01/01 13:05",
+  "kTurnover": "",
+  "kVWAP": "5507.0662"
+ },
+ {
+  "kEnd": 5485,
+  "kHeight": 5487,
+  "kLow": 5484,
+  "kStart": 5486,
+  "kTimestamp": "2000/01/01 13:06",
+  "kTurnover": "",
+  "kVWAP": "5506.9603"
+ },
+ {
+  "kEnd": 5484,
+  "kHeight": 5486,
+  "kLow": 5483,
+  "kStart": 5485,
+  "kTimestamp": "2000/01/01 13:07",
+  "kTurnover": "",
+  "kVWAP": "5506.853"
+ },
+ {
+  "kEnd": 5483,
+  "kHeight": 5485,
+  "kLow": 5483,
+  "kStart": 5485,
+  "kTimestamp": "2000/01/01 13:08",
+  "kTurnover": "",
+  "kVWAP": "5506.8"
+ },
+ {
+  "kEnd": 5484,
+  "kHeight": 5484,
+  "kLow": 5483,
+  "kStart": 5484,
+  "kTimestamp": "2000/01/01 13:09",
+  "kTurnover": "",
+  "kVWAP": "5506.779"
+ },
+ {
+  "kEnd": 5488,
+  "kHeight": 5490,
+  "kLow": 5485,
+  "kStart": 5485,
+  "kTimestamp": "2000/01/01 13:10",
+  "kTurnover": "",
+  "kVWAP": "5506.7221"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5490,
+  "kLow": 5486,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 13:11",
+  "kTurnover": "",
+  "kVWAP": "5506.6587"
+ },
+ {
+  "kEnd": 5485,
+  "kHeight": 5488,
+  "kLow": 5484,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 13:12",
+  "kTurnover": "",
+  "kVWAP": "5506.6045"
+ },
+ {
+  "kEnd": 5487,
+  "kHeight": 5487,
+  "kLow": 5485,
+  "kStart": 5485,
+  "kTimestamp": "2000/01/01 13:13",
+  "kTurnover": "",
+  "kVWAP": "5506.5824"
+ },
+ {
+  "kEnd": 5486,
+  "kHeight": 5488,
+  "kLow": 5484,
+  "kStart": 5487,
+  "kTimestamp": "2000/01/01 13:14",
+  "kTurnover": "",
+  "kVWAP": "5506.4817"
+ },
+ {
+  "kEnd": 5485,
+  "kHeight": 5488,
+  "kLow": 5483,
+  "kStart": 5484,
+  "kTimestamp": "2000/01/01 13:15",
+  "kTurnover": "",
+  "kVWAP": "5506.3644"
+ },
+ {
+  "kEnd": 5484,
+  "kHeight": 5485,
+  "kLow": 5483,
+  "kStart": 5483,
+  "kTimestamp": "2000/01/01 13:16",
+  "kTurnover": "",
+  "kVWAP": "5506.3016"
+ },
+ {
+  "kEnd": 5483,
+  "kHeight": 5484,
+  "kLow": 5483,
+  "kStart": 5484,
+  "kTimestamp": "2000/01/01 13:17",
+  "kTurnover": "",
+  "kVWAP": "5506.264"
+ },
+ {
+  "kEnd": 5487,
+  "kHeight": 5487,
+  "kLow": 5483,
+  "kStart": 5483,
+  "kTimestamp": "2000/01/01 13:18",
+  "kTurnover": "",
+  "kVWAP": "5506.1999"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5491,
+  "kLow": 5485,
+  "kStart": 5486,
+  "kTimestamp": "2000/01/01 13:19",
+  "kTurnover": "",
+  "kVWAP": "5506.1579"
+ },
+ {
+  "kEnd": 5488,
+  "kHeight": 5492,
+  "kLow": 5487,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 13:20",
+  "kTurnover": "",
+  "kVWAP": "5506.0868"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5490,
+  "kLow": 5489,
+  "kStart": 5489,
+  "kTimestamp": "2000/01/01 13:21",
+  "kTurnover": "",
+  "kVWAP": "5506.0754"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5490,
+  "kLow": 5489,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:22",
+  "kTurnover": "",
+  "kVWAP": "5506.0366"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5491,
+  "kLow": 5490,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:23",
+  "kTurnover": "",
+  "kVWAP": "5506.0333"
+ },
+ {
+  "kEnd": 5488,
+  "kHeight": 5490,
+  "kLow": 5487,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:24",
+  "kTurnover": "",
+  "kVWAP": "5505.9991"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5490,
+  "kLow": 5486,
+  "kStart": 5487,
+  "kTimestamp": "2000/01/01 13:25",
+  "kTurnover": "",
+  "kVWAP": "5505.9655"
+ },
+ {
+  "kEnd": 5488,
+  "kHeight": 5489,
+  "kLow": 5486,
+  "kStart": 5487,
+  "kTimestamp": "2000/01/01 13:26",
+  "kTurnover": "",
+  "kVWAP": "5505.9196"
+ },
+ {
+  "kEnd": 5488,
+  "kHeight": 5489,
+  "kLow": 5487,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 13:27",
+  "kTurnover": "",
+  "kVWAP": "5505.889"
+ },
+ {
+  "kEnd": 5487,
+  "kHeight": 5488,
+  "kLow": 5487,
+  "kStart": 5487,
+  "kTimestamp": "2000/01/01 13:28",
+  "kTurnover": "",
+  "kVWAP": "5505.8754"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5489,
+  "kLow": 5487,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 13:29",
+  "kTurnover": "",
+  "kVWAP": "5505.8363"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5491,
+  "kLow": 5488,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 13:30",
+  "kTurnover": "",
+  "kVWAP": "5505.8084"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5491,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:31",
+  "kTurnover": "",
+  "kVWAP": "5505.8055"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:32",
+  "kTurnover": "",
+  "kVWAP": "5505.7809"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5491,
+  "kLow": 5490,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:33",
+  "kTurnover": "",
+  "kVWAP": "5505.7577"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 13:34",
+  "kTurnover": "",
+  "kVWAP": "5505.7306"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5491,
+  "kLow": 5490,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:35",
+  "kTurnover": "",
+  "kVWAP": "5505.7078"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:36",
+  "kTurnover": "",
+  "kVWAP": "5505.685"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5492,
+  "kLow": 5489,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:37",
+  "kTurnover": "",
+  "kVWAP": "5505.6082"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5491,
+  "kLow": 5489,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 13:38",
+  "kTurnover": "",
+  "kVWAP": "5505.569"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 13:39",
+  "kTurnover": "",
+  "kVWAP": "5505.5578"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:40",
+  "kTurnover": "",
+  "kVWAP": "5505.4925"
+ },
+ {
+  "kEnd": 5490,
+  "kHeight": 5491,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:41",
+  "kTurnover": "",
+  "kVWAP": "5505.4815"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:42",
+  "kTurnover": "",
+  "kVWAP": "5505.4119"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 13:43",
+  "kTurnover": "",
+  "kVWAP": "5505.3899"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5492,
+  "kLow": 5491,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 13:44",
+  "kTurnover": "",
+  "kVWAP": "5505.3859"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5491,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 13:45",
+  "kTurnover": "",
+  "kVWAP": "5505.3178"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5496,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:46",
+  "kTurnover": "",
+  "kVWAP": "5505.2996"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5496,
+  "kLow": 5493,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:47",
+  "kTurnover": "",
+  "kVWAP": "5505.2824"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5493,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:48",
+  "kTurnover": "",
+  "kVWAP": "5505.276"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:49",
+  "kTurnover": "",
+  "kVWAP": "5505.2393"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5494,
+  "kLow": 5493,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 13:50",
+  "kTurnover": "",
+  "kVWAP": "5505.2221"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 13:51",
+  "kTurnover": "",
+  "kVWAP": "5505.2029"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5495,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:52",
+  "kTurnover": "",
+  "kVWAP": "5505.1843"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5495,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:53",
+  "kTurnover": "",
+  "kVWAP": "5505.1798"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5495,
+  "kLow": 5494,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 13:54",
+  "kTurnover": "",
+  "kVWAP": "5505.174"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5494,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 13:55",
+  "kTurnover": "",
+  "kVWAP": "5505.1637"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5496,
+  "kLow": 5494,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 13:56",
+  "kTurnover": "",
+  "kVWAP": "5505.1571"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5495,
+  "kLow": 5491,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 13:57",
+  "kTurnover": "",
+  "kVWAP": "5505.1165"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5493,
+  "kLow": 5491,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 13:58",
+  "kTurnover": "",
+  "kVWAP": "5505.1026"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5494,
+  "kLow": 5492,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 13:59",
+  "kTurnover": "",
+  "kVWAP": "5505.0883"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5490,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 14:00",
+  "kTurnover": "",
+  "kVWAP": "5505.0509"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5491,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 14:01",
+  "kTurnover": "",
+  "kVWAP": "5505.0353"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5492,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 14:02",
+  "kTurnover": "",
+  "kVWAP": "5505.0274"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5494,
+  "kLow": 5493,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 14:03",
+  "kTurnover": "",
+  "kVWAP": "5505.017"
+ },
+ {
+  "kEnd": 5495,
+  "kHeight": 5495,
+  "kLow": 5494,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 14:04",
+  "kTurnover": "",
+  "kVWAP": "5505.0016"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5498,
+  "kLow": 5495,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 14:05",
+  "kTurnover": "",
+  "kVWAP": "5504.9721"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5498,
+  "kLow": 5495,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 14:06",
+  "kTurnover": "",
+  "kVWAP": "5504.9571"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5498,
+  "kLow": 5496,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 14:07",
+  "kTurnover": "",
+  "kVWAP": "5504.9486"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5495,
+  "kLow": 5493,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 14:08",
+  "kTurnover": "",
+  "kVWAP": "5504.9246"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5494,
+  "kLow": 5492,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 14:09",
+  "kTurnover": "",
+  "kVWAP": "5504.9119"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5492,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 14:10",
+  "kTurnover": "",
+  "kVWAP": "5504.8925"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5493,
+  "kLow": 5491,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 14:11",
+  "kTurnover": "",
+  "kVWAP": "5504.8814"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5491,
+  "kLow": 5488,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 14:12",
+  "kTurnover": "",
+  "kVWAP": "5504.8104"
+ },
+ {
+  "kEnd": 5489,
+  "kHeight": 5490,
+  "kLow": 5488,
+  "kStart": 5488,
+  "kTimestamp": "2000/01/01 14:13",
+  "kTurnover": "",
+  "kVWAP": "5504.7837"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5489,
+  "kStart": 5490,
+  "kTimestamp": "2000/01/01 14:14",
+  "kTurnover": "",
+  "kVWAP": "5504.7239"
+ },
+ {
+  "kEnd": 5491,
+  "kHeight": 5492,
+  "kLow": 5490,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 14:15",
+  "kTurnover": "",
+  "kVWAP": "5504.7161"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5493,
+  "kLow": 5491,
+  "kStart": 5491,
+  "kTimestamp": "2000/01/01 14:16",
+  "kTurnover": "",
+  "kVWAP": "5504.7088"
+ },
+ {
+  "kEnd": 5492,
+  "kHeight": 5493,
+  "kLow": 5491,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 14:17",
+  "kTurnover": "",
+  "kVWAP": "5504.6926"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5494,
+  "kLow": 5492,
+  "kStart": 5492,
+  "kTimestamp": "2000/01/01 14:18",
+  "kTurnover": "",
+  "kVWAP": "5504.6817"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 14:19",
+  "kTurnover": "",
+  "kVWAP": "5504.6454"
+ },
+ {
+  "kEnd": 5494,
+  "kHeight": 5496,
+  "kLow": 5494,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 14:20",
+  "kTurnover": "",
+  "kVWAP": "5504.6241"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5494,
+  "kLow": 5492,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 14:21",
+  "kTurnover": "",
+  "kVWAP": "5504.5933"
+ },
+ {
+  "kEnd": 5493,
+  "kHeight": 5495,
+  "kLow": 5492,
+  "kStart": 5494,
+  "kTimestamp": "2000/01/01 14:22",
+  "kTurnover": "",
+  "kVWAP": "5504.558"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5496,
+  "kLow": 5492,
+  "kStart": 5493,
+  "kTimestamp": "2000/01/01 14:23",
+  "kTurnover": "",
+  "kVWAP": "5504.5087"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5496,
+  "kLow": 5495,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 14:24",
+  "kTurnover": "",
+  "kVWAP": "5504.5024"
+ },
+ {
+  "kEnd": 5496,
+  "kHeight": 5497,
+  "kLow": 5495,
+  "kStart": 5495,
+  "kTimestamp": "2000/01/01 14:25",
+  "kTurnover": "",
+  "kVWAP": "5504.4928"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5497,
+  "kLow": 5495,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 14:26",
+  "kTurnover": "",
+  "kVWAP": "5504.4812"
+ },
+ {
+  "kEnd": 5497,
+  "kHeight": 5497,
+  "kLow": 5496,
+  "kStart": 5496,
+  "kTimestamp": "2000/01/01 14:27",
+  "kTurnover": "",
+  "kVWAP": "5504.4756"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5498,
+  "kLow": 5496,
+  "kStart": 5497,
+  "kTimestamp": "2000/01/01 14:28",
+  "kTurnover": "",
+  "kVWAP": "5504.4659"
+ },
+ {
+  "kEnd": 5498,
+  "kHeight": 5498,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 14:29",
+  "kTurnover": "",
+  "kVWAP": "5504.4611"
+ },
+ {
+  "kEnd": 5500,
+  "kHeight": 5500,
+  "kLow": 5497,
+  "kStart": 5498,
+  "kTimestamp": "2000/01/01 14:30",
+  "kTurnover": "",
+  "kVWAP": "5504.4453"
+ },
+ {
+  "kEnd": 5502,
+  "kHeight": 5503,
+  "kLow": 5500,
+  "kStart": 5500,
+  "kTimestamp": "2000/01/01 14:31",
+  "kTurnover": "",
+  "kVWAP": "5504.4365"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5504,
+  "kLow": 5501,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 14:32",
+  "kTurnover": "",
+  "kVWAP": "5504.4335"
+ },
+ {
+  "kEnd": 5503,
+  "kHeight": 5504,
+  "kLow": 5502,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 14:33",
+  "kTurnover": "",
+  "kVWAP": "5504.4303"
+ },
+ {
+  "kEnd": 5501,
+  "kHeight": 5504,
+  "kLow": 5501,
+  "kStart": 5503,
+  "kTimestamp": "2000/01/01 14:34",
+  "kTurnover": "",
+  "kVWAP": "5504.4256"
+ },
+ {
+  "kEnd": 5500,
+  "kHeight": 5502,
+  "kLow": 5498,
+  "kStart": 5502,
+  "kTimestamp": "2000/01/01 14:35",
+  "kTurnover": "",
+  "kVWAP": "5504.3918"
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:36",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:37",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:38",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:39",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:40",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:41",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:42",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:43",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:44",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:45",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:46",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:47",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:48",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:49",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:50",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:51",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:52",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:53",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:54",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:55",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:56",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:57",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:58",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 14:59",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:00",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:01",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:02",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:03",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:04",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:05",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:06",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:07",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:08",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:09",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:10",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:11",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:12",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:13",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:14",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:15",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:16",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:17",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:18",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:19",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:20",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:21",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:22",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:23",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:24",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:25",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:26",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:27",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:28",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:29",
+  "kTurnover": "",
+  "kVWAP": ""
+ },
+ {
+  "kEnd": "",
+  "kHeight": "",
+  "kLow": "",
+  "kStart": "",
+  "kTimestamp": "2000/01/01 15:30",
+  "kTurnover": "",
+  "kVWAP": ""
+ }
+]

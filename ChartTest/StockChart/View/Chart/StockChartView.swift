@@ -1,0 +1,1009 @@
+//
+//  StockChartView.swift
+//  ChartTest
+//
+//  【View】株価チャートの描画を担当するカスタムView。
+//
+//  ┌───────────────────────────┐
+//  │ 移動平均 短期(5) 長期(25)   │ 70,000  ← メインチャート(priceChartView)
+//  │   ローソク足 + メイン指標     │ 65,000     ローソク足 + MainChartContent
+//  │                           │ 60,000
+//  ├───────────────────────────┤ ← 区切り線(dividerView)
+//  │ 出来高 出来高移動平均         │ 4,000,000,000 ← サブチャート(subChartView)
+//  │   サブ指標                  │ 0                SubChartContent
+//  └───────────────────────────┘
+//   7/14   7/27   8/6 ...          ← X軸ラベル(一番下のチャートにだけ表示)
+//
+//  【使い方】外から使うのは次のものだけ(Swift・Objective-C の両方から呼べる。書き方は README を参照)
+//  ・period / market         … 足種・指数の種類(先に設定しておく。足種を設定すると足種に合った見た目に切り替わる)
+//  ・chartType / mainIndicator / subIndicator … チャートの種類・指標(先に設定しておく。既定はローソク足・移動平均線 + 出来高)
+//  ・qCodeType / chartData / chartCategory / mainChart / subChart … 上のプロパティを DGChartEnum の enum で設定する(StockChartView+DGChartEnum.swift)
+//  ・qCode                   … 銘柄コード(チャートでは使わず、持っておくだけ。StockChartView+DGChartEnum.swift)
+//  ・setCandles(_:)          … データを渡すだけで、上のプロパティの設定で描画する
+//  ・setCandles(_:indicatorValues:) … チャートの外で計算した指標の値も渡して描画する(ChartIndicatorValues)
+//  ・setCandles(_:period:)   … 足種を指定して描画する(period も設定される。X軸の書式・移動平均の期間などが足種ごとに変わる)
+//  ・setCandles(_:mainIndicator:subIndicator:) … 指標を指定して描画する
+//  ・display(candles:main:sub:keepsViewport:) … 描画内容を指定して描画する(StockChartViewController が使う)
+//  ・clear()                 … 表示を消す
+//  ・style                   … 見た目の設定(色・フォント・初期表示本数など。StockChartStyle)
+//  ・displayOptions          … 表示オプション(Y軸固定・4本値。ChartDisplayOptions)
+//  それ以外のプロパティ・メソッドはこのView の内部用。
+//  (処理をファイルに分けているため private を付けられないものがあるが、外からは使わないこと)
+//
+//  【ファイルの構成】処理の役割ごとに、次のファイルに分けている(StockChart/View/ の下)
+//  Chart/(チャート本体)
+//  ・StockChartView.swift                … このファイル。プロパティ・外から呼ぶ入口・画面回転時の表示範囲の維持
+//  ・StockChartView+Layout.swift         … 部品の配置(Auto Layout)と見た目の設定
+//  ・StockChartView+Rendering.swift      … データを DGCharts の形に変換して描画する・凡例の文字列を作る
+//  ・StockChartView+AxisRange.swift      … スクロール/ズームの同期と、表示範囲に合わせたY軸範囲の調整
+//  ・StockChartView+HighLowLabels.swift  … 表示中の範囲の最高値・最安値の文字
+//  ・StockChartView+DGChartEnum.swift    … DGChartEnum の enum で設定するプロパティ(mainChart・subChart など)と銘柄コード
+//  ・StockChartStyle.swift               … 見た目の設定(色・フォント・余白など)
+//  ・ChartAxisFormatters.swift           … 軸ラベル・価格などの数値の書式
+//  Chart/Renderers/(DGCharts の描き方を変える部品)
+//  ・LatestAlignedXAxisRenderer.swift    … X軸ラベル(日付)をどの足の下に置くか
+//  ・AlignedYAxisRenderer.swift          … Y軸ラベルの揃え方
+//  ・CloudCombinedRenderer.swift         … 一目均衡表の雲の塗りつぶし
+//  ・SafePinchCombinedChartView.swift    … ピンチ操作のクラッシュ対策をしたチャート
+//  Crosshair/(4本値)
+//  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線・4本値の表示・操作
+//  ・ChartCrosshairViews.swift           … 十字線・4本値の枠・マーカーの部品
+//  初めて読む場合は、このファイル → Layout → Rendering → AxisRange → Crosshair の順がおすすめ。
+//
+//  【描画の流れ】
+//   display(...) で内容を受け取る
+//     → render()               (Rendering) DGCharts のデータを作ってチャートに渡す
+//     → updateAxisRanges(...)  (AxisRange) 見えている範囲の値に合わせてY軸の上限・下限を決める
+//     → updateCrosshair()      (Crosshair) 4本値がオンなら十字線を置き直す
+//   スクロール・ズームのたびに、updateAxisRanges → updateCrosshair が呼ばれる
+//
+//  【ラベルの種類と位置】
+//  ・凡例(priceLegendLabel / subLegendLabel)
+//      「移動平均 短期移動平均(5) 長期移動平均(25)」のような1行のテキスト。
+//      DGCharts 標準の凡例は使わず、UILabel を外枠の内側・左上に重ねて表示している。
+//        メイン: 外枠の上端から style.legendTopInset(3pt)下、左端から style.legendLeadingInset(8pt)右
+//        サブ  : 区切り線の下端から style.subLegendTopInset(2pt)下、左端から 8pt 右
+//      文字列は Model(ChartContentBuilder)が付けた legendTitle / label から作る(Rendering)。
+//      凡例とチャートの線が重ならないよう、Y軸の上側に余白を取っている(AxisRange)。
+//  ・Y軸ラベル(価格・指標の値)
+//      外枠の右側、幅 style.rightAxisWidth(90pt)の領域に DGCharts が描く。
+//      外枠の右端から style.yAxisLabelOffset(10pt)離して左揃え(style で中央揃えにもできる)で表示する。
+//  ・X軸ラベル(日付)
+//      外枠の下側、高さ style.xAxisLabelHeight(20pt)の領域に DGCharts が描く。
+//      サブチャートがあるときはサブ、ないときはメインのチャートにだけ表示する。
+//
+//  【仕組み】
+//  ・メイン/サブは別々の CombinedChartView(DGCharts のチャート)だが、外枠(frameView)と
+//    区切り線(dividerView)を上から重ねて描くことで「1つの枠の中に2つのチャート」があるように見せている。
+//  ・X軸の値は日付ではなく「データの何本目か(0, 1, 2, …)」。日付を使うと土日・祝日が空白になるため。
+//  ・指標の計算や「どの指標を表示するか」の状態は持たない(Model / Controller の責務)。
+//
+
+import UIKit
+import DGCharts
+
+final class StockChartView: UIView {
+
+    // MARK: - 設定(外から変更する)
+
+    /// 見た目の設定。変更すると現在の内容を再描画する(表示位置は初期状態に戻る)
+    var style = StockChartStyle() {
+        didSet {
+            self.applyStyle()
+            self.render(keepingMatrix: nil)
+        }
+    }
+
+    /// 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次。描き方は国内/海外の2通り)。setCandles(_:period:) での描き方が変わる
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// チャートの種類(chartType)は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
+    /// (最初は国内・海外ともローソク足。横画面(StockChartViewController)の海外は、折線チャートから始まる)。
+    /// chartType は market を設定したあとで設定する
+    @objc var market: IndexMarket = .japanIndex {
+        didSet {
+            guard self.market != oldValue else {
+                return
+            }
+            self.chartTypeByMarket[oldValue] = self.chartType
+            self.chartType = self.chartTypeByMarket[self.market] ?? .candlestick
+        }
+    }
+
+    /// 指数の種類ごとに覚えておくチャートの種類(market を切り替えたときに戻す)
+    private var chartTypeByMarket: [IndexMarket: ChartType] = [:]
+
+    /// 足種。設定すると、足種に合った見た目(日付の書式・日付ラベルの置き方・初期表示本数。ChartPeriod)に切り替わる。
+    /// setCandles(_:) は、この足種の移動平均の期間・出来高の凡例名で描く。
+    /// 同じ足種を設定し直しても見た目は上書きしないので、足種を設定したあとで visibleCount などを変えれば、その値が使われる。
+    /// 初期値の日足は、style の初期値(初期表示 50本・日付「M/d」)と同じ
+    ///
+    ///   Objective-C:
+    ///       chartView.period = ChartPeriodWeekly;   // 週足の見た目に切り替わる
+    ///       chartView.visibleCount = 30;            // 必要なら、足種を設定したあとで変える
+    ///       [chartView setCandles:candles];         // 週足の設定(移動平均 13/26 など)で描く
+    @objc var period: ChartPeriod = .daily {
+        didSet {
+            guard self.period != oldValue else {
+                return
+            }
+            // style を変えると描き直される(新しいデータは、このあと setCandles で渡される)
+            self.style = self.style.applying(self.period)
+        }
+    }
+
+    /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類で選べない種類(海外指数の VWAP・新値足)は、ローソク足で描く(ChartType.choices)
+    /// 指標を使わない種類(VWAP・新値足・国内の折線チャート)にすると、メイン・サブとも「なし」になる
+    /// (ローソク足に戻しても「なし」のまま)
+    @objc var chartType: ChartType = .candlestick {
+        didSet {
+            guard self.chartType != oldValue else {
+                return
+            }
+            if !self.chartType.usesTechnicalIndicators(in: self.market) {
+                self.mainIndicator = .candleOnly
+                self.subIndicator = .hidden
+            }
+        }
+    }
+
+    /// メインチャートの指標。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類・足種で選べない指標(1分足の一目均衡表など)は、移動平均線で描く(MainChartIndicator.choices)
+    @objc var mainIndicator: MainChartIndicator = .movingAverage
+
+    /// サブチャートの指標。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類・足種で選べない指標(1分足の MACD など)は、出来高(海外指数は なし)で描く(SubChartIndicator.choices)
+    @objc var subIndicator: SubChartIndicator = .volume
+
+    /// 表示オプション(Y軸固定・4本値)。変更すると即座に反映する
+    var displayOptions = ChartDisplayOptions() {
+        didSet {
+            guard self.displayOptions != oldValue else {
+                return
+            }
+            self.applyDisplayOptions()
+        }
+    }
+
+    // MARK: - 定数
+
+    /// 各チャートの描画領域の上下に確保する余白。
+    /// 描画領域の端ちょうどにあるY軸ラベルは文字の半分が領域外にはみ出すため、
+    /// その部分がチャートViewの境界で切れないように余白を取っておく。
+    /// (メインとサブはこの余白ぶん重ねて配置するので、見た目上の隙間にはならない)
+    let labelOverflowInset: CGFloat = 8
+
+    // MARK: - 部品(サブView)
+
+    /// メインチャート(ローソク足 + メイン指標)
+    let priceChartView = SafePinchCombinedChartView()
+    /// サブチャート(サブ指標)
+    let subChartView = SafePinchCombinedChartView()
+    /// メインチャート用のレンダラー(描画処理)。一目均衡表の雲を塗るために DGCharts 標準のものから差し替えている
+    lazy var priceRenderer = CloudCombinedRenderer(
+        chart: self.priceChartView, animator: self.priceChartView.chartAnimator, viewPortHandler: self.priceChartView.viewPortHandler)
+    /// メインチャートの X軸ラベルの描画処理。最新の足を基準にラベルを並べるため、DGCharts 標準のものから差し替えている
+    lazy var priceXAxisRenderer = LatestAlignedXAxisRenderer(
+        viewPortHandler: self.priceChartView.viewPortHandler, axis: self.priceChartView.xAxis,
+        transformer: self.priceChartView.getTransformer(forAxis: .left))
+    /// メインチャートの Y軸ラベルの描画処理。中央揃え・枠内に収める表示に切り替えられるよう、DGCharts 標準のものから差し替えている
+    lazy var priceYAxisRenderer = AlignedYAxisRenderer(
+        viewPortHandler: self.priceChartView.viewPortHandler, axis: self.priceChartView.rightAxis,
+        transformer: self.priceChartView.getTransformer(forAxis: .right))
+    /// サブチャートの Y軸ラベルの描画処理(同上)
+    lazy var subYAxisRenderer = AlignedYAxisRenderer(
+        viewPortHandler: self.subChartView.viewPortHandler, axis: self.subChartView.rightAxis,
+        transformer: self.subChartView.getTransformer(forAxis: .right))
+    /// サブチャートの X軸ラベルの描画処理(同上)
+    lazy var subXAxisRenderer = LatestAlignedXAxisRenderer(
+        viewPortHandler: self.subChartView.viewPortHandler, axis: self.subChartView.xAxis,
+        transformer: self.subChartView.getTransformer(forAxis: .left))
+    /// メイン・サブ全体を囲む外枠(チャートの上に重ねて表示)
+    let frameView = UIView()
+    /// メインとサブの間の区切り線
+    let dividerView = UIView()
+    /// メインチャートの凡例(例:「移動平均 短期移動平均(5) 長期移動平均(25)」)。外枠の内側・左上に重ねて表示する
+    let priceLegendLabel = UILabel()
+    /// サブチャートの凡例(例:「出来高 出来高移動平均」)。区切り線のすぐ下・左端に重ねて表示する
+    let subLegendLabel = UILabel()
+    /// データが0件のときのメッセージ(「現在、指定の条件で表示できる情報はありません。」)。メインチャートの凡例の下に表示する
+    let noDataLabel = UILabel()
+    /// 表示中の範囲の最高値(その足の上に表示。style.showsHighLowLabels が true のとき)
+    let highPriceLabel = UILabel()
+    /// 表示中の範囲の最安値(その足の下に表示。style.showsHighLowLabels が true のとき)
+    let lowPriceLabel = UILabel()
+
+    // MARK: - 部品(4本値の表示用)
+
+    /// 十字線(4本値がオンのときに表示)
+    let crosshairView = CrosshairOverlayView()
+    /// 選択中の足の4本値の枠
+    let ohlcInfoView = OHLCInfoView()
+    /// 十字線の横線の位置の値を表示するマーカー(外枠の左端寄り・グレーの六角形)
+    let valueMarker = CrosshairMarkerLabel(shape: .hexagon)
+    /// 十字線の縦線の位置を示すマーカー(X軸・赤い上向き矢印。文字なし)
+    let dateMarker = CrosshairMarkerLabel(shape: .arrowUp)
+    /// 十字線の横線の位置を示すマーカー(Y軸側の右端・赤い左向き矢印)
+    let yAxisMarker = CrosshairMarkerLabel(shape: .arrowLeft)
+    /// 十字線を動かすジェスチャー(タップ・1本指ドラッグ)。メイン・サブそれぞれに付ける
+    var crosshairRecognizers: [UIGestureRecognizer] = []
+    /// 十字線の位置(このViewの座標)。指の位置に合わせて動く(縦線も足の中心には合わせない。4本値はこの X に一番近い足)。
+    /// nil の場合は次回表示時に、メインチャートの描画領域の中央に置く
+    var crosshairPoint: CGPoint?
+    /// ドラッグ中に動かす十字線の線(なぞり始めた場所で決める。nil = ドラッグしていない・動かさない)
+    var crosshairDragTarget: CrosshairMoveTarget?
+    /// 4本値を薄く表示する予約(一定時間動かさなかったら実行する。動かすと取り消して予約し直す)
+    var crosshairFadeWorkItem: DispatchWorkItem?
+
+    // MARK: - レイアウトの制約(スタイル・サブチャートの有無によって変わるもの)
+
+    /// メインチャートの凡例の上端(style.legendTopInset)
+    var priceLegendTopConstraint: NSLayoutConstraint?
+    /// サブチャートの凡例の上端(style.subLegendTopInset)
+    var subLegendTopConstraint: NSLayoutConstraint?
+    /// 凡例の左端(style.legendLeadingInset。メイン・サブ・データなしのメッセージ)
+    var legendLeadingConstraints: [NSLayoutConstraint] = []
+
+    /// サブチャートを区切り線の位置まで重ねるための制約
+    var subTopConstraint: NSLayoutConstraint?
+    /// 外枠の右端(Y軸ラベル領域の左端)を決める制約
+    var frameTrailingConstraint: NSLayoutConstraint?
+    /// 区切り線の太さを決める制約
+    var dividerHeightConstraint: NSLayoutConstraint?
+    /// [サブあり] メインとサブの高さ比を決める制約
+    var priceHeightConstraint: NSLayoutConstraint?
+    /// [サブあり] 外枠の下端をサブチャートのX軸ラベル領域の上端に合わせる制約
+    var frameBottomWithSubConstraint: NSLayoutConstraint?
+    /// [サブなし] メインチャートの下端をこのViewの下端に合わせる制約
+    var priceBottomConstraint: NSLayoutConstraint?
+    /// [サブなし] 外枠の下端をメインチャートのX軸ラベル領域の上端に合わせる制約
+    var frameBottomWithoutSubConstraint: NSLayoutConstraint?
+
+    // MARK: - 表示中の内容
+
+    /// 表示中のローソク足データ(古い順)
+    var candles: [StockCandle] = []
+    /// 表示中のメインチャートの内容
+    var mainContent = MainChartContent()
+    /// 表示中のサブチャートの内容(nil = サブチャートなし)
+    var subContent: SubChartContent?
+    /// 値のある最初の足より前に、日付だけを並べる日時(1分足・日中足の、まだ値のない時間帯。古い順)
+    var leadingDates: [Date] = []
+    /// 値のある最後の足より後ろに、日付だけを並べる日時(1分足・日中足の、これから値が来る時間帯。古い順)
+    var trailingDates: [Date] = []
+
+    /// データの右端より先に空ける本数(一目均衡表の先行スパン・日付だけを並べる時間帯。それ以外は 0)
+    var futureCount: Int {
+        return max(self.mainContent.futureCount, self.trailingDates.count)
+    }
+
+    /// X軸に並ぶ本数(先行スパンの先の部分を含む)
+    var totalCount: Int {
+        return self.candles.count + self.futureCount
+    }
+
+    /// 初期表示する本数(nil = 全件)。表示内容で本数が決まっている場合(新値足)はそちらを優先する
+    var effectiveVisibleCount: Int? {
+        if let fixedVisibleCount = self.mainContent.fixedVisibleCount {
+            return fixedVisibleCount
+        }
+        return self.style.visibleCount
+    }
+
+    /// データの左端より前に空けておく本数。
+    /// 日付だけを並べる時間帯の本数に、X軸の本数が足りないときに左側を空ける本数を足す
+    /// (スクロールできる範囲の最小の本数(minimumScrollCount)・新値足を右寄せにする本数(fixedVisibleCount)のうち大きいほう)
+    var leadingBlankCount: Int {
+        let datedCount = self.leadingDates.count + self.totalCount
+        var requiredCount = 0
+        if let fixedVisibleCount = self.mainContent.fixedVisibleCount {
+            requiredCount = max(requiredCount, fixedVisibleCount)
+        }
+        if let minimumScrollCount = self.mainContent.minimumScrollCount {
+            requiredCount = max(requiredCount, minimumScrollCount)
+        }
+        return self.leadingDates.count + max(0, requiredCount - datedCount)
+    }
+
+    /// X軸の左端の値。両端の足が半分切れないよう、前に 0.5 本広げる(右寄せの場合は空ける本数も含める)
+    var xAxisMinimum: Double {
+        return -0.5 - Double(self.leadingBlankCount)
+    }
+
+    /// X軸の右端の値。両端の足が半分切れないよう、最後の足(先行スパンの先を含む)の 0.5 本先まで広げる
+    var xAxisMaximum: Double {
+        return Double(self.totalCount) - 0.5
+    }
+
+    /// サブチャートを表示中か
+    var hasSubChart: Bool {
+        return self.subContent != nil
+    }
+
+    /// 前回データを表示したときの、表示範囲を引き継ぐかを決める条件(VisibleRangeKey)。nil = 引き継がない
+    var displayedRangeKey: VisibleRangeKey?
+
+    /// データが0件のときのメッセージを表示するか。
+    /// display で空のデータを渡されたときだけ true(clear で消したときは何も表示しない)
+    var showsNoDataMessage = false
+
+    // MARK: - 初期化
+
+    /// コードから生成された場合
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        self.setup()
+    }
+
+    /// Storyboard / XIB から生成された場合
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        self.setup()
+    }
+
+    // MARK: - 外から呼ぶ入口
+
+    /// 描画内容を表示する。
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ
+    ///   - main: メインチャート(ローソク足に重ねる部分)の内容
+    ///   - sub: サブチャートの内容。nil の場合はサブチャートを隠し、メインチャートを全高で表示する
+    ///   - keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する(指標の切り替え時など)
+    ///   - leadingDates: 値のある最初の足より前に、日付だけを並べる日時(CandleSlots.leadingDates)
+    ///   - trailingDates: 値のある最後の足より後ろに、日付だけを並べる日時(CandleSlots.trailingDates)
+    ///   - rangeKey: データを更新したときに表示範囲を引き継ぐかを決める条件(足種・指数の種類・チャートの種類)。
+    ///               前回と同じなら、データの更新とみなして直前の表示範囲(何本目〜何本目)を引き継ぐ。nil なら引き継がない
+    func display(candles: [StockCandle], main: MainChartContent, sub: SubChartContent?, keepsViewport: Bool = false,
+                 leadingDates: [Date] = [], trailingDates: [Date] = [], rangeKey: VisibleRangeKey? = nil) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: {
+            self.display(candles: candles, main: main, sub: sub, keepsViewport: keepsViewport,
+                         leadingDates: leadingDates, trailingDates: trailingDates, rangeKey: rangeKey)
+        }) else {
+            return
+        }
+
+        // データの更新(足種・指数の種類・チャートの種類が前回と同じ)なら、直前の表示範囲を引き継ぐ。
+        // 内容を差し替える前に取得しておく(keepsViewport のときは、変換行列でそのまま維持するので使わない)
+        var keptRange: (low: Double, high: Double)?
+        if !keepsViewport {
+            if let rangeKey {
+                if rangeKey == self.displayedRangeKey {
+                    keptRange = self.currentVisibleRange()
+                }
+            }
+        }
+        if let rangeKey {
+            self.displayedRangeKey = rangeKey
+        }
+
+        // 維持する表示位置・拡大率(nil = 初期表示位置に戻す)。内容を差し替える前に取得しておく
+        var keptMatrix: CGAffineTransform?
+        if keepsViewport {
+            // 日付だけを並べる本数が変わると X軸の範囲が変わるので、同じ行列は使えない
+            if leadingDates.count == self.leadingDates.count {
+                if trailingDates.count == self.trailingDates.count {
+                    keptMatrix = self.currentMatrixIfReusable(candleCount: candles.count, futureCount: main.futureCount,
+                                                              fixedVisibleCount: main.fixedVisibleCount)
+                }
+            }
+        }
+
+        // サブチャートの表示/非表示が切り替わるか(今の表示状態と、新しい内容にサブがあるかを比べる)
+        let willShowSub = sub != nil
+        let subVisibilityChanged = willShowSub != self.hasSubChart
+
+        // データ件数が変わったら(別のデータになったら)十字線の位置はリセットする
+        if candles.count != self.candles.count {
+            self.crosshairPoint = nil
+        }
+
+        self.candles = candles
+        self.mainContent = main
+        self.subContent = sub
+        // 値のある足がない場合は、日付だけを並べても意味がないので並べない(メッセージを表示する)
+        if candles.isEmpty {
+            self.leadingDates = []
+            self.trailingDates = []
+        } else {
+            self.leadingDates = leadingDates
+            self.trailingDates = trailingDates
+        }
+        // データが0件なら、枠と凡例を残したままメッセージを表示する
+        self.showsNoDataMessage = candles.isEmpty
+
+        if subVisibilityChanged {
+            self.updateSubChartVisibility()
+        }
+        self.render(keepingMatrix: keptMatrix)
+
+        // データの更新: 直前に見ていた範囲(何本目〜何本目)を、新しいデータのスクロールできる範囲に収めて表示する
+        if let keptRange {
+            if !self.candles.isEmpty {
+                self.restoreVisibleRange(clamping: keptRange)
+            }
+        }
+    }
+
+    /// 次にデータを渡したときは、直前の表示範囲を引き継がずに初期表示(直近 visibleCount 本・右端)にする。
+    /// 銘柄を切り替えたときなどに呼ぶ(足種・指数の種類・チャートの種類が変わったときは、呼ばなくても初期表示になる)
+    @objc func resetVisibleRange() {
+        self.displayedRangeKey = nil
+    }
+
+    /// 表示内容をすべて消す(Objective-C からは [chartView clear])
+    @objc func clear() {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.clear() }) else {
+            return
+        }
+        self.candles = []
+        self.mainContent = MainChartContent()
+        self.subContent = nil
+        self.leadingDates = []
+        self.trailingDates = []
+        self.crosshairPoint = nil
+        self.showsNoDataMessage = false
+        self.render(keepingMatrix: nil)
+    }
+
+    /// 現在の表示位置・拡大率(変換行列)を、新しい内容でもそのまま使えるなら返す。使えなければ nil
+    ///
+    /// DGCharts は「どこを・何倍で表示しているか」を変換行列(touchMatrix)で持っている。
+    /// X軸の範囲が変わらなければ、同じ行列を使うと同じ位置が表示される。
+    /// - Parameters:
+    ///   - candleCount: 新しく表示するデータの件数
+    ///   - futureCount: 新しく表示する内容の、データの右端より先に描く本数
+    ///   - fixedVisibleCount: 新しく表示する内容の、表示本数の固定値(新値足)
+    private func currentMatrixIfReusable(candleCount: Int, futureCount newFutureCount: Int,
+                                         fixedVisibleCount: Int?) -> CGAffineTransform? {
+        // まだ何も表示していない
+        guard self.priceChartView.data != nil else {
+            return nil
+        }
+        // レイアウト前で、描画領域の幅が確定していない
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else {
+            return nil
+        }
+        // データ件数が変わると X軸の範囲が変わるので、同じ行列では同じ位置にならない
+        guard candleCount == self.candles.count else {
+            return nil
+        }
+        // 先行スパンの本数(一目均衡表の有無)が変わっても X軸の範囲が変わる
+        guard newFutureCount == self.mainContent.futureCount else {
+            return nil
+        }
+        // 表示本数の固定(新値足の右寄せ)が変わっても X軸の範囲が変わる
+        guard fixedVisibleCount == self.mainContent.fixedVisibleCount else {
+            return nil
+        }
+
+        return self.priceChartView.viewPortHandler.touchMatrix
+    }
+
+    // MARK: - サイズ変更(画面回転など)
+
+    override func layoutSubviews() {
+        // DGCharts はスクロール位置をピクセル単位で保持しているため、画面回転などで幅が変わると
+        // 表示範囲がずれてしまう。サイズ変更前の表示範囲(X軸の値)を覚えておき、変更後に復元する
+        let oldWidth = self.priceChartView.viewPortHandler.contentWidth
+        let oldHeight = self.priceChartView.viewPortHandler.contentHeight
+        let oldRange = self.currentVisibleRange()
+
+        super.layoutSubviews()  // ここでチャートのサイズが変わる
+
+        let widthChanged = self.priceChartView.viewPortHandler.contentWidth != oldWidth
+        let heightChanged = self.priceChartView.viewPortHandler.contentHeight != oldHeight
+
+        // 幅が変わったら、表示範囲を戻す
+        var restoredRange = false
+        if widthChanged {
+            restoredRange = self.restoreRangeAfterWidthChange(oldWidth: oldWidth, oldRange: oldRange)
+        }
+        // 表示範囲を戻さなかった場合(初めてサイズが決まったときなど)、高さが変わっていれば Y軸範囲を計算し直す。
+        // (表示範囲を戻した場合は、その中で Y軸範囲も計算し直している)
+        if !restoredRange {
+            if heightChanged {
+                // 凡例の下に空ける余白(Y軸の上側の余白)が変わるので、Y軸範囲を計算し直す
+                self.updateAxisRangesAfterHeightChange(isFirstLayout: oldWidth == 0)
+            }
+        }
+
+        // 十字線の位置はこの View の座標で覚えているので、サイズが変わると(画面の回転など)外枠の外を指してしまう。
+        // サイズが変わったら、最新の足の位置から置き直す(次の updateCrosshair で決め直される)
+        let sizeChanged = widthChanged || heightChanged
+        if sizeChanged {
+            self.crosshairPoint = nil
+        }
+        self.updateCrosshair()
+    }
+
+    /// 今見えている X軸の範囲(何本目〜何本目)。まだ表示していない・レイアウト前なら nil
+    private func currentVisibleRange() -> (low: Double, high: Double)? {
+        guard self.priceChartView.data != nil else {
+            return nil
+        }
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else {
+            return nil
+        }
+        return (low: self.priceChartView.lowestVisibleX, high: self.priceChartView.highestVisibleX)
+    }
+
+    /// 幅が変わったあとに、表示範囲を戻す(Y軸範囲も計算し直す)
+    /// - Parameters:
+    ///   - oldWidth: 変更前の描画領域の幅
+    ///   - oldRange: 変更前に見えていた X軸の範囲(取れなかった場合は nil)
+    /// - Returns: 表示範囲を戻した(または初期表示からやり直した)か。
+    ///            false なら何もしていない(初めてサイズが決まった・まだ何も表示していない)
+    private func restoreRangeAfterWidthChange(oldWidth: CGFloat, oldRange: (low: Double, high: Double)?) -> Bool {
+        // 画面の回転など: 変更前と同じ範囲(何本目〜何本目)が見えるように戻す
+        if let oldRange {
+            self.restoreVisibleRange(low: oldRange.low, high: oldRange.high)
+            return true
+        }
+        // 初めてサイズが決まった
+        guard oldWidth != 0 else {
+            return false
+        }
+        // まだ何も表示していない
+        guard self.priceChartView.data != nil else {
+            return false
+        }
+        // 変更前の幅では表示範囲が取れなかった(描画領域の幅が 0 以下の狭い幅でデータを渡された):
+        // その幅で決めた拡大率は当てにならないので、初期表示(直近 visibleCount 本・右端)からやり直す
+        self.render(keepingMatrix: nil)
+        return true
+    }
+
+    /// 高さが変わったあとに、Y軸範囲を計算し直す
+    /// - Parameter isFirstLayout: 初めてサイズが決まったときか(このときはまだ表示範囲が取れないので、初期表示範囲で計算する)
+    private func updateAxisRangesAfterHeightChange(isFirstLayout: Bool) {
+        guard self.priceChartView.data != nil else {
+            return
+        }
+        if isFirstLayout {
+            self.updateAxisRangesForInitialCandles()
+        } else {
+            self.updateAxisRangesForVisibleCandles()
+        }
+    }
+
+    /// 指定した X軸の範囲を、スクロールできる範囲(X軸の左端〜右端)に収めて表示する。
+    /// 幅がスクロールできる範囲より広ければ全体を、はみ出す場合は端に寄せて表示する
+    ///
+    ///   例) スクロールできる範囲 0〜100、指定 90〜120(幅 30)→ 右端からはみ出すので 70〜100 にする
+    private func restoreVisibleRange(clamping range: (low: Double, high: Double)) {
+        let axisMinimum = self.xAxisMinimum
+        let axisMaximum = self.xAxisMaximum
+        // 1. 幅: 指定の幅のまま。スクロールできる範囲より広ければ、範囲の幅にする
+        let width = min(range.high - range.low, axisMaximum - axisMinimum)
+        // 2. 左端: 左端からはみ出していれば、範囲の左端に合わせる
+        var low = max(range.low, axisMinimum)
+        // 3. 右端からはみ出していれば、右端に合わせて左へずらす
+        if low + width > axisMaximum {
+            low = axisMaximum - width
+        }
+        self.restoreVisibleRange(low: low, high: low + width)
+    }
+
+    /// 指定した X軸の範囲(low〜high)が表示されるよう、両チャートの拡大率とスクロール位置を設定する
+    private func restoreVisibleRange(low: Double, high: Double) {
+        let visibleWidth = high - low
+        guard visibleWidth > 0 else {
+            return
+        }
+
+        // X軸全体の幅(xAxisMinimum 〜 xAxisMaximum)
+        let totalWidth = self.xAxisMaximum - self.xAxisMinimum
+
+        for chart in [self.priceChartView, self.subChartView] {
+            chart.fitScreen()  // 拡大率・スクロール位置をリセット(拡大・縮小の限界もリセットされる)
+            self.applyZoomLimits(to: chart)  // 拡大・縮小の限界を設定し直す
+            chart.zoom(scaleX: CGFloat(totalWidth / visibleWidth), scaleY: 1, x: 0, y: 0)  // 表示本数に合わせて拡大
+            chart.moveViewToX(low)  // 左端を元の位置に合わせる
+        }
+        self.updateAxisRanges(from: Int(low.rounded()), to: Int(high.rounded()))
+    }
+}
+
+// MARK: - 直接呼び出し用(Controller を使わない場合)
+
+/// 指標の切り替えメニューが不要な画面(縦画面など)で、StockChartView だけを置いて使うための入口。
+/// 描画内容の組み立て(Model: ChartContentBuilder)もここで行う。
+///
+///   | やりたいこと               | Swift                                                   | Objective-C                                              |
+///   |----------------------------|---------------------------------------------------------|----------------------------------------------------------|
+///   | プロパティの設定で表示     | setCandles(candles)                                     | [chartView setCandles:candles]                           |
+///   | 足種を指定して表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
+///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseasRealtime)  | [chartView setCandles:candles period:… market:IndexMarketOverseasRealtime] |
+///   | 計算済みの指標の値で表示   | setCandles(candles, indicatorValues: values)            | [chartView setCandles:candles indicatorValues:values]    |
+///   | 指標を指定して表示         | setCandles(candles, mainIndicator: .macd, …)            | [chartView setCandles:candles mainIndicator:… subIndicator:…] |
+///   | パラメータも指定(Swift のみ)| setCandles(candles, mainIndicator: …, subIndicator: …, parameters: …) | (IndicatorParameters は struct のため不可)     |
+///
+/// 「プロパティの設定で表示」は、period(足種)・market(指数の種類)・chartType(チャートの種類)・
+/// mainIndicator / subIndicator(指標)を先に設定しておき、データを渡す形(Objective-C の enum でも設定できる)
+extension StockChartView {
+
+    /// ローソク足データを渡して、プロパティ(period・market・chartType・mainIndicator・subIndicator)の設定で描画する。
+    /// プロパティは先に設定しておく(何も設定しなければ、日足・国内指数・ローソク足・移動平均線 + 出来高)
+    /// - Parameter candles: 日付の古い順に並んだローソク足データ(period の足種のデータ)
+    @objc func setCandles(_ candles: [StockCandle]) {
+        self.setCandles(candles, period: self.period, market: self.market)
+    }
+
+    /// ローソク足データを渡して、足種に合った設定で描画する(period もこの足種になる。チャートの種類・指標はプロパティの設定)。
+    /// 足種によって、X軸の日付の書式・ラベルの個数・初期表示本数・移動平均の期間・出来高の凡例名が変わる(ChartPeriod)
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
+    @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        // 指数の種類は market の値(既定は国内指数)
+        self.setCandles(candles, period: period, market: self.market)
+    }
+
+    /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する(period・market もこの値になる)。
+    /// チャートの種類・指標はプロパティ(chartType・mainIndicator・subIndicator)の設定。
+    /// 既定(ローソク足・移動平均線 + 出来高)の場合:
+    ///   ・国内指数: ローソク足 + 移動平均線、サブチャートに出来高
+    ///   ・海外指数: ローソク足 + 移動平均線(サブチャートなし。メインチャートを全高で表示)
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
+    ///   - market: 指数の種類
+    @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod, market: IndexMarket) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period, market: market) }) else {
+            return
+        }
+
+        self.market = market
+        // 足種が変わった場合は、足種に合わせた見た目に切り替わる(period の didSet)
+        self.period = period
+        self.render(candles, indicatorValues: nil)
+    }
+
+    /// ローソク足データと、チャートの外(Objective-C など)で計算した指標の値を渡して描画する。
+    /// 値が入っている指標は計算せずにその値で描き、入っていない指標はチャートが計算する(ChartIndicatorValues)。
+    /// 足種・指数の種類・チャートの種類・指標は、プロパティ(period・market・chartType・mainIndicator・subIndicator)の設定。
+    ///
+    ///   指標の値は、次の値で計算しておく(凡例・描く指標と合わせるため)
+    ///     ・期間など          : indicatorPeriods
+    ///     ・描くチャートの種類 : effectiveChartType
+    ///     ・描く指標          : effectiveMainIndicator / effectiveSubIndicator
+    ///
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(period の足種のデータ)
+    ///   - indicatorValues: チャートの外で計算した指標の値(candles と同じ並び)。nil ならすべてチャートが計算する
+    @objc func setCandles(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, indicatorValues: indicatorValues) }) else {
+            return
+        }
+
+        self.render(candles, indicatorValues: indicatorValues)
+    }
+
+    /// プロパティの設定で、描画内容を組み立てて表示する。
+    /// 日時だけの足(StockCandle.hasValue = false)は、先頭側・末尾側を X軸の日付だけに使い、指標の計算には使わない
+    private func render(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {
+        let slots = CandleSlots(candles)
+        // 選べない組み合わせ(海外指数の出来高・1分足の MACD など)は、選べるものに置き換えて描く(プロパティの値は変えない)
+        var builder = ChartContentBuilder(candles: slots.candles, parameters: self.period.indicatorParameters)
+        builder.precomputed = indicatorValues
+        let chartType = self.effectiveChartType
+        let content = builder.content(for: chartType, mainIndicator: self.effectiveMainIndicator,
+                                      subIndicator: self.effectiveSubIndicator, market: self.market, period: self.period)
+        // 足種・指数の種類・チャートの種類が前回と同じなら、データの更新として直前の表示範囲を引き継ぐ
+        let rangeKey = VisibleRangeKey(period: self.period, market: self.market, chartType: chartType)
+        self.display(candles: content.candles, main: content.main, sub: content.sub,
+                     leadingDates: Self.leadingDates(of: slots, chartType: chartType),
+                     trailingDates: Self.trailingDates(of: slots, chartType: chartType),
+                     rangeKey: rangeKey)
+    }
+
+    /// 値のある最初の足より前に並べる日時。新値足は時間の流れと関係なく並ぶので、日付だけの時間帯は並べない
+    static func leadingDates(of slots: CandleSlots, chartType: ChartType) -> [Date] {
+        guard chartType != .newPrice else {
+            return []
+        }
+        return slots.leadingDates
+    }
+
+    /// 値のある最後の足より後ろに並べる日時。新値足は時間の流れと関係なく並ぶので、日付だけの時間帯は並べない
+    static func trailingDates(of slots: CandleSlots, chartType: ChartType) -> [Date] {
+        guard chartType != .newPrice else {
+            return []
+        }
+        return slots.trailingDates
+    }
+
+    /// 指標の計算に使う期間など(今の足種 period のもの)。チャートの外で指標を計算するときは、この値で計算する
+    @objc var indicatorPeriods: ChartIndicatorPeriods {
+        return ChartIndicatorPeriods(parameters: self.period.indicatorParameters)
+    }
+
+    /// 実際に描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
+    /// (横画面の StockChartViewController.applyMarket と同じ)
+    @objc var effectiveChartType: ChartType {
+        guard ChartType.choices(for: self.market).contains(self.chartType) else {
+            return .candlestick
+        }
+        return self.chartType
+    }
+
+    /// 実際に描くメインチャートの指標。指数の種類・足種で選べない指標は移動平均線にする
+    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    @objc var effectiveMainIndicator: MainChartIndicator {
+        let choices = MainChartIndicator.choices(for: self.market, period: self.period)
+        guard choices.contains(self.mainIndicator) else {
+            return .movingAverage
+        }
+        return self.mainIndicator
+    }
+
+    /// 実際に描くサブチャートの指標。指数の種類・足種で選べない指標は出来高(出来高も選べない海外指数は なし)にする
+    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    @objc var effectiveSubIndicator: SubChartIndicator {
+        let choices = SubChartIndicator.choices(for: self.market, period: self.period)
+        if choices.contains(self.subIndicator) {
+            return self.subIndicator
+        }
+        if choices.contains(.volume) {
+            return .volume
+        }
+        return .hidden
+    }
+
+    /// ローソク足データを渡して、指定した指標で描画する(パラメータは既定値)
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ
+    ///   - mainIndicator: メインチャートの指標
+    ///   - subIndicator: サブチャートの指標(.hidden でサブチャートなし)
+    @objc func setCandles(_ candles: [StockCandle], mainIndicator: MainChartIndicator, subIndicator: SubChartIndicator) {
+        self.setCandles(candles, mainIndicator: mainIndicator, subIndicator: subIndicator,
+                        parameters: IndicatorParameters())
+    }
+
+    /// ローソク足データを渡して、指定した指標・パラメータで描画する(Swift のみ)
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ
+    ///   - mainIndicator: メインチャートの指標
+    ///   - subIndicator: サブチャートの指標(.hidden でサブチャートなし)
+    ///   - parameters: 指標の計算パラメータ(期間など)
+    func setCandles(_ candles: [StockCandle], mainIndicator: MainChartIndicator, subIndicator: SubChartIndicator,
+                    parameters: IndicatorParameters) {
+        // データが0件でも凡例は表示するので、描画内容は組み立てる(チャートの代わりにメッセージが表示される)。
+        // 日時だけの足は、先頭側・末尾側を X軸の日付だけに使う
+        let slots = CandleSlots(candles)
+        let builder = ChartContentBuilder(candles: slots.candles, parameters: parameters)
+        self.display(candles: slots.candles,
+                     main: builder.mainContent(for: mainIndicator),
+                     sub: builder.subContent(for: subIndicator),
+                     leadingDates: slots.leadingDates,
+                     trailingDates: slots.trailingDates)
+    }
+}
+
+// MARK: - Objective-C 向けのスタイル設定
+
+/// StockChartStyle は struct のため Objective-C から直接扱えない。
+/// よく変更する設定だけを @objc プロパティとして公開する(中身は style を読み書きしているだけ)。
+extension StockChartView {
+
+    // MARK: チャート全体
+
+    /// 初期表示する本数。0 以下を指定すると全件表示(Swift 側の visibleCount = nil に相当)
+    @objc var visibleCount: Int {
+        get {
+            return self.style.visibleCount ?? 0
+        }
+        set {
+            if newValue > 0 {
+                self.style.visibleCount = newValue
+            } else {
+                self.style.visibleCount = nil
+            }
+        }
+    }
+
+    /// 拡大の限界(ピンチで拡大したときに、最低でも表示する本数)。0 以下を指定すると制限なし(DGCharts の標準)
+    @objc var minimumVisibleCount: Int {
+        get {
+            return self.style.minimumVisibleCount ?? 0
+        }
+        set {
+            if newValue > 0 {
+                self.style.minimumVisibleCount = newValue
+            } else {
+                self.style.minimumVisibleCount = nil
+            }
+        }
+    }
+
+    /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数)。0 以下を指定すると全件まで縮小できる
+    @objc var maximumVisibleCount: Int {
+        get {
+            return self.style.maximumVisibleCount ?? 0
+        }
+        set {
+            if newValue > 0 {
+                self.style.maximumVisibleCount = newValue
+            } else {
+                self.style.maximumVisibleCount = nil
+            }
+        }
+    }
+
+    /// メインチャートとサブチャートの高さ比(メイン : サブ = priceHeightRatio : 1)
+    @objc var priceHeightRatio: CGFloat {
+        get {
+            return self.style.priceHeightRatio
+        }
+        set {
+            self.style.priceHeightRatio = newValue
+        }
+    }
+
+    /// 陽線(上昇)の色
+    @objc var increasingColor: UIColor {
+        get {
+            return self.style.increasingColor
+        }
+        set {
+            self.style.increasingColor = newValue
+        }
+    }
+
+    /// 陰線(下降)の色
+    @objc var decreasingColor: UIColor {
+        get {
+            return self.style.decreasingColor
+        }
+        set {
+            self.style.decreasingColor = newValue
+        }
+    }
+
+    /// X軸ラベルの日付の書式(例: "M/d"、"HH:mm")
+    @objc var dateFormat: String {
+        get {
+            return self.style.dateFormat
+        }
+        set {
+            self.style.dateFormat = newValue
+        }
+    }
+
+    /// データが0件のときに表示するメッセージ
+    @objc var noDataMessage: String {
+        get {
+            return self.style.noDataMessage
+        }
+        set {
+            self.style.noDataMessage = newValue
+        }
+    }
+
+    // MARK: 文字・ラベル
+
+    /// 凡例のフォント(「移動平均 短期移動平均(5) …」の文字)
+    @objc var legendFont: UIFont {
+        get {
+            return self.style.legendFont
+        }
+        set {
+            self.style.legendFont = newValue
+        }
+    }
+
+    /// X軸ラベル(日付)のフォント
+    @objc var xAxisFont: UIFont {
+        get {
+            return self.style.xAxisFont
+        }
+        set {
+            self.style.xAxisFont = newValue
+        }
+    }
+
+    /// Y軸ラベル(価格・指標の値)のフォント
+    @objc var yAxisFont: UIFont {
+        get {
+            return self.style.yAxisFont
+        }
+        set {
+            self.style.yAxisFont = newValue
+        }
+    }
+
+    /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ)
+    @objc var showsHighLowLabels: Bool {
+        get {
+            return self.style.showsHighLowLabels
+        }
+        set {
+            self.style.showsHighLowLabels = newValue
+        }
+    }
+
+    /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
+    @objc var legendTopInset: CGFloat {
+        get {
+            return self.style.legendTopInset
+        }
+        set {
+            self.style.legendTopInset = newValue
+        }
+    }
+
+    // MARK: 4本値
+
+    /// 4本値を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
+    @objc var crosshairFadeDelay: TimeInterval {
+        get {
+            return self.style.crosshairFadeDelay
+        }
+        set {
+            self.style.crosshairFadeDelay = newValue
+        }
+    }
+
+    /// 4本値を薄く表示するときの、4本値の枠・値のマーカー・矢印の不透明度(0 〜 1。既定 0.5)
+    @objc var crosshairFadedAlpha: CGFloat {
+        get {
+            return self.style.crosshairFadedAlpha
+        }
+        set {
+            self.style.crosshairFadedAlpha = newValue
+        }
+    }
+
+    /// 4本値を薄く表示するときの、十字線(縦線・横線)の不透明度(0 〜 1。既定 0.3)
+    @objc var crosshairFadedLineAlpha: CGFloat {
+        get {
+            return self.style.crosshairFadedLineAlpha
+        }
+        set {
+            self.style.crosshairFadedLineAlpha = newValue
+        }
+    }
+
+    /// 4本値の日付のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
+    @objc var dateMarkerImage: UIImage? {
+        get {
+            return self.style.dateMarkerImage
+        }
+        set {
+            self.style.dateMarkerImage = newValue
+        }
+    }
+
+    /// 4本値の価格のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
+    @objc var yAxisMarkerImage: UIImage? {
+        get {
+            return self.style.yAxisMarkerImage
+        }
+        set {
+            self.style.yAxisMarkerImage = newValue
+        }
+    }
+}
+
+// MARK: - 表示範囲を引き継ぐ条件
+
+/// データを更新したときに、直前の表示範囲を引き継ぐかを決める条件。
+/// 前回データを表示したときと同じなら「データの更新」とみなして、直前に見ていた範囲(何本目〜何本目)を引き継ぐ。
+/// 違えば(足種・指数の種類・チャートの種類を切り替えた)初期表示(直近 visibleCount 本・右端)にする。
+/// 銘柄の切り替えは StockChartView からはわからないので、resetVisibleRange() を呼んでもらう
+struct VisibleRangeKey: Equatable {
+    /// 足種
+    var period: ChartPeriod
+    /// 指数の種類
+    var market: IndexMarket
+    /// チャートの種類
+    var chartType: ChartType
+}
