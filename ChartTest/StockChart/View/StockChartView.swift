@@ -18,6 +18,7 @@
 //  ・渡された描画内容(MainChartContent / SubChartContent)を DGCharts で描画する
 //  ・レイアウト(外枠・区切り線・凡例・サブチャートの表示/非表示)
 //  ・スクロール/ピンチ操作のメイン・サブ間の同期、表示範囲に合わせたY軸範囲の調整
+//  ・表示オプション(Y軸固定・4本値。4本値オン中は十字線を常に表示し、指で動かせる)
 //  指標の計算や「どの指標を表示するか」の状態は持たない(Model / Controller の責務)。
 //
 //  【仕組み】
@@ -42,6 +43,16 @@ final class StockChartView: UIView {
         didSet {
             applyStyle()
             render(keepingMatrix: nil)
+        }
+    }
+
+    // MARK: - Display options
+
+    /// 表示オプション(Y軸固定・4本値)。変更すると即座に反映する
+    var displayOptions = ChartDisplayOptions() {
+        didSet {
+            guard displayOptions != oldValue else { return }
+            applyDisplayOptions()
         }
     }
 
@@ -70,6 +81,24 @@ final class StockChartView: UIView {
     private let priceLegendLabel = UILabel()
     /// サブチャートの凡例
     private let subLegendLabel = UILabel()
+    /// 選択中の足の十字線(4本値表示時)
+    private let crosshairView = CrosshairOverlayView()
+    /// 選択中の足の4本値の枠(4本値表示時)
+    private let ohlcInfoView = OHLCInfoView()
+    /// 十字線の横線の位置の値を表示するマーカー(外枠の左端・グレーの六角形)
+    private let valueMarker = CrosshairMarkerLabel(shape: .hexagon)
+    /// 十字線の縦線の位置の日付を表示するマーカー(X軸・赤い上向き矢印)
+    private let dateMarker = CrosshairMarkerLabel(shape: .arrowUp)
+    /// 十字線の横線の位置を示すマーカー(Y軸側の右端・赤い左向き矢印)
+    private let yAxisMarker = CrosshairMarkerLabel(shape: .arrowLeft)
+    /// 日付マーカー用の書式(style.dateFormat に合わせる)
+    private let badgeDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        return f
+    }()
+    /// 十字線を動かすジェスチャー(タップ・1本指ドラッグ)。メイン・サブそれぞれに付ける
+    private var crosshairRecognizers: [UIGestureRecognizer] = []
 
     // MARK: - Layout constraints(スタイル・サブチャート表示有無によって変わる制約)
 
@@ -103,6 +132,9 @@ final class StockChartView: UIView {
     private var totalCount: Int { candles.count + futureCount }
     /// サブチャートを表示中か
     private var hasSubChart: Bool { subContent != nil }
+    /// 十字線の位置(このViewの座標)。指の位置に合わせて動く。
+    /// 縦線はこの X に一番近い足にスナップする。nil の場合は次回表示時に最新の足の位置に置く
+    private var crosshairPoint: CGPoint?
 
     // MARK: - Init
 
@@ -136,6 +168,10 @@ final class StockChartView: UIView {
         let savedMatrix = priceChart.viewPortHandler.touchMatrix
         let subVisibilityChanged = (sub != nil) != hasSubChart
 
+        // データ件数が変わったら(別のデータになったら)4本値の選択は解除する
+        if candles.count != self.candles.count {
+            crosshairPoint = nil
+        }
         self.candles = candles
         self.mainContent = main
         self.subContent = sub
@@ -151,6 +187,7 @@ final class StockChartView: UIView {
         candles = []
         mainContent = MainChartContent()
         subContent = nil
+        crosshairPoint = nil
         render(keepingMatrix: nil)
     }
 
@@ -169,6 +206,8 @@ final class StockChartView: UIView {
         if let oldRange, priceChart.viewPortHandler.contentWidth != oldWidth {
             restoreVisibleRange(low: oldRange.low, high: oldRange.high)
         }
+        // サイズが変わると十字線の画面上の位置も変わるので更新する
+        updateCrosshair()
     }
 
     /// 指定した X軸の範囲(low〜high)が表示されるよう、両チャートの拡大率とスクロール位置を設定する
@@ -199,6 +238,28 @@ final class StockChartView: UIView {
         }
         // 雲を描けるレンダラーに差し替える(drawOrder などの設定より前に行う)
         priceChart.renderer = priceRenderer
+
+        // 4本値表示用の十字線・マーカー・枠(チャートの上に重ねる)。位置は updateCrosshair で直接設定する
+        [crosshairView, ohlcInfoView, valueMarker, dateMarker, yAxisMarker].forEach {
+            addSubview($0)
+            $0.isHidden = $0 !== crosshairView
+        }
+
+        // 十字線を動かすジェスチャー。4本値がオンのときだけ有効にする(applyDisplayOptions)
+        //   タップ       : タップした位置に十字線を移動
+        //   1本指ドラッグ: 十字線を指の位置に追従させる
+        // 4本値オン中はチャートのスクロールを2本指に切り替えるので(updateChartPanTouches)、1本指のドラッグと競合しない
+        for chart in [priceChart, subChart] {
+            let tap = UITapGestureRecognizer(target: self, action: #selector(chartTapped(_:)))
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(chartPanned(_:)))
+            pan.maximumNumberOfTouches = 1
+            pan.delegate = self  // 4本値オンのときだけ開始する(gestureRecognizerShouldBegin)
+            [tap, pan].forEach {
+                $0.isEnabled = false
+                chart.addGestureRecognizer($0)
+            }
+            crosshairRecognizers += [tap, pan]
+        }
 
         // 外枠・区切り線・凡例はチャートの上に重ねる。
         // タッチはチャートに届くよう isUserInteractionEnabled を false にしておく
@@ -257,6 +318,11 @@ final class StockChartView: UIView {
         frameView.layer.borderColor = style.borderColor.resolvedColor(with: traitCollection).cgColor
         frameView.layer.borderWidth = style.borderWidth
         dividerView.backgroundColor = style.dividerColor
+        crosshairView.lineColor = style.textColor
+        valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
+        dateMarker.fillColor = style.increasingColor
+        yAxisMarker.fillColor = style.increasingColor
+        badgeDateFormatter.dateFormat = style.dateFormat
 
         // --- メイン/サブ共通の設定 ---
         [priceChart, subChart].forEach { chart in
@@ -484,6 +550,160 @@ final class StockChartView: UIView {
         }
     }
 
+    // MARK: - Display options
+
+    /// 表示オプションを反映する
+    private func applyDisplayOptions() {
+        // 4本値: オンのときだけ十字線のジェスチャーを受け付け、チャートのスクロールを2本指に切り替える。
+        // オン/オフが切り替わったら、十字線は次回表示時に最新の足の位置から始める
+        crosshairRecognizers.forEach { $0.isEnabled = displayOptions.showsOHLC }
+        updateChartPanTouches()
+        crosshairPoint = nil
+
+        // Y軸固定: 現在の表示範囲でY軸範囲を計算し直す(固定の場合は全期間で計算される)
+        if priceChart.data != nil {
+            if priceChart.viewPortHandler.contentWidth > 0 {
+                updateAxisRanges(from: Int(priceChart.lowestVisibleX.rounded()),
+                                 to: Int(priceChart.highestVisibleX.rounded()))
+            } else {
+                // レイアウト前は表示範囲が取れないので、初期表示範囲で計算する
+                let firstIndex = style.visibleCount.map { max(0, totalCount - $0) } ?? 0
+                updateAxisRanges(from: firstIndex, to: totalCount - 1)
+            }
+        }
+        updateCrosshair()
+    }
+
+    // MARK: - Crosshair(十字線と4本値)
+
+    /// タップ: タップした位置に十字線を移動する
+    @objc private func chartTapped(_ recognizer: UITapGestureRecognizer) {
+        guard let chart = recognizer.view else { return }
+        moveCrosshair(to: chart.convert(recognizer.location(in: chart), to: self))
+    }
+
+    /// 1本指ドラッグ: 十字線を指の位置に追従させる
+    @objc private func chartPanned(_ recognizer: UIPanGestureRecognizer) {
+        guard let chart = recognizer.view else { return }
+        switch recognizer.state {
+        case .began, .changed:
+            moveCrosshair(to: chart.convert(recognizer.location(in: chart), to: self))
+        default:
+            break
+        }
+    }
+
+    /// 十字線を指定した位置(このViewの座標)に移動する。外枠の外は外枠の端に寄せる
+    private func moveCrosshair(to point: CGPoint) {
+        guard displayOptions.showsOHLC else { return }
+        let frameRect = frameView.frame
+        crosshairPoint = CGPoint(x: min(max(point.x, frameRect.minX), frameRect.maxX),
+                                 y: min(max(point.y, frameRect.minY), frameRect.maxY))
+        updateCrosshair()
+    }
+
+    /// DGCharts のスクロール(パン)に必要な指の本数を切り替える。
+    /// 4本値オン中は1本指のドラッグを十字線の移動に使うため、スクロールは2本指にする
+    private func updateChartPanTouches() {
+        let touches = displayOptions.showsOHLC ? 2 : 1
+        for chart in [priceChart, subChart] {
+            for recognizer in chart.gestureRecognizers ?? [] {
+                // 自分で追加した十字線用のパンは対象外(DGCharts が持つスクロール用のパンだけ変更する)
+                guard let pan = recognizer as? UIPanGestureRecognizer,
+                      !crosshairRecognizers.contains(pan) else { continue }
+                pan.minimumNumberOfTouches = touches
+            }
+        }
+    }
+
+    /// 十字線・マーカー・4本値の枠を配置する(指の移動・スクロール・ズーム・サイズ変更のたびに呼ぶ)。
+    /// 縦線は十字線の X に一番近い足にスナップし、4本値はその足の値を表示する
+    private func updateCrosshair() {
+        let frameRect = frameView.frame  // 外枠(メイン + サブの描画領域全体)
+        guard displayOptions.showsOHLC, !candles.isEmpty,
+              priceChart.viewPortHandler.contentWidth > 0, frameRect.width > 0 else {
+            crosshairView.hide()
+            [ohlcInfoView, valueMarker, dateMarker, yAxisMarker].forEach { $0.isHidden = true }
+            return
+        }
+        crosshairView.frame = bounds
+        let transformer = priceChart.getTransformer(forAxis: .right)
+
+        // 位置が未設定(4本値をオンにした直後・データ変更後)なら、表示範囲内の最新の足の終値の位置に置く
+        if crosshairPoint == nil {
+            let latest = min(candles.count - 1, max(0, Int(priceChart.highestVisibleX.rounded(.down))))
+            let pixel = transformer.pixelForValues(x: Double(latest), y: candles[latest].close)
+            crosshairPoint = priceChart.convert(pixel, to: self)
+        }
+        guard let point = crosshairPoint else { return }
+
+        // 十字線の X → X軸の値 → 一番近い足(データの範囲外は端の足に寄せる)
+        let xValue = priceChart.valueForTouchPoint(point: convert(point, to: priceChart), axis: .right).x
+        let index = min(max(Int(xValue.rounded()), 0), candles.count - 1)
+        let candle = candles[index]
+
+        // 縦線は足の中心にスナップする。足が表示範囲外なら描かない
+        let candleX = priceChart.convert(transformer.pixelForValues(x: Double(index), y: 0), to: self).x
+        let x: CGFloat? = (frameRect.minX...frameRect.maxX).contains(candleX) ? candleX : nil
+        let y = point.y
+        crosshairView.show(x: x, verticalRange: frameRect.minY...frameRect.maxY,
+                           y: y, horizontalRange: frameRect.minX...frameRect.maxX)
+
+        // 横線の値: 外枠の左端寄りのグレーの六角形。横線がメイン/サブのどちらにあるかで、その軸の値を表示する
+        if let text = crosshairValueText(atY: y) {
+            valueMarker.show(text, anchor: CGPoint(x: frameRect.minX + 60, y: y), within: frameRect)
+        } else {
+            valueMarker.isHidden = true
+        }
+
+        // Y軸側の赤い矢印: このViewの右端に、横線の高さで左向きに置く
+        yAxisMarker.show(nil, anchor: CGPoint(x: bounds.maxX, y: y), within: bounds, alignRight: true)
+
+        // X軸の赤い矢印: 外枠のすぐ下(X軸ラベルの位置)に、縦線を指す上向きの矢印と日付を置く。
+        // 矢印の分だけX軸ラベル領域より少し背が高いので、下側に少しはみ出してもよいことにする
+        if let x {
+            // 横方向は外枠ではなくView全体に収める(右端の足でも矢印が縦線からずれないように)
+            let labelArea = CGRect(x: bounds.minX, y: frameRect.maxY,
+                                   width: bounds.width, height: style.xAxisLabelHeight + 8)
+            dateMarker.show(badgeDateFormatter.string(from: candle.date),
+                            anchor: CGPoint(x: x, y: frameRect.maxY), within: labelArea)
+        } else {
+            dateMarker.isHidden = true
+        }
+
+        // 4本値の枠: 外枠の上部(凡例の下)に置く。十字線と重ならないよう、縦線が右半分なら左側、左半分なら右側に置く
+        ohlcInfoView.update(with: candle)
+        ohlcInfoView.isHidden = false
+        let size = ohlcInfoView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        let margin: CGFloat = 8
+        let top = frameRect.minY + 28
+        let placeLeft = (x ?? point.x) > frameRect.midX
+        let originX = placeLeft ? frameRect.minX + margin : frameRect.maxX - margin - size.width
+        ohlcInfoView.frame = CGRect(origin: CGPoint(x: originX, y: top), size: size)
+    }
+
+    /// 横線の高さ(このViewの座標)にあたる軸の値を、表示用の文字列にする。
+    /// メインチャート上なら価格(小数2桁)、サブチャート上ならサブ指標の値(指標ごとの桁数・単位)。
+    private func crosshairValueText(atY y: CGFloat) -> String? {
+        let priceContent = priceChart.convert(priceChart.viewPortHandler.contentRect, to: self)
+        if (priceContent.minY...priceContent.maxY).contains(y) {
+            let point = convert(CGPoint(x: priceContent.midX, y: y), to: priceChart)
+            let value = priceChart.valueForTouchPoint(point: point, axis: .right).y
+            return Self.numberFormatter(fractionDigits: 2, suffix: "", minimumFractionDigits: 2)
+                .string(from: NSNumber(value: value))
+        }
+        if let sub = subContent {
+            let subArea = subChart.convert(subChart.viewPortHandler.contentRect, to: self)
+            if (subArea.minY...subArea.maxY).contains(y) {
+                let point = convert(CGPoint(x: subArea.midX, y: y), to: subChart)
+                let value = subChart.valueForTouchPoint(point: point, axis: .right).y
+                return Self.numberFormatter(fractionDigits: sub.fractionDigits, suffix: sub.suffix)
+                    .string(from: NSNumber(value: value))
+            }
+        }
+        return nil
+    }
+
     /// 凡例のテキストを作る(タイトルは文字色、各項目はその線の色)
     private func makeLegend(title: String?, items: [(String, ChartColorRole)]) -> NSAttributedString? {
         var all: [(String, UIColor)] = []
@@ -630,13 +850,18 @@ final class StockChartView: UIView {
     private func updateAxisRanges(from: Int, to: Int) {
         let lower = min(from, to)
         let upper = max(from, to)
+        // Y軸固定の場合は、表示範囲ではなくデータ全期間を対象にする(スクロールしても範囲が変わらない)
+        let mainLower = displayOptions.isMainYAxisFixed ? 0 : lower
+        let mainUpper = displayOptions.isMainYAxisFixed ? totalCount - 1 : upper
+        let subLower = displayOptions.isSubYAxisFixed ? 0 : lower
+        let subUpper = displayOptions.isSubYAxisFixed ? totalCount - 1 : upper
 
         // --- メインチャート ---
         // 範囲の計算対象: 高値・安値・メイン指標の各線
         let mainValues = [candles.map { Optional($0.high) }, candles.map { Optional($0.low) }]
             + mainContent.series.map(\.values)
         // 上側は凡例と重ならないよう値幅の 20%、下側は 5% の余白を取る
-        if let (low, high) = Self.valueRange(of: mainValues, from: lower, to: upper) {
+        if let (low, high) = Self.valueRange(of: mainValues, from: mainLower, to: mainUpper) {
             let range = Self.nonZeroRange(low: low, high: high)
             priceChart.rightAxis.axisMaximum = high + range * 0.2
             priceChart.rightAxis.axisMinimum = low - range * 0.05
@@ -644,7 +869,10 @@ final class StockChartView: UIView {
         }
 
         // --- サブチャート ---
-        guard let sub = subContent else { return }
+        guard let sub = subContent else {
+            updateCrosshair()
+            return
+        }
         let axis = subChart.rightAxis
         if let fixed = sub.fixedRange {
             // 固定範囲(0〜100 など)。上側は凡例用に 25% 広げる(その部分のラベルは非表示)
@@ -653,7 +881,7 @@ final class StockChartView: UIView {
         } else {
             // 範囲の計算対象: サブ指標の各線・棒
             let subValues = sub.series.map(\.values) + (sub.bars.map { [$0.values] } ?? [])
-            if var (low, high) = Self.valueRange(of: subValues, from: lower, to: upper) {
+            if var (low, high) = Self.valueRange(of: subValues, from: subLower, to: subUpper) {
                 if sub.includesZero {
                     low = min(low, 0)
                     high = max(high, 0)
@@ -665,6 +893,10 @@ final class StockChartView: UIView {
             }
         }
         subChart.notifyDataSetChanged()
+
+        // Y軸範囲が変わると終値の横線の位置も変わるので十字線を更新する
+        // (スクロール・ズーム時もここを通るので、十字線が足に追従する)
+        updateCrosshair()
     }
 
     /// 複数の値の配列から、指定インデックス範囲内の最小値・最大値を求める(nil は無視)
@@ -695,10 +927,12 @@ final class StockChartView: UIView {
     /// - Parameters:
     ///   - fractionDigits: 小数点以下の最大桁数(不要な 0 は表示しない)
     ///   - suffix: 末尾に付ける文字(「%」など)
-    private static func numberFormatter(fractionDigits: Int, suffix: String) -> NumberFormatter {
+    ///   - minimumFractionDigits: 小数点以下の最小桁数(価格を「60,660.90」のように桁を揃えて表示する場合に指定)
+    private static func numberFormatter(fractionDigits: Int, suffix: String,
+                                        minimumFractionDigits: Int = 0) -> NumberFormatter {
         let f = NumberFormatter()
         f.numberStyle = .decimal
-        f.minimumFractionDigits = 0
+        f.minimumFractionDigits = minimumFractionDigits
         f.maximumFractionDigits = fractionDigits
         f.positiveSuffix = suffix
         f.negativeSuffix = suffix
@@ -734,6 +968,19 @@ extension StockChartView {
     @objc var decreasingColor: UIColor {
         get { style.decreasingColor }
         set { style.decreasingColor = newValue }
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate(十字線のドラッグ)
+
+extension StockChartView: UIGestureRecognizerDelegate {
+
+    /// 十字線を動かすドラッグは、4本値オンのときだけ開始する
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer is UIPanGestureRecognizer, crosshairRecognizers.contains(gestureRecognizer) {
+            return displayOptions.showsOHLC
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
 }
 

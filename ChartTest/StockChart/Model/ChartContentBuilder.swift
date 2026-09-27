@@ -126,11 +126,11 @@ struct ChartContentBuilder {
             return SubChartContent(
                 legendTitle: "移動平均乖離率",
                 series: [
-                    ChartSeries(label: "短期(\(p.shortMAPeriod))",
-                                values: TechnicalIndicators.movingAverageDeviation(closes: closes, period: p.shortMAPeriod),
+                    ChartSeries(label: "短期(\(p.deviationShortPeriod))",
+                                values: TechnicalIndicators.movingAverageDeviation(closes: closes, period: p.deviationShortPeriod),
                                 colorRole: .line(0)),
-                    ChartSeries(label: "長期(\(p.longMAPeriod))",
-                                values: TechnicalIndicators.movingAverageDeviation(closes: closes, period: p.longMAPeriod),
+                    ChartSeries(label: "長期(\(p.deviationLongPeriod))",
+                                values: TechnicalIndicators.movingAverageDeviation(closes: closes, period: p.deviationLongPeriod),
                                 colorRole: .line(1)),
                 ],
                 referenceLines: [0], includesZero: true, fractionDigits: 1, suffix: "%")

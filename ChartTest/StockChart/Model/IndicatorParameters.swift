@@ -10,11 +10,11 @@ import Foundation
 
 struct IndicatorParameters {
 
-    // MARK: 移動平均線 / 移動平均乖離率
+    // MARK: 移動平均線
 
-    /// 短期移動平均の期間(本数)。移動平均乖離率の「短期」にも使う
+    /// 短期移動平均の期間(本数)
     var shortMAPeriod = 5
-    /// 長期移動平均の期間(本数)。移動平均乖離率の「長期」にも使う
+    /// 長期移動平均の期間(本数)
     var longMAPeriod = 25
     /// 出来高移動平均の期間(本数)
     var volumeMAPeriod = 25
@@ -51,6 +51,10 @@ struct IndicatorParameters {
 
     // MARK: オシレーター
 
+    /// 移動平均乖離率(短期)の移動平均の期間(本数)
+    var deviationShortPeriod = 5
+    /// 移動平均乖離率(長期)の移動平均の期間(本数)
+    var deviationLongPeriod = 25
     /// RSI の期間(本数)
     var rsiPeriod = 14
     /// サイコロジカルラインの期間(本数)
