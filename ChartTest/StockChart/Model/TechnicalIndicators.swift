@@ -41,8 +41,8 @@ enum TechnicalIndicators {
                 window.removeAll()
                 continue
             }
-            if let prev = previous {
-                let current = prev + alpha * (value - prev)
+            if let previousEMA = previous {
+                let current = previousEMA + alpha * (value - previousEMA)
                 result[i] = current
                 previous = current
             } else {
@@ -82,15 +82,28 @@ enum TechnicalIndicators {
             for i in closes.indices where i >= period - 1 {
                 guard let mean = middle[i] else { continue }
                 let window = closes[(i - period + 1)...i]
-                let variance = window.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(period)
+                // 分散 = (各値 − 平均)² の平均。標準偏差 = 分散の平方根
+                var sumOfSquares = 0.0
+                for close in window {
+                    sumOfSquares += (close - mean) * (close - mean)
+                }
+                let variance = sumOfSquares / Double(period)
                 deviations[i] = variance.squareRoot()
             }
         }
 
-        let bands = sigmas.map { sigma in
-            (sigma: sigma,
-             upper: zip(middle, deviations).map { m, d in m.flatMap { m in d.map { m + $0 * sigma } } },
-             lower: zip(middle, deviations).map { m, d in m.flatMap { m in d.map { m - $0 * sigma } } })
+        // σ倍率ごとに、上限(中心線 + σ × 倍率)と下限(中心線 − σ × 倍率)を計算する
+        var bands: [(sigma: Double, upper: [Double?], lower: [Double?])] = []
+        for sigma in sigmas {
+            var upper = [Double?](repeating: nil, count: closes.count)
+            var lower = [Double?](repeating: nil, count: closes.count)
+            for i in closes.indices {
+                // 中心線・標準偏差のどちらかが計算できていない位置は nil のまま
+                guard let center = middle[i], let deviation = deviations[i] else { continue }
+                upper[i] = center + deviation * sigma
+                lower[i] = center - deviation * sigma
+            }
+            bands.append((sigma: sigma, upper: upper, lower: lower))
         }
         return (middle, bands)
     }
@@ -128,7 +141,9 @@ enum TechnicalIndicators {
         var spanA = [Double?](repeating: nil, count: count + offset)
         var spanB = [Double?](repeating: nil, count: count + offset)
         for i in 0..<count {
-            if let t = tenkan[i], let k = kijun[i] { spanA[i + offset] = (t + k) / 2 }
+            if let tenkanValue = tenkan[i], let kijunValue = kijun[i] {
+                spanA[i + offset] = (tenkanValue + kijunValue) / 2
+            }
             spanB[i + offset] = spanBBase[i]
         }
 
@@ -174,14 +189,24 @@ enum TechnicalIndicators {
 
         // 初期トレンドは最初の2本の終値で判定する
         var uptrend = closes[1] >= closes[0]
-        var af = step
-        var ep = uptrend ? max(highs[0], highs[1]) : min(lows[0], lows[1])
-        var sar = uptrend ? min(lows[0], lows[1]) : max(highs[0], highs[1])
+        // accelerationFactor(AF・加速因子): step から始まり、EP を更新するたびに step ずつ増える
+        var accelerationFactor = step
+        // extremePoint(EP・極値): 上昇トレンドなら最高値、下降トレンドなら最安値
+        // SAR: 上昇トレンドなら最安値(足の下に置く)、下降トレンドなら最高値(足の上に置く)
+        var extremePoint: Double
+        var sar: Double
+        if uptrend {
+            extremePoint = max(highs[0], highs[1])
+            sar = min(lows[0], lows[1])
+        } else {
+            extremePoint = min(lows[0], lows[1])
+            sar = max(highs[0], highs[1])
+        }
         values[1] = sar
         isUptrend[1] = uptrend
 
         for i in 2..<count {
-            sar += af * (ep - sar)
+            sar += accelerationFactor * (extremePoint - sar)
 
             if uptrend {
                 // SAR は直近2本の安値より上にはならない
@@ -189,13 +214,13 @@ enum TechnicalIndicators {
                 if lows[i] < sar {
                     // 安値が SAR を割り込んだ → 下降トレンドへ転換
                     uptrend = false
-                    sar = ep
-                    ep = lows[i]
-                    af = step
-                } else if highs[i] > ep {
+                    sar = extremePoint
+                    extremePoint = lows[i]
+                    accelerationFactor = step
+                } else if highs[i] > extremePoint {
                     // 最高値更新 → EP と AF を更新
-                    ep = highs[i]
-                    af = min(af + step, maximum)
+                    extremePoint = highs[i]
+                    accelerationFactor = min(accelerationFactor + step, maximum)
                 }
             } else {
                 // SAR は直近2本の高値より下にはならない
@@ -203,13 +228,13 @@ enum TechnicalIndicators {
                 if highs[i] > sar {
                     // 高値が SAR を上抜けた → 上昇トレンドへ転換
                     uptrend = true
-                    sar = ep
-                    ep = highs[i]
-                    af = step
-                } else if lows[i] < ep {
+                    sar = extremePoint
+                    extremePoint = highs[i]
+                    accelerationFactor = step
+                } else if lows[i] < extremePoint {
                     // 最安値更新 → EP と AF を更新
-                    ep = lows[i]
-                    af = min(af + step, maximum)
+                    extremePoint = lows[i]
+                    accelerationFactor = min(accelerationFactor + step, maximum)
                 }
             }
             values[i] = sar
@@ -234,7 +259,11 @@ enum TechnicalIndicators {
                 if change > 0 { gain += change } else { loss -= change }
             }
             // 期間中まったく値動きがない場合は中立の 50 とする
-            result[i] = (gain + loss) == 0 ? 50 : gain / (gain + loss) * 100
+            if gain + loss == 0 {
+                result[i] = 50
+            } else {
+                result[i] = gain / (gain + loss) * 100
+            }
         }
         return result
     }
@@ -245,7 +274,13 @@ enum TechnicalIndicators {
         guard period > 0 else { return result }
 
         for i in closes.indices where i >= period {
-            let upDays = ((i - period + 1)...i).filter { closes[$0] > closes[$0 - 1] }.count
+            // 期間中に前日より終値が上がった日数を数える
+            var upDays = 0
+            for j in (i - period + 1)...i {
+                if closes[j] > closes[j - 1] {
+                    upDays += 1
+                }
+            }
             result[i] = Double(upDays) / Double(period) * 100
         }
         return result
@@ -270,14 +305,28 @@ enum TechnicalIndicators {
             let lowest = lows[range].min()!
             numerators[i] = closes[i] - lowest
             denominators[i] = highest - lowest
-            k[i] = highest == lowest ? 50 : (closes[i] - lowest) / (highest - lowest) * 100
+            if highest == lowest {
+                // 期間中の高値と安値が同じ(値動きなし)場合は中立の 50 とする
+                k[i] = 50
+            } else {
+                k[i] = (closes[i] - lowest) / (highest - lowest) * 100
+            }
         }
 
         for i in 0..<count where i >= kPeriod - 1 + dPeriod - 1 {
-            let range = (i - dPeriod + 1)...i
-            let numerator = range.compactMap { numerators[$0] }.reduce(0, +)
-            let denominator = range.compactMap { denominators[$0] }.reduce(0, +)
-            d[i] = denominator == 0 ? 50 : numerator / denominator * 100
+            // 直近 dPeriod 本の (終値 − 最安値) と (最高値 − 最安値) をそれぞれ合計する
+            var numerator = 0.0
+            var denominator = 0.0
+            for j in (i - dPeriod + 1)...i {
+                numerator += numerators[j] ?? 0
+                denominator += denominators[j] ?? 0
+            }
+            if denominator == 0 {
+                // 値動きなしの場合は中立の 50 とする
+                d[i] = 50
+            } else {
+                d[i] = numerator / denominator * 100
+            }
         }
         return (k, d)
     }
@@ -287,16 +336,26 @@ enum TechnicalIndicators {
     static func macd(closes: [Double], shortPeriod: Int, longPeriod: Int, signalPeriod: Int)
         -> (macd: [Double?], signal: [Double?], histogram: [Double?]) {
 
-        let shortEMA = ema(closes.map { $0 }, period: shortPeriod)
-        let longEMA = ema(closes.map { $0 }, period: longPeriod)
-        let macd: [Double?] = zip(shortEMA, longEMA).map { s, l in
-            guard let s, let l else { return nil }
-            return s - l
+        // ema は nil を含む配列を受け取るので、[Double] を [Double?] に変換して渡す
+        let optionalCloses: [Double?] = closes.map { close in close }
+        let shortEMA = ema(optionalCloses, period: shortPeriod)
+        let longEMA = ema(optionalCloses, period: longPeriod)
+
+        // MACD = 短期EMA − 長期EMA(どちらかが計算できていない位置は nil)
+        var macd = [Double?](repeating: nil, count: closes.count)
+        for i in closes.indices {
+            guard let shortValue = shortEMA[i], let longValue = longEMA[i] else { continue }
+            macd[i] = shortValue - longValue
         }
+
+        // シグナル = MACD の EMA
         let signal = ema(macd, period: signalPeriod)
-        let histogram: [Double?] = zip(macd, signal).map { m, s in
-            guard let m, let s else { return nil }
-            return m - s
+
+        // ヒストグラム = MACD − シグナル
+        var histogram = [Double?](repeating: nil, count: closes.count)
+        for i in closes.indices {
+            guard let macdValue = macd[i], let signalValue = signal[i] else { continue }
+            histogram[i] = macdValue - signalValue
         }
         return (macd, signal, histogram)
     }
@@ -327,33 +386,45 @@ enum TechnicalIndicators {
             // 当日の +DM / −DM / TR
             let upMove = highs[i] - highs[i - 1]
             let downMove = lows[i - 1] - lows[i]
-            let plusDM = (upMove > downMove && upMove > 0) ? upMove : 0
-            let minusDM = (downMove > upMove && downMove > 0) ? downMove : 0
-            let tr = max(highs[i] - lows[i], abs(highs[i] - closes[i - 1]), abs(lows[i] - closes[i - 1]))
+            // +DM: 高値の上昇幅が安値の下落幅より大きく、かつ上昇している場合だけ採用する(それ以外は 0)
+            var plusDM = 0.0
+            if upMove > downMove, upMove > 0 {
+                plusDM = upMove
+            }
+            // −DM: 安値の下落幅が高値の上昇幅より大きく、かつ下落している場合だけ採用する(それ以外は 0)
+            var minusDM = 0.0
+            if downMove > upMove, downMove > 0 {
+                minusDM = downMove
+            }
+            let trueRange = max(highs[i] - lows[i], abs(highs[i] - closes[i - 1]), abs(lows[i] - closes[i - 1]))
 
             if i <= period {
                 // 最初の period 本は単純合計で初期値を作る
-                smoothedTR += tr
+                smoothedTR += trueRange
                 smoothedPlusDM += plusDM
                 smoothedMinusDM += minusDM
                 if i < period { continue }
             } else {
                 // 以降は Wilder 方式で平滑化
-                smoothedTR = smoothedTR - smoothedTR / Double(period) + tr
+                smoothedTR = smoothedTR - smoothedTR / Double(period) + trueRange
                 smoothedPlusDM = smoothedPlusDM - smoothedPlusDM / Double(period) + plusDM
                 smoothedMinusDM = smoothedMinusDM - smoothedMinusDM / Double(period) + minusDM
             }
 
             guard smoothedTR > 0 else { continue }
-            let pDI = smoothedPlusDM / smoothedTR * 100
-            let mDI = smoothedMinusDM / smoothedTR * 100
-            plusDI[i] = pDI
-            minusDI[i] = mDI
+            let currentPlusDI = smoothedPlusDM / smoothedTR * 100
+            let currentMinusDI = smoothedMinusDM / smoothedTR * 100
+            plusDI[i] = currentPlusDI
+            minusDI[i] = currentMinusDI
 
             // DX → ADX
-            let dx = (pDI + mDI) == 0 ? 0 : abs(pDI - mDI) / (pDI + mDI) * 100
-            if let prev = previousADX {
-                let current = (prev * Double(period - 1) + dx) / Double(period)
+            var dx = 0.0
+            if currentPlusDI + currentMinusDI != 0 {
+                dx = abs(currentPlusDI - currentMinusDI) / (currentPlusDI + currentMinusDI) * 100
+            }
+            if let previous = previousADX {
+                // ADX = (前回ADX × (period − 1) + 今回DX) ÷ period
+                let current = (previous * Double(period - 1) + dx) / Double(period)
                 adx[i] = current
                 previousADX = current
             } else {

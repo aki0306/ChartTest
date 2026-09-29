@@ -120,7 +120,7 @@ final class TechnicalMenuView: UIView {
         // 空の行(区切り線を出さないよう、行と同じ背景色にする)
         let fillers: [UIView] = (0..<max(rowCount - rows.count, 0)).map { _ in
             let view = UIView()
-            view.backgroundColor = .systemBackground
+            view.backgroundColor = .white
             return view
         }
 
@@ -160,9 +160,17 @@ final class TechnicalMenuView: UIView {
     /// 行ボタンに選択/非選択の見た目を適用する
     private func applyRowStyle(_ button: UIButton, isSelected: Bool) {
         guard var config = button.configuration else { return }
-        config.background.backgroundColor = isSelected ? selectedRowColor : .systemBackground
-        config.baseForegroundColor = isSelected ? .white : .label
-        let font: UIFont = isSelected ? .boldSystemFont(ofSize: 15) : .systemFont(ofSize: 15)
+        let font: UIFont
+        if isSelected {
+            // 選択中: 背景 selectedRowColor・白文字・太字
+            config.background.backgroundColor = selectedRowColor
+            config.baseForegroundColor = .white
+            font = .boldSystemFont(ofSize: 15)
+        } else {
+            config.background.backgroundColor = .white
+            config.baseForegroundColor = .black
+            font = .systemFont(ofSize: 15)
+        }
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var attributes = attributes
             attributes.font = font

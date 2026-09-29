@@ -19,7 +19,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.view.backgroundColor = UIColor.systemBackgroundColor;
+    self.view.backgroundColor = UIColor.whiteColor;
 
     // チャート部品を子 ViewController として埋め込み、画面上部に配置する
     self.chartViewController = [[StockChartViewController alloc] init];

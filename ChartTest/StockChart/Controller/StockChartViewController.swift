@@ -266,22 +266,33 @@ final class StockChartViewController: UIViewController {
         guard isViewLoaded else { return }  // viewDidLoad で改めて呼ばれる
 
         tabStack.isHidden = !isTechnicalMenuEnabled
-        // タブがあるときはタブの右側からチャートを表示する
-        chartLeadingConstraint?.constant = isTechnicalMenuEnabled ? tabWidth + tabSpacing : 0
-        // タブが使えなくなったらパネルを閉じる
-        if !isTechnicalMenuEnabled {
+        if isTechnicalMenuEnabled {
+            // タブがあるときはタブの右側からチャートを表示する
+            chartLeadingConstraint?.constant = tabWidth + tabSpacing
+        } else {
+            // タブがないときはチャートを左端から表示し、開いているパネルを閉じる
+            chartLeadingConstraint?.constant = 0
             setOpenPanel(nil, animated: false)
         }
     }
 
     /// 「テクニカル」タブがタップされたら、指標の選択メニューを開閉する
     @objc private func technicalTabTapped() {
-        setOpenPanel(openPanel == .technical ? nil : .technical, animated: true)
+        togglePanel(.technical)
     }
 
     /// 「設定」タブがタップされたら、設定画面を開閉する
     @objc private func settingsTabTapped() {
-        setOpenPanel(openPanel == .settings ? nil : .settings, animated: true)
+        togglePanel(.settings)
+    }
+
+    /// 指定したパネルが開いていれば閉じ、閉じていれば開く
+    private func togglePanel(_ panel: Panel) {
+        if openPanel == panel {
+            setOpenPanel(nil, animated: true)
+        } else {
+            setOpenPanel(panel, animated: true)
+        }
     }
 
     /// 指定したパネルを開く(もう一方は閉じる)。nil の場合は両方閉じる
@@ -298,14 +309,20 @@ final class StockChartViewController: UIViewController {
 
         // 開くパネルはフェードインのために一旦透明で表示する
         let panels: [(Panel, UIView)] = [(.technical, menuView), (.settings, settingsView)]
-        for (kind, view) in panels where kind == panel && view.isHidden {
+        for (kind, view) in panels {
+            guard kind == panel else { continue }  // 開くパネルだけが対象
+            guard view.isHidden else { continue }  // すでに表示中ならそのまま
             view.isHidden = false
             view.alpha = 0
         }
 
         let changes = {
             for (kind, view) in panels {
-                view.alpha = (kind == panel) ? 1 : 0
+                if kind == panel {
+                    view.alpha = 1  // 開くパネルは不透明に
+                } else {
+                    view.alpha = 0  // それ以外は透明に
+                }
             }
             self.view.layoutIfNeeded()
         }
@@ -327,9 +344,13 @@ final class StockChartViewController: UIViewController {
 
     /// 設定画面の左側リストを Model(ChartSettingsCatalog)から作る
     private func configureSettingsView() {
-        settingsView.sections = ChartSettingsCatalog.sections.map { section in
-            ChartSettingsView.Section(title: section.title, items: section.items.map(\.title))
+        // 見出しごとに、項目の名称(「移動平均線」など)を並べる
+        var sections: [ChartSettingsView.Section] = []
+        for section in ChartSettingsCatalog.sections {
+            let itemTitles = section.items.map { item in item.title }
+            sections.append(ChartSettingsView.Section(title: section.title, items: itemTitles))
         }
+        settingsView.sections = sections
         settingsView.selectedIndexPath = selectedSettingsIndexPath
         reloadSettingsRows()
     }

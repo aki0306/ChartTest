@@ -9,15 +9,23 @@ import Foundation
 
 // MARK: - サンプルデータ
 
-/// 動作確認用のダミーデータ
-enum SampleData {
+/// 動作確認用のダミーデータ。
+/// Objective-C からも使えるよう NSObject を継承したクラスにしている(インスタンスは作らない)
+///   Swift       : SampleData.candles(for: .daily)
+///   Objective-C : [SampleData candlesForPeriod:ChartPeriodDaily]
+final class SampleData: NSObject {
+
+    /// インスタンスは作らない(static メソッドだけを使う)
+    private override init() {
+        super.init()
+    }
 
     /// 平日のみ・日経平均風のランダムウォークデータを生成する。
     /// シード固定の乱数を使っているので、毎回同じ形のチャートになる。
     /// (一目均衡表の先行スパン2 や多重移動平均線の 75 本など、長い期間の指標も描けるよう 200 本用意する)
     /// - Parameter days: 生成する営業日数
     /// - Returns: 日付の古い順に並んだローソク足データ
-    static func nikkeiLike(days: Int = 200) -> [StockCandle] {
+    @objc static func nikkeiLike(days: Int = 200) -> [StockCandle] {
         var rng = SeededGenerator(seed: 20260925)
         let calendar = Calendar(identifier: .gregorian)
         let end = calendar.date(from: DateComponents(year: 2026, month: 9, day: 25))!
@@ -48,6 +56,129 @@ enum SampleData {
         }
         return candles
     }
+
+    // MARK: - 足種ごとのデータ
+
+    /// 指定した足種のダミーデータを返す(本来は足種を指定して API から取得する想定)
+    /// - Returns: 日付の古い順に並んだローソク足データ
+    @objc(candlesForPeriod:)
+    static func candles(for period: ChartPeriod) -> [StockCandle] {
+        switch period {
+        case .oneMinute:
+            return intradayCandles(intervalMinutes: 1)
+        case .intraday:
+            return intradayCandles(intervalMinutes: 5)
+        case .daily:
+            return nikkeiLike()
+        case .weekly:
+            return weeklyCandles()
+        case .monthly:
+            return monthlyCandles()
+        }
+    }
+
+    /// 当日(2026/9/29)の分足。前場 9:00〜11:30、後場 12:30〜15:30。
+    /// 指数は分足の出来高が配信されない想定なので、出来高は 0 にする
+    /// - Parameter intervalMinutes: 1本の分数(1分足なら 1、日中足なら 5)
+    private static func intradayCandles(intervalMinutes: Int) -> [StockCandle] {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = DateComponents(year: 2026, month: 9, day: 29)
+
+        // 前場・後場の時間帯に、intervalMinutes 分おきの時刻を並べる
+        var dates: [Date] = []
+        let sessions = [(start: 9 * 60, end: 11 * 60 + 30), (start: 12 * 60 + 30, end: 15 * 60 + 30)]
+        for session in sessions {
+            var minuteOfDay = session.start
+            while minuteOfDay < session.end {
+                var components = day
+                components.hour = minuteOfDay / 60
+                components.minute = minuteOfDay % 60
+                dates.append(calendar.date(from: components)!)
+                minuteOfDay += intervalMinutes
+            }
+        }
+
+        // 1本の値動きの大きさは、足の長さに合わせて変える
+        let scale = Double(intervalMinutes).squareRoot()
+        return trendCandles(dates: dates, startPrice: 65_560, endPrice: 65_480,
+                            bodySize: 12 * scale, wickSize: 8 * scale,
+                            volumeRange: nil, seed: UInt64(20260929 + intervalMinutes))
+    }
+
+    /// 週足(約2年半ぶん)。毎週金曜日の日付で、4万円台から6万円台へ上がっていく形
+    private static func weeklyCandles() -> [StockCandle] {
+        let calendar = Calendar(identifier: .gregorian)
+        let lastFriday = calendar.date(from: DateComponents(year: 2026, month: 9, day: 25))!
+
+        var dates: [Date] = []
+        for weeksAgo in (0..<130).reversed() {
+            dates.append(calendar.date(byAdding: .weekOfYear, value: -weeksAgo, to: lastFriday)!)
+        }
+        return trendCandles(dates: dates, startPrice: 38_000, endPrice: 65_500,
+                            bodySize: 1_300, wickSize: 700,
+                            volumeRange: 1.6e9...3.0e9, seed: 202609)
+    }
+
+    /// 月足(2022/10〜2026/9 の4年ぶん)。毎月1日の日付で、3万円台から6万円台へ上がっていく形
+    private static func monthlyCandles() -> [StockCandle] {
+        let calendar = Calendar(identifier: .gregorian)
+        let lastMonth = calendar.date(from: DateComponents(year: 2026, month: 9, day: 1))!
+
+        var dates: [Date] = []
+        for monthsAgo in (0..<48).reversed() {
+            dates.append(calendar.date(byAdding: .month, value: -monthsAgo, to: lastMonth)!)
+        }
+        return trendCandles(dates: dates, startPrice: 32_000, endPrice: 65_500,
+                            bodySize: 2_500, wickSize: 1_200,
+                            volumeRange: 1.2e9...2.8e9, seed: 20269)
+    }
+
+    /// 開始値から終了値へ向かう、ランダムな値動きのローソク足を作る
+    /// - Parameters:
+    ///   - dates: 各足の日時(古い順)
+    ///   - startPrice: 最初の足の値の目安
+    ///   - endPrice: 最後の足の値の目安
+    ///   - bodySize: 実体(始値〜終値)の大きさの目安
+    ///   - wickSize: ヒゲの長さの目安
+    ///   - volumeRange: 出来高の範囲。nil なら出来高 0(出来高のないデータ)
+    ///   - seed: 乱数のシード(同じシードなら毎回同じ形になる)
+    private static func trendCandles(dates: [Date], startPrice: Double, endPrice: Double,
+                                     bodySize: Double, wickSize: Double,
+                                     volumeRange: ClosedRange<Double>?, seed: UInt64) -> [StockCandle] {
+        var rng = SeededGenerator(seed: seed)
+        var candles: [StockCandle] = []
+        var previousClose = startPrice
+        // 直線からのずれ(ゆっくり上下に波打つ)。前回の値を少し残しながら変えるので、上げ・下げの流れができる
+        var wave = 0.0
+
+        for (index, date) in dates.enumerated() {
+            // 目標の値: 開始値から終了値へ直線的に動く線に、ゆっくりした波を足したもの
+            var progress = 0.0
+            if dates.count > 1 {
+                progress = Double(index) / Double(dates.count - 1)
+            }
+            wave = wave * 0.95 + Double.random(in: -bodySize...bodySize, using: &rng)
+            let target = startPrice + (endPrice - startPrice) * progress + wave
+
+            // 始値は前の足の終値の近く。終値は目標の値に 3 割近づけ、少しランダムにずらす
+            let open = previousClose + Double.random(in: -bodySize * 0.2...bodySize * 0.2, using: &rng)
+            let close = open + (target - open) * 0.3 + Double.random(in: -bodySize * 0.6...bodySize * 0.6, using: &rng)
+            // 高値/安値は実体(始値〜終値)の外側にヒゲとして伸ばす
+            let high = max(open, close) + Double.random(in: 0...wickSize, using: &rng)
+            let low = min(open, close) - Double.random(in: 0...wickSize, using: &rng)
+
+            var volume = 0.0
+            if let volumeRange {
+                volume = Double.random(in: volumeRange, using: &rng)
+            }
+
+            candles.append(StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume))
+            previousClose = close
+        }
+        return candles
+    }
+
+    // MARK: - 乱数
 
     /// シード指定可能な乱数ジェネレータ(SplitMix64)。
     /// SystemRandomNumberGenerator はシードを指定できないため、再現性のあるデータ生成用に用意している

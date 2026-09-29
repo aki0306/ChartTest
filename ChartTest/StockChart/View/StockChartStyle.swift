@@ -53,11 +53,11 @@ struct StockChartStyle {
     /// 横グリッド線の色
     var gridColor = UIColor.systemGray5
     /// 外枠の色
-    var borderColor = UIColor.label
+    var borderColor = UIColor.black
     /// メイン/サブの区切り線の色
     var dividerColor = UIColor.systemGray
     /// 軸ラベル・凡例タイトルの文字色
-    var textColor = UIColor.label
+    var textColor = UIColor.black
 
     // MARK: - フォント
 
@@ -76,15 +76,25 @@ struct StockChartStyle {
     var xAxisLabelHeight: CGFloat = 20
     /// 外枠・区切り線の線幅
     var borderWidth: CGFloat = 1
-    /// X軸ラベルの日付フォーマット
+    /// X軸ラベルの日付フォーマット(足種ごとの値は ChartPeriod.dateFormat)
     var dateFormat = "M/d"
+    /// X軸ラベルのおおよその個数(文字が長い書式のときは少なくして、ラベル同士が重ならないようにする)
+    var xAxisLabelCount = 7
+
+    // MARK: - 文言
+
+    /// データが0件のときにメインチャートの凡例の下に表示するメッセージ
+    var noDataMessage = "現在、指定の条件で表示できる情報はありません。"
 
     // MARK: - 色の役割 → 実際の色
 
     /// Model が指定した色の役割を実際の色に変換する
     func color(for role: ChartColorRole) -> UIColor {
         switch role {
-        case .line(let index): return lineColors.isEmpty ? textColor : lineColors[index % lineColors.count]
+        case .line(let index):
+            // 色が1つも設定されていなければ文字色で代用する
+            guard !lineColors.isEmpty else { return textColor }
+            return lineColors[index % lineColors.count]
         case .increasing: return increasingColor
         case .decreasing: return decreasingColor
         case .volume: return volumeColor

@@ -18,6 +18,8 @@ struct IndicatorParameters {
     var longMAPeriod = 25
     /// 出来高移動平均の期間(本数)
     var volumeMAPeriod = 25
+    /// 出来高の凡例に表示する名前(週足・月足では「出来高(平均)」にする。ChartPeriod を参照)
+    var volumeLegendLabel = "出来高"
 
     // MARK: 多重移動平均線
 

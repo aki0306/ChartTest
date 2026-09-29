@@ -121,12 +121,12 @@ final class ChartSettingsView: UIView {
         tableView.sectionHeaderHeight = listHeaderHeight
         tableView.sectionHeaderTopPadding = 0
         tableView.separatorInset = .zero
-        tableView.backgroundColor = .systemBackground
+        tableView.backgroundColor = .white
         addSubview(tableView)
 
         // 右側パネル: 白い角丸の板。中身の行は中央に縦並び
         detailPanel.translatesAutoresizingMaskIntoConstraints = false
-        detailPanel.backgroundColor = .systemBackground
+        detailPanel.backgroundColor = .white
         detailPanel.layer.cornerRadius = 8
         addSubview(detailPanel)
 
@@ -226,14 +226,24 @@ final class ChartSettingsView: UIView {
     private func applyCellStyle(_ cell: UITableViewCell, isSelected: Bool, text: String?) {
         var content = cell.defaultContentConfiguration()
         content.text = text
-        content.textProperties.font = isSelected ? .boldSystemFont(ofSize: 16) : .systemFont(ofSize: 16)
-        content.textProperties.color = isSelected ? .white : .label
+        if isSelected {
+            // 選択中: 太字・白文字(背景は selectedRowColor)
+            content.textProperties.font = .boldSystemFont(ofSize: 16)
+            content.textProperties.color = .white
+        } else {
+            content.textProperties.font = .systemFont(ofSize: 16)
+            content.textProperties.color = .black
+        }
         // 長い項目名(ボリンジャーバンドなど)は省略せず、文字を縮小して1行に収める
         content.textProperties.numberOfLines = 1
         content.textProperties.adjustsFontSizeToFitWidth = true
         content.textProperties.minimumScaleFactor = 0.6
         cell.contentConfiguration = content
-        cell.backgroundColor = isSelected ? selectedRowColor : .systemBackground
+        if isSelected {
+            cell.backgroundColor = selectedRowColor
+        } else {
+            cell.backgroundColor = .white
+        }
     }
 }
 

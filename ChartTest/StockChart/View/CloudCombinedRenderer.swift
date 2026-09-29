@@ -63,37 +63,64 @@ nonisolated final class CloudCombinedRenderer: CombinedChartRenderer {
 
         /// チャート座標の点列を画面座標に変換して塗りつぶす
         func fill(_ points: [(x: Double, y: Double)], color: UIColor) {
-            let pixels = points.map { transformer.pixelForValues(x: $0.x, y: $0.y) }
+            // チャートの値(X = 何本目か、Y = 価格)→ 画面上の座標
+            let pixels = points.map { point in transformer.pixelForValues(x: point.x, y: point.y) }
             guard let first = pixels.first else { return }
             context.beginPath()
             context.move(to: first)
-            pixels.dropFirst().forEach { context.addLine(to: $0) }
+            for pixel in pixels.dropFirst() {
+                context.addLine(to: pixel)
+            }
             context.closePath()
             context.setFillColor(color.cgColor)
             context.fillPath()
         }
 
+        /// (先行スパン1 − 先行スパン2) の値から雲の色を決める。0 以上なら陽雲、負なら陰雲
+        func color(forDifference difference: Double) -> UIColor {
+            if difference >= 0 {
+                return cloud.upColor
+            } else {
+                return cloud.downColor
+            }
+        }
+
+        // i 本目と i+1 本目の間(区間)ごとに塗る
+        //
+        //   spanA ●───────●          ← 先行スパン1
+        //         │ 雲    │
+        //   spanB ●───────●          ← 先行スパン2
+        //       i 本目   i+1 本目
         for i in from..<to {
-            guard let a0 = cloud.spanA[i], let b0 = cloud.spanB[i],
-                  let a1 = cloud.spanA[i + 1], let b1 = cloud.spanB[i + 1] else { continue }
+            // 区間の左端(i 本目)と右端(i+1 本目)の、先行スパン1/2 の値。どれかが nil なら塗らない
+            guard let spanALeft = cloud.spanA[i], let spanBLeft = cloud.spanB[i] else { continue }
+            guard let spanARight = cloud.spanA[i + 1], let spanBRight = cloud.spanB[i + 1] else { continue }
 
-            // 各位置での (先行スパン1 − 先行スパン2)。正なら陽雲、負なら陰雲
-            let d0 = a0 - b0
-            let d1 = a1 - b1
-            let x0 = Double(i)
-            let x1 = Double(i + 1)
+            // 左端・右端での (先行スパン1 − 先行スパン2)。正なら陽雲、負なら陰雲
+            let differenceLeft = spanALeft - spanBLeft
+            let differenceRight = spanARight - spanBRight
+            let xLeft = Double(i)
+            let xRight = Double(i + 1)
 
-            if d0 * d1 >= 0 {
+            // 左端と右端で差の符号が同じ(積が 0 以上)なら、区間内で線は交差しない
+            let crossesInside = differenceLeft * differenceRight < 0
+
+            if !crossesInside {
                 // 区間内で上下が入れ替わらない → 四角形1つで塗る
-                let color = (d0 + d1) >= 0 ? cloud.upColor : cloud.downColor
-                fill([(x0, a0), (x1, a1), (x1, b1), (x0, b0)], color: color)
+                let quad = [(xLeft, spanALeft), (xRight, spanARight), (xRight, spanBRight), (xLeft, spanBLeft)]
+                fill(quad, color: color(forDifference: differenceLeft + differenceRight))
             } else {
                 // 区間内で線が交差する → 交点で分割し、三角形2つで塗る
-                let t = d0 / (d0 - d1)  // 交点の位置(0〜1)
-                let crossX = x0 + t
-                let crossY = a0 + (a1 - a0) * t
-                fill([(x0, a0), (crossX, crossY), (x0, b0)], color: d0 > 0 ? cloud.upColor : cloud.downColor)
-                fill([(crossX, crossY), (x1, a1), (x1, b1)], color: d1 > 0 ? cloud.upColor : cloud.downColor)
+                //   交点は左端から区間幅の crossRatio(0〜1)の位置。差が直線的に変わるとして、差が 0 になる位置を求める
+                let crossRatio = differenceLeft / (differenceLeft - differenceRight)
+                let crossX = xLeft + crossRatio
+                let crossY = spanALeft + (spanARight - spanALeft) * crossRatio
+
+                // (交差する区間では左右の差は 0 にならず、必ず正負が逆になる)
+                let leftTriangle = [(xLeft, spanALeft), (crossX, crossY), (xLeft, spanBLeft)]
+                let rightTriangle = [(crossX, crossY), (xRight, spanARight), (xRight, spanBRight)]
+                fill(leftTriangle, color: color(forDifference: differenceLeft))
+                fill(rightTriangle, color: color(forDifference: differenceRight))
             }
         }
     }

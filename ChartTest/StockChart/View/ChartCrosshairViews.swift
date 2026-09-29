@@ -30,7 +30,7 @@ final class CrosshairOverlayView: UIView {
     private let horizontalLine = CAShapeLayer()
 
     /// 線の色
-    var lineColor: UIColor = .label {
+    var lineColor: UIColor = .black {
         didSet { applyLineStyle() }
     }
 
@@ -50,20 +50,15 @@ final class CrosshairOverlayView: UIView {
         [verticalLine, horizontalLine].forEach { layer.addSublayer($0) }
         applyLineStyle()
         hide()
-
-        // ライト/ダークモード切り替え時に線の色(CGColor)を更新する
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _: UITraitCollection) in
-            self.applyLineStyle()
-        }
     }
 
     /// 線の色・太さ・破線を設定する
     private func applyLineStyle() {
-        [verticalLine, horizontalLine].forEach {
-            $0.strokeColor = lineColor.resolvedColor(with: traitCollection).cgColor
-            $0.lineWidth = 0.8
-            $0.lineDashPattern = [4, 3]
-            $0.fillColor = nil
+        for line in [verticalLine, horizontalLine] {
+            line.strokeColor = lineColor.cgColor
+            line.lineWidth = 0.8
+            line.lineDashPattern = [4, 3]  // 4pt 描いて 3pt 空ける破線
+            line.fillColor = nil
         }
     }
 
@@ -78,18 +73,27 @@ final class CrosshairOverlayView: UIView {
         // 暗黙のアニメーションで線が遅れて動かないよう、アニメーションを無効にして更新する
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        verticalLine.path = x.map { x in
+
+        // 縦線: (x, 上端) から (x, 下端) まで
+        if let x {
             let path = UIBezierPath()
             path.move(to: CGPoint(x: x, y: verticalRange.lowerBound))
             path.addLine(to: CGPoint(x: x, y: verticalRange.upperBound))
-            return path.cgPath
+            verticalLine.path = path.cgPath
+        } else {
+            verticalLine.path = nil
         }
-        horizontalLine.path = y.map { y in
+
+        // 横線: (左端, y) から (右端, y) まで
+        if let y {
             let path = UIBezierPath()
             path.move(to: CGPoint(x: horizontalRange.lowerBound, y: y))
             path.addLine(to: CGPoint(x: horizontalRange.upperBound, y: y))
-            return path.cgPath
+            horizontalLine.path = path.cgPath
+        } else {
+            horizontalLine.path = nil
         }
+
         CATransaction.commit()
     }
 
@@ -117,19 +121,19 @@ final class OHLCInfoView: UIView {
 
     /// 日付の書式(例: 2026/04/06)
     private let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "ja_JP")
-        f.dateFormat = "yyyy/MM/dd"
-        return f
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "yyyy/MM/dd"
+        return formatter
     }()
 
     /// 価格の書式(3桁カンマ区切り・小数2桁)
     private let priceFormatter: NumberFormatter = {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = 2
-        f.maximumFractionDigits = 2
-        return f
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter
     }()
 
     override init(frame: CGRect) {
@@ -225,8 +229,15 @@ final class CrosshairMarkerLabel: UILabel {
         backgroundColor = .clear  // 背景は draw で形に沿って塗る
         textColor = .white
         textAlignment = .center
-        // 日付の矢印はX軸ラベル領域に収まるよう少し小さい文字にする
-        font = .monospacedDigitSystemFont(ofSize: shape == .arrowUp ? 11 : 12, weight: .semibold)
+        let fontSize: CGFloat
+        switch shape {
+        case .arrowUp:
+            // 日付の矢印はX軸ラベル領域に収まるよう少し小さい文字にする
+            fontSize = 11
+        case .hexagon, .arrowLeft:
+            fontSize = 12
+        }
+        font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
     }
 
     required init?(coder: NSCoder) {
@@ -235,7 +246,13 @@ final class CrosshairMarkerLabel: UILabel {
 
     /// 余白を含めたサイズ(文字なしの矢印は固定サイズ)
     override var intrinsicContentSize: CGSize {
-        let textSize = (text?.isEmpty ?? true) ? CGSize(width: 10, height: 16) : super.intrinsicContentSize
+        // 文字ありなら文字の大きさそのまま
+        var textSize = super.intrinsicContentSize
+        let hasText = !(text ?? "").isEmpty
+        if !hasText {
+            // 文字なし(Y軸側の矢印など): 固定サイズ
+            textSize = CGSize(width: 10, height: 16)
+        }
         return CGSize(width: textSize.width + padding.left + padding.right,
                       height: textSize.height + padding.top + padding.bottom)
     }
@@ -253,29 +270,29 @@ final class CrosshairMarkerLabel: UILabel {
     }
 
     /// マーカーの形のパスを作る
-    private func makeShapePath(in r: CGRect) -> UIBezierPath {
+    private func makeShapePath(in rect: CGRect) -> UIBezierPath {
         let path = UIBezierPath()
         switch shape {
         case .hexagon:
-            let tip = r.height / 2
-            path.move(to: CGPoint(x: r.minX, y: r.midY))
-            path.addLine(to: CGPoint(x: r.minX + tip, y: r.minY))
-            path.addLine(to: CGPoint(x: r.maxX - tip, y: r.minY))
-            path.addLine(to: CGPoint(x: r.maxX, y: r.midY))
-            path.addLine(to: CGPoint(x: r.maxX - tip, y: r.maxY))
-            path.addLine(to: CGPoint(x: r.minX + tip, y: r.maxY))
+            let tip = rect.height / 2
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.minX + tip, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX - tip, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX - tip, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + tip, y: rect.maxY))
         case .arrowUp:
-            path.move(to: CGPoint(x: r.midX, y: r.minY))
-            path.addLine(to: CGPoint(x: r.maxX, y: r.minY + tipLength))
-            path.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
-            path.addLine(to: CGPoint(x: r.minX, y: r.maxY))
-            path.addLine(to: CGPoint(x: r.minX, y: r.minY + tipLength))
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + tipLength))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + tipLength))
         case .arrowLeft:
-            path.move(to: CGPoint(x: r.minX, y: r.midY))
-            path.addLine(to: CGPoint(x: r.minX + tipLength, y: r.minY))
-            path.addLine(to: CGPoint(x: r.maxX, y: r.minY))
-            path.addLine(to: CGPoint(x: r.maxX, y: r.maxY))
-            path.addLine(to: CGPoint(x: r.minX + tipLength, y: r.maxY))
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.minX + tipLength, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + tipLength, y: rect.maxY))
         }
         path.close()
         return path
@@ -290,8 +307,23 @@ final class CrosshairMarkerLabel: UILabel {
     func show(_ text: String?, anchor: CGPoint, within bounds: CGRect, alignRight: Bool = false) {
         self.text = text
         let size = intrinsicContentSize
-        var origin = CGPoint(x: alignRight ? anchor.x - size.width : anchor.x - size.width / 2,
-                             y: shape == .arrowUp ? anchor.y : anchor.y - size.height / 2)
+        var origin = CGPoint.zero
+
+        // 横位置: alignRight なら anchor.x に右端を、そうでなければ中心を合わせる
+        if alignRight {
+            origin.x = anchor.x - size.width
+        } else {
+            origin.x = anchor.x - size.width / 2
+        }
+
+        // 縦位置: 上向き矢印は先端(上端)を anchor.y に、それ以外は縦方向の中心を合わせる
+        switch shape {
+        case .arrowUp:
+            origin.y = anchor.y
+        case .hexagon, .arrowLeft:
+            origin.y = anchor.y - size.height / 2
+        }
+
         // 範囲の端ではみ出さないよう内側に寄せる
         origin.x = min(max(origin.x, bounds.minX), bounds.maxX - size.width)
         origin.y = min(max(origin.y, bounds.minY), bounds.maxY - size.height)

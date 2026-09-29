@@ -54,7 +54,7 @@ extension Array where Element == Double {
     /// - Returns: 元の配列と同じ要素数の配列。期間に満たない先頭部分(index < period - 1)は nil
     func simpleMovingAverage(period: Int) -> [Double?] {
         // 期間が不正な場合は全て nil
-        guard period > 0 else { return map { _ in nil } }
+        guard period > 0 else { return [Double?](repeating: nil, count: count) }
 
         var result = [Double?](repeating: nil, count: count)
         var sum = 0.0
