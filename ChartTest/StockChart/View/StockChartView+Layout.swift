@@ -44,6 +44,9 @@ extension StockChartView {
         }
         // 雲を描けるレンダラーに差し替える(drawOrder などの設定より前に行う)
         priceChart.renderer = priceRenderer
+        // X軸ラベルを最新の足を基準に並べる描画処理に差し替える(LatestAlignedXAxisRenderer)
+        priceChart.xAxisRenderer = priceXAxisRenderer
+        subChart.xAxisRenderer = subXAxisRenderer
     }
 
     /// 4本値表示用の十字線・マーカー・枠を追加する(チャートの上に重ねる)。
@@ -258,6 +261,7 @@ extension StockChartView {
     /// X軸の設定(メイン/サブ共通)。縦グリッド線と軸線は描かない。1本単位でラベルを配置する
     /// ・ラベルは描画領域の下(setViewPortOffsets の bottom = style.xAxisLabelHeight で確保した領域)に描かれる
     /// ・横位置は各足の中心に、文字の中心を合わせて描かれる
+    /// ・どの足にラベルを置くかは LatestAlignedXAxisRenderer が決める(最新の足から左へ同じ間隔で置く)
     /// ・表示するのは一番下のチャートだけ(updateSubChartVisibility で drawLabelsEnabled を切り替える)
     private func configureXAxis(_ axis: XAxis) {
         axis.labelPosition = .bottom
@@ -268,7 +272,9 @@ extension StockChartView {
         axis.granularity = 1                       // ラベルは1本単位(足と足の間には置かない)
         axis.granularityEnabled = true
         axis.labelCount = style.xAxisLabelCount    // X軸ラベルの個数(約7個。足種によって変える)
-        axis.avoidFirstLastClippingEnabled = true  // 両端のラベルが描画領域からはみ出さないようにする
+        // 両端のラベルをずらす DGCharts の機能は使わない(ずらすと足の位置と合わず、隣のラベルと重なることがある)。
+        // はみ出すラベルは LatestAlignedXAxisRenderer が表示しないようにしている
+        axis.avoidFirstLastClippingEnabled = false
     }
 
     // MARK: - スタイルに依存する制約

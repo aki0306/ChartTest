@@ -76,17 +76,15 @@ import Foundation
         }
     }
 
-    /// X軸ラベルのおおよその個数。
-    /// 週足・月足は「2025/10」のように文字が長く、7個だと隣のラベルと重なるので減らす。
-    /// (左端のラベルは画面からはみ出さないよう右にずらして描かれるため、間隔が狭いと2番目のラベルと重なる)
+    /// X軸ラベルのおおよその個数。ラベルは最新の足から左へ同じ間隔で置かれる(LatestAlignedXAxisRenderer)。
+    /// 週足・月足は「2025/10」のように文字が長いので、少なめにする。
+    /// (月足は 48 本を5個で割ると 12 本 = 1年おきになり、「2023/9 2024/9 2025/9 2026/9」のように並ぶ)
     var xAxisLabelCount: Int {
         switch self {
         case .oneMinute, .intraday, .daily:
             return 7
-        case .weekly:
-            return 3
-        case .monthly:
-            return 4
+        case .weekly, .monthly:
+            return 5
         }
     }
 

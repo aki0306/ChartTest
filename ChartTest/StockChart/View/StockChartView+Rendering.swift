@@ -80,6 +80,11 @@ extension StockChartView {
             chart.xAxis.axisMinimum = -0.5
             chart.xAxis.axisMaximum = Double(totalCount) - 0.5
         }
+
+        // X軸ラベルは最新の足(データの右端)を基準に並べる。
+        // (一目均衡表の先行スパンで右に余白がある場合も、日付のある最後の足を基準にする)
+        priceXAxisRenderer.latestIndex = candles.count - 1
+        subXAxisRenderer.latestIndex = candles.count - 1
     }
 
     /// メインチャート(ローソク足 + メイン指標・雲・凡例)を描く

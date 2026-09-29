@@ -103,6 +103,14 @@ final class StockChartView: UIView {
     /// メインチャート用のレンダラー(描画処理)。一目均衡表の雲を塗るために DGCharts 標準のものから差し替えている
     lazy var priceRenderer = CloudCombinedRenderer(
         chart: priceChart, animator: priceChart.chartAnimator, viewPortHandler: priceChart.viewPortHandler)
+    /// メインチャートの X軸ラベルの描画処理。最新の足を基準にラベルを並べるため、DGCharts 標準のものから差し替えている
+    lazy var priceXAxisRenderer = LatestAlignedXAxisRenderer(
+        viewPortHandler: priceChart.viewPortHandler, axis: priceChart.xAxis,
+        transformer: priceChart.getTransformer(forAxis: .left))
+    /// サブチャートの X軸ラベルの描画処理(同上)
+    lazy var subXAxisRenderer = LatestAlignedXAxisRenderer(
+        viewPortHandler: subChart.viewPortHandler, axis: subChart.xAxis,
+        transformer: subChart.getTransformer(forAxis: .left))
     /// メイン・サブ全体を囲む外枠(チャートの上に重ねて表示)
     let frameView = UIView()
     /// メインとサブの間の区切り線
