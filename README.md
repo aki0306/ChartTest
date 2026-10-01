@@ -272,6 +272,7 @@ ChartTest/
 | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値) |
 | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数) |
 | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |
+| `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
 | `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
 | `ChartPeriodTabView.swift` | 足種のタブ(縦画面の上部) |
 | `TechnicalMenuView.swift` | 指標の選択メニュー(テクニカルタブ) |

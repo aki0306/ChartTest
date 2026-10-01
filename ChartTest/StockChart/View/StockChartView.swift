@@ -97,9 +97,9 @@ final class StockChartView: UIView {
     // MARK: - 部品(サブView)
 
     /// メインチャート(ローソク足 + メイン指標)
-    let priceChart = CombinedChartView()
+    let priceChart = SafePinchCombinedChartView()
     /// サブチャート(サブ指標)
-    let subChart = CombinedChartView()
+    let subChart = SafePinchCombinedChartView()
     /// メインチャート用のレンダラー(描画処理)。一目均衡表の雲を塗るために DGCharts 標準のものから差し替えている
     lazy var priceRenderer = CloudCombinedRenderer(
         chart: priceChart, animator: priceChart.chartAnimator, viewPortHandler: priceChart.viewPortHandler)
