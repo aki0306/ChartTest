@@ -58,7 +58,7 @@ extension StockChartView {
     /// レイアウト前は DGCharts から表示範囲を取得できないため、インデックスから計算する
     func updateAxisRangesForInitialCandles() {
         var firstIndex = 0
-        if let visibleCount = style.visibleCount {
+        if let visibleCount = effectiveVisibleCount {
             firstIndex = max(0, totalCount - visibleCount)
         }
         updateAxisRanges(from: firstIndex, to: totalCount - 1)
@@ -110,15 +110,23 @@ extension StockChartView {
     ///
     /// 凡例の位置は固定(外枠の上端から 6pt)なので、線が一番高くても凡例の下に収まるようにしている
     private func updateMainAxisRange(from: Int, to: Int) {
-        // 範囲の計算対象: 高値・安値・メイン指標の各線
-        let highs: [Double?] = candles.map { candle in candle.high }
-        let lows: [Double?] = candles.map { candle in candle.low }
-        var valueArrays: [[Double?]] = [highs, lows]
+        // 範囲の計算対象: 高値・安値(足を描く場合)・メイン指標の各線
+        var valueArrays: [[Double?]] = []
+        if mainContent.priceStyle != .hidden {
+            valueArrays.append(candles.map { candle in candle.high })
+            valueArrays.append(candles.map { candle in candle.low })
+        }
         for series in mainContent.series {
             valueArrays.append(series.values)
         }
 
-        guard let (low, high) = Self.valueRange(of: valueArrays, from: from, to: to) else { return }
+        guard var (low, high) = Self.valueRange(of: valueArrays, from: from, to: to) else { return }
+
+        // 現在値の破線(新値足・折線チャート)も範囲に含める
+        if let currentPrice = mainContent.currentPrice {
+            low = min(low, currentPrice)
+            high = max(high, currentPrice)
+        }
 
         let range = Self.nonZeroRange(low: low, high: high)
         priceChart.rightAxis.axisMaximum = high + range * 0.2

@@ -44,6 +44,14 @@ struct StockChartStyle {
     var ichimokuSpanBColor = UIColor(red: 0.60, green: 0.30, blue: 0.85, alpha: 1)
     /// 一目均衡表: 遅行スパンの色
     var ichimokuChikouColor = UIColor(red: 0.55, green: 0.80, blue: 0.10, alpha: 1)
+    /// VWAP の線・点の色(赤)
+    var vwapColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+    /// 新値足の色(陽線・陰線とも同じ青。陽線は枠だけ、陰線は塗りつぶしで区別する)
+    var newPriceColor = UIColor(red: 0.10, green: 0.50, blue: 1.00, alpha: 1)
+    /// 折線チャートの線の色(青)
+    var lineChartColor = UIColor(red: 0.10, green: 0.50, blue: 1.00, alpha: 1)
+    /// 現在値の破線(新値足・折線チャート)の色
+    var currentPriceLineColor = UIColor.darkGray
     /// 雲の不透明度(先行スパンの色をこの不透明度で塗る)
     var cloudAlpha: CGFloat = 0.15
     /// MACD ヒストグラムの不透明度(上昇/下降の色をこの不透明度で塗る)
@@ -106,6 +114,9 @@ struct StockChartStyle {
         case .ichimokuChikou: return ichimokuChikouColor
         case .histogramPositive: return increasingColor.withAlphaComponent(histogramAlpha)
         case .histogramNegative: return decreasingColor.withAlphaComponent(histogramAlpha)
+        case .vwap: return vwapColor
+        case .newPrice: return newPriceColor
+        case .closeLine: return lineChartColor
         }
     }
 }

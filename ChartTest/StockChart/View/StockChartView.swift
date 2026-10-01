@@ -182,6 +182,25 @@ final class StockChartView: UIView {
         return candles.count + futureCount
     }
 
+    /// 初期表示する本数(nil = 全件)。表示内容で本数が決まっている場合(新値足)はそちらを優先する
+    var effectiveVisibleCount: Int? {
+        if let fixedVisibleCount = mainContent.fixedVisibleCount {
+            return fixedVisibleCount
+        }
+        return style.visibleCount
+    }
+
+    /// データの左端より前に空けておく本数(新値足の本数が表示本数より少ないとき、右寄せにするため)
+    var leadingBlankCount: Int {
+        guard let fixedVisibleCount = mainContent.fixedVisibleCount else { return 0 }
+        return max(0, fixedVisibleCount - totalCount)
+    }
+
+    /// X軸の左端の値。両端の足が半分切れないよう、前に 0.5 本広げる(右寄せの場合は空ける本数も含める)
+    var xAxisMinimum: Double {
+        return -0.5 - Double(leadingBlankCount)
+    }
+
     /// サブチャートを表示中か
     var hasSubChart: Bool {
         return subContent != nil
@@ -217,7 +236,8 @@ final class StockChartView: UIView {
         // 維持する表示位置・拡大率(nil = 初期表示位置に戻す)。内容を差し替える前に取得しておく
         var keptMatrix: CGAffineTransform?
         if keepsViewport {
-            keptMatrix = currentMatrixIfReusable(candleCount: candles.count, futureCount: main.futureCount)
+            keptMatrix = currentMatrixIfReusable(candleCount: candles.count, futureCount: main.futureCount,
+                                                 fixedVisibleCount: main.fixedVisibleCount)
         }
 
         // サブチャートの表示/非表示が切り替わるか(今の表示状態と、新しい内容にサブがあるかを比べる)
@@ -258,7 +278,9 @@ final class StockChartView: UIView {
     /// - Parameters:
     ///   - candleCount: 新しく表示するデータの件数
     ///   - futureCount: 新しく表示する内容の、データの右端より先に描く本数
-    private func currentMatrixIfReusable(candleCount: Int, futureCount newFutureCount: Int) -> CGAffineTransform? {
+    ///   - fixedVisibleCount: 新しく表示する内容の、表示本数の固定値(新値足)
+    private func currentMatrixIfReusable(candleCount: Int, futureCount newFutureCount: Int,
+                                         fixedVisibleCount: Int?) -> CGAffineTransform? {
         // まだ何も表示していない
         guard priceChart.data != nil else { return nil }
         // レイアウト前で、描画領域の幅が確定していない
@@ -267,6 +289,8 @@ final class StockChartView: UIView {
         guard candleCount == candles.count else { return nil }
         // 先行スパンの本数(一目均衡表の有無)が変わっても X軸の範囲が変わる
         guard newFutureCount == futureCount else { return nil }
+        // 表示本数の固定(新値足の右寄せ)が変わっても X軸の範囲が変わる
+        guard fixedVisibleCount == mainContent.fixedVisibleCount else { return nil }
 
         return priceChart.viewPortHandler.touchMatrix
     }
@@ -298,8 +322,8 @@ final class StockChartView: UIView {
         let visibleWidth = high - low
         guard visibleWidth > 0 else { return }
 
-        // X軸全体の幅(axisMinimum = -0.5 〜 axisMaximum = totalCount - 0.5 なので totalCount 本ぶん)
-        let totalWidth = Double(totalCount)
+        // X軸全体の幅(axisMinimum = xAxisMinimum 〜 axisMaximum = totalCount - 0.5)
+        let totalWidth = Double(totalCount) - 0.5 - xAxisMinimum
 
         for chart in [priceChart, subChart] {
             chart.fitScreen()  // 拡大率・スクロール位置をリセット

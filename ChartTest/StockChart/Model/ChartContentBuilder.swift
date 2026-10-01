@@ -42,6 +42,92 @@ struct ChartContentBuilder {
     private var highs: [Double] { candles.map { candle in candle.high } }
     private var lows: [Double] { candles.map { candle in candle.low } }
 
+    // MARK: - チャート種類
+
+    /// 新値足の転換に使う本数(3本新値)
+    static let newPriceReversalCount = 3
+    /// 新値足の表示本数(本数が少ないときは右寄せで表示する)
+    static let newPriceVisibleCount = 50
+
+    /// チャート種類に合わせて、表示する内容一式を作る
+    /// - Parameters:
+    ///   - chartType: チャートの種類
+    ///   - mainIndicator: メインチャートの指標(ローソク足のときだけ使う)
+    ///   - subIndicator: サブチャートの指標(ローソク足のときだけ使う)
+    func content(for chartType: ChartType, mainIndicator: MainChartIndicator,
+                 subIndicator: SubChartIndicator) -> ChartContent {
+        switch chartType {
+        case .candlestick:
+            return ChartContent(candles: candles,
+                                main: mainContent(for: mainIndicator),
+                                sub: subContent(for: subIndicator))
+        case .vwapLine:
+            return vwapContent(title: chartType.title, style: .line)
+        case .vwapDots:
+            return vwapContent(title: chartType.title, style: .dots)
+        case .newPrice:
+            return newPriceContent()
+        case .lineChart:
+            return lineChartContent()
+        }
+    }
+
+    /// 折線チャートの内容(ローソク足は描かず、終値を線で結ぶ。サブチャートなし)
+    ///
+    ///   凡例:「折線チャート」(線の色)
+    ///   現在値(最新の足の終値)の位置に破線を引く
+    private func lineChartContent() -> ChartContent {
+        let values: [Double?] = closes.map { close in close }
+        let main = MainChartContent(
+            series: [ChartSeries(label: ChartType.lineChart.title, values: values, colorRole: .closeLine)],
+            priceStyle: .hidden,
+            currentPrice: candles.last?.close)
+        return ChartContent(candles: candles, main: main, sub: nil)
+    }
+
+    /// VWAP の内容(ローソク足は描かず、VWAP の線または点だけを描く。サブチャートなし)
+    private func vwapContent(title: String, style: ChartSeries.Style) -> ChartContent {
+        let values = TechnicalIndicators.vwap(
+            dates: candles.map { candle in candle.date }, highs: highs, lows: lows, closes: closes,
+            volumes: candles.map { candle in candle.volume })
+        let main = MainChartContent(
+            series: [ChartSeries(label: title, values: values, colorRole: .vwap, style: style)],
+            priceStyle: .hidden)
+
+        // 出来高がないデータ(指数の1分足・日中足など)は VWAP を計算できないので、
+        // 凡例だけ残して「表示できる情報はありません」と表示する
+        let hasValue = values.contains { value in value != nil }
+        guard hasValue else {
+            return ChartContent(candles: [], main: main, sub: nil)
+        }
+        return ChartContent(candles: candles, main: main, sub: nil)
+    }
+
+    /// 新値足の内容(新値足の1本を1つの足として並べる。サブチャートなし)
+    ///
+    ///   凡例:「新値足 ■陰線 □陽線」(すべて新値足の色)
+    ///   現在値(最新の足の終値)の位置に破線を引く
+    private func newPriceContent() -> ChartContent {
+        let lines = TechnicalIndicators.newPriceLines(
+            dates: candles.map { candle in candle.date }, closes: closes,
+            reversalCount: Self.newPriceReversalCount)
+
+        // 新値足の1本 = ローソク足の「始値 = 始点、終値 = 終点」として並べる(ヒゲはないので高値・安値は線の両端)
+        let lineCandles = lines.map { line in
+            StockCandle(date: line.date, open: line.start, high: line.high, low: line.low, close: line.end, volume: 0)
+        }
+        let main = MainChartContent(
+            priceStyle: .newPrice,
+            legendItems: [
+                ChartLegendItem(text: ChartType.newPrice.title, colorRole: .newPrice),
+                ChartLegendItem(text: "■陰線", colorRole: .newPrice),
+                ChartLegendItem(text: "□陽線", colorRole: .newPrice),
+            ],
+            currentPrice: candles.last?.close,
+            fixedVisibleCount: Self.newPriceVisibleCount)
+        return ChartContent(candles: lineCandles, main: main, sub: nil)
+    }
+
     // MARK: - メインチャート
 
     /// メインチャート(ローソク足に重ねる部分)の描画内容を作る

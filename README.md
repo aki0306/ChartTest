@@ -10,10 +10,24 @@
 
 | 縦画面 | 横画面 |
 |---|---|
-| 上部のタブで足種(1分足・日中足・日足・週足・月足)を切り替える。チャートは移動平均線 + 出来高 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる(日足) |
+| 上部のタブで足種(1分足・日中足・日足・週足・月足)を切り替える。チャートは移動平均線 + 出来高 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。右下のボタンでチャートの種類を切り替える(日足) |
 | `Portrait.storyboard` / `PortraitChartViewController` | `Landscape.storyboard` / `LandscapeChartViewController` |
 
 `ViewController`(`Main.storyboard`)が縦画面用と横画面用の両方を読み込み、画面の向きに合わせて片方だけを表示します。
+
+### 横画面のチャートの種類
+
+右下のボタンで切り替えます(`ChartType`)。ローソク足以外では、テクニカル指標とサブチャートは表示しません。
+
+- 「テクニカル」のメニューは、メインチャート・サブチャートとも「なし」だけになります(ローソク足に戻すと、それまでの選択に戻ります)
+- 「設定」は使えますが、「4本値」はオンにしてもローソク足のときだけ表示されます
+
+| 種類 | 表示 |
+|---|---|
+| ローソク足 | ローソク足 + テクニカル指標(メイン・サブ) |
+| VWAP：線 / VWAP：点 | VWAP を線または点で表示(ローソク足は描かない)。同じ日の足で累計し、日付が変わると計算し直す。出来高が 0 のデータでは計算できないので、凡例と「現在、指定の条件で表示できる情報はありません。」を表示する |
+| 折線チャート | 終値を線で結んだチャート(ローソク足は描かない)。現在値に破線を引く |
+| 新値足 | 3本新値の新値足。陽線は枠だけ、陰線は塗りつぶしで、現在値に破線を引く。X軸は時間ではなく新値の本数で、50本分の幅で表示する(50本未満なら右寄せ) |
 
 ### 縦画面の足種
 
@@ -166,6 +180,7 @@ chartViewController.didMove(toParent: self)
 chartViewController.mainIndicator = .bollingerBands
 chartViewController.subIndicator = .macd
 chartViewController.isTechnicalMenuEnabled = true  // テクニカル/設定タブを表示する
+chartViewController.chartType = .candlestick       // チャートの種類(.vwapLine / .vwapDots / .newPrice / .lineChart)
 chartViewController.setCandles(candles)
 ```
 
@@ -179,6 +194,7 @@ StockChartViewController *chartViewController = [[StockChartViewController alloc
 chartViewController.mainIndicator = MainChartIndicatorBollingerBands;
 chartViewController.subIndicator = SubChartIndicatorMacd;
 chartViewController.isTechnicalMenuEnabled = YES;  // テクニカル/設定タブを表示する
+chartViewController.chartType = ChartTypeCandlestick;  // チャートの種類
 [chartViewController setCandles:candles];
 ```
 
@@ -202,7 +218,7 @@ LandscapeChartViewController *landscape = [LandscapeChartViewController instanti
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
-| `StockChartViewController` | `setCandles`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions` |
+| `StockChartViewController` | `setCandles`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles` | ― |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
@@ -232,6 +248,14 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 | | `.dmi` → `SubChartIndicatorDmi`(DMI) |
 | | `.hidden` → `SubChartIndicatorHidden`(サブチャートなし) |
 
+| チャートの種類(`ChartType`) |
+|---|
+| `.candlestick` → `ChartTypeCandlestick`(ローソク足) |
+| `.vwapLine` → `ChartTypeVwapLine`(VWAP：線) |
+| `.vwapDots` → `ChartTypeVwapDots`(VWAP：点) |
+| `.newPrice` → `ChartTypeNewPrice`(新値足) |
+| `.lineChart` → `ChartTypeLineChart`(折線チャート) |
+
 ## フォルダ構成
 
 ```
@@ -251,12 +275,13 @@ ChartTest/
 | ファイル | 内容 |
 |---|---|
 | `StockCandle.swift` | ローソク足1本分のデータ(日付・始値・高値・安値・終値・出来高) |
-| `TechnicalIndicators.swift` | 指標の計算(移動平均・ボリンジャーバンド・一目均衡表・RSI・MACD など) |
+| `TechnicalIndicators.swift` | 指標の計算(移動平均・ボリンジャーバンド・一目均衡表・RSI・MACD・VWAP・新値足 など) |
+| `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
 | `ChartPeriod.swift` | 足種(1分足〜月足)と足種ごとの表示の違い、指数の種類(国内/海外)ごとに選べる足種 |
 | `IndicatorParameters.swift` | 指標の計算パラメータ(期間など) |
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |
-| `ChartContentBuilder.swift` | ローソク足 + 指標 + パラメータ → `ChartContent` を組み立てる |
+| `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる |
 | `ChartDisplayOptions.swift` | 表示オプション(Y軸固定・4本値) |
 | `ChartSettingsCatalog.swift` | 設定画面に並べる項目と、編集できるパラメータの定義 |
 
@@ -282,7 +307,7 @@ ChartTest/
 
 | ファイル | 内容 |
 |---|---|
-| `StockChartViewController.swift` | 選択中の指標・パラメータ・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
+| `StockChartViewController.swift` | チャートの種類・選択中の指標・パラメータ・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
 
 ## データの流れ
 

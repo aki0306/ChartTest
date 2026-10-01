@@ -17,14 +17,6 @@
 import UIKit
 import DGCharts
 
-/// 凡例の1項目(表示する文字と、その色の役割)
-private struct LegendItem {
-    /// 表示する文字(例:「短期移動平均(5)」)
-    let text: String
-    /// 文字の色の役割(チャートの線と同じ色にする)
-    let colorRole: ChartColorRole
-}
-
 extension StockChartView {
 
     // MARK: - 描画
@@ -73,11 +65,11 @@ extension StockChartView {
         let dates = candles.map { candle in candle.date }
         let xAxisFormatter = DateAxisValueFormatter(dates: dates, formatter: dateFormatter)
 
-        // 両端のローソク足/バーが半分切れないよう、X軸の範囲を前後に 0.5 本ずつ広げる。
+        // 両端のローソク足/バーが半分切れないよう、X軸の範囲を前後に 0.5 本ずつ広げる(xAxisMinimum)。
         // メインとサブで範囲を揃えておかないとスクロール同期がずれるので、両方に同じ値を設定する
         for chart in [priceChart, subChart] {
             chart.xAxis.valueFormatter = xAxisFormatter
-            chart.xAxis.axisMinimum = -0.5
+            chart.xAxis.axisMinimum = xAxisMinimum  // 新値足で本数が少ない場合は、左側を空けて右寄せにする
             chart.xAxis.axisMaximum = Double(totalCount) - 0.5
         }
 
@@ -100,7 +92,22 @@ extension StockChartView {
             priceRenderer.cloud = nil
         }
 
+        updateCurrentPriceLine()
         priceChart.data = makePriceData()
+    }
+
+    /// 現在値の破線(新値足・折線チャート)を引く。現在値がない内容では消す
+    private func updateCurrentPriceLine() {
+        let axis = priceChart.rightAxis
+        axis.removeAllLimitLines()
+        guard let price = mainContent.currentPrice else { return }
+
+        let line = ChartLimitLine(limit: price)
+        line.lineColor = style.currentPriceLineColor
+        line.lineWidth = 0.8
+        line.lineDashLengths = [3, 2]  // 3pt 描いて 2pt 空ける破線
+        line.drawLabelEnabled = false
+        axis.addLimitLine(line)
     }
 
     /// サブチャート(サブ指標・Y軸)を描く。サブなしの場合は空にする
@@ -126,7 +133,7 @@ extension StockChartView {
                 // 直近 visibleCount 本を表示し、右端(最新)にスクロールしておく。
                 // (レイアウト前の場合、moveViewToX はサイズ確定後に DGCharts が自動で実行する)
                 chart.fitScreen()
-                if let visibleCount = style.visibleCount, visibleCount < totalCount {
+                if let visibleCount = effectiveVisibleCount, visibleCount < totalCount {
                     chart.setVisibleXRangeMaximum(Double(visibleCount))
                     chart.moveViewToX(Double(totalCount))
                 }
@@ -145,7 +152,8 @@ extension StockChartView {
         // ・タイトル(legendTitle)と各線のラベル(label)は Model(ChartContentBuilder)で決めている
         // ・label が nil の線は凡例に出さない(ボリンジャーバンドの下限線、パラボリックの点など)
         // ・「なし(ローソク足のみ)」はタイトルも線もないので、凡例は空(nil)になる
-        let mainItems = legendItems(of: mainContent.series)
+        // ・線を持たない項目(新値足の「■陰線 □陽線」など)は、各線のラベルのあとに並べる
+        let mainItems = legendItems(of: mainContent.series) + mainContent.legendItems
         priceLegendLabel.attributedText = makeLegend(title: mainContent.legendTitle, items: mainItems)
 
         // サブチャートの凡例: 「タイトル + 棒のラベル + 各線のラベル」の順に並べる
@@ -156,20 +164,20 @@ extension StockChartView {
             subLegendLabel.attributedText = nil
             return
         }
-        var subItems: [LegendItem] = []
+        var subItems: [ChartLegendItem] = []
         if let bars = sub.bars, let barLabel = bars.label {
-            subItems.append(LegendItem(text: barLabel, colorRole: bars.labelColorRole))
+            subItems.append(ChartLegendItem(text: barLabel, colorRole: bars.labelColorRole))
         }
         subItems += legendItems(of: sub.series)
         subLegendLabel.attributedText = makeLegend(title: sub.legendTitle, items: subItems)
     }
 
     /// 線のうち、凡例に出すもの(label があるもの)を凡例の項目にする
-    private func legendItems(of series: [ChartSeries]) -> [LegendItem] {
-        var items: [LegendItem] = []
+    private func legendItems(of series: [ChartSeries]) -> [ChartLegendItem] {
+        var items: [ChartLegendItem] = []
         for line in series {
             guard let label = line.label else { continue }  // label が nil の線は凡例に出さない
-            items.append(LegendItem(text: label, colorRole: line.colorRole))
+            items.append(ChartLegendItem(text: label, colorRole: line.colorRole))
         }
         return items
     }
@@ -187,7 +195,7 @@ extension StockChartView {
     ///   - title: 先頭に表示するタイトル(指標名など)。nil なら出さない
     ///   - items: 凡例に並べる項目。並び順のまま表示する
     /// - Returns: 表示する項目が1つもない場合は nil(凡例を空にする)
-    private func makeLegend(title: String?, items: [LegendItem]) -> NSAttributedString? {
+    private func makeLegend(title: String?, items: [ChartLegendItem]) -> NSAttributedString? {
         // (文字, 色) の組を並べる
         var parts: [(text: String, color: UIColor)] = []
         if let title {
@@ -217,7 +225,21 @@ extension StockChartView {
 
     /// メインチャートのデータ(ローソク足 + メイン指標)を作る
     private func makePriceData() -> CombinedChartData {
-        // ローソク足: X = 何本目か、Y = 4本値
+        let data = CombinedChartData()
+        switch mainContent.priceStyle {
+        case .candles:
+            data.candleData = CandleChartData(dataSet: makeCandleSet())
+        case .newPrice:
+            data.candleData = CandleChartData(dataSet: makeNewPriceSet())
+        case .hidden:
+            break  // 足は描かない(VWAP など)
+        }
+        addSeries(mainContent.series, to: data)
+        return data
+    }
+
+    /// 表示中の足を、DGCharts の足(X = 何本目か、Y = 4本値)に変換する
+    private func makeCandleEntries() -> [CandleChartDataEntry] {
         var candleEntries: [CandleChartDataEntry] = []
         for (index, candle) in candles.enumerated() {
             let entry = CandleChartDataEntry(x: Double(index),
@@ -227,8 +249,12 @@ extension StockChartView {
                                              close: candle.close)
             candleEntries.append(entry)
         }
+        return candleEntries
+    }
 
-        let candleSet = CandleChartDataSet(entries: candleEntries, label: "ローソク足")
+    /// ローソク足のデータセットを作る
+    private func makeCandleSet() -> CandleChartDataSet {
+        let candleSet = CandleChartDataSet(entries: makeCandleEntries(), label: "ローソク足")
         candleSet.axisDependency = .right               // 右のY軸を基準に描画する
         candleSet.drawValuesEnabled = false             // 各足の値ラベルは表示しない
         candleSet.highlightEnabled = false
@@ -240,11 +266,29 @@ extension StockChartView {
         candleSet.shadowColorSameAsCandle = true        // ヒゲを実体と同じ色にする
         candleSet.shadowWidth = 1
         candleSet.barSpace = 0.15                       // 足同士の隙間(1本分の幅に対する割合)
+        return candleSet
+    }
 
-        let data = CombinedChartData()
-        data.candleData = CandleChartData(dataSet: candleSet)
-        addSeries(mainContent.series, to: data)
-        return data
+    /// 新値足のデータセットを作る(新値足の1本をローソク足の実体として描く)
+    ///
+    ///   ・陽線は枠だけ、陰線は塗りつぶし(色はどちらも新値足の色)
+    ///   ・ヒゲはなし(高値・安値は実体の両端と同じ。ヒゲの線は透明にする)
+    ///   ・隣の足との隙間はなし(階段状につながって見える)
+    private func makeNewPriceSet() -> CandleChartDataSet {
+        let candleSet = CandleChartDataSet(entries: makeCandleEntries(), label: "新値足")
+        candleSet.axisDependency = .right
+        candleSet.drawValuesEnabled = false
+        candleSet.highlightEnabled = false
+        candleSet.increasingColor = style.newPriceColor
+        candleSet.increasingFilled = false              // 陽線は枠だけ
+        candleSet.decreasingColor = style.newPriceColor
+        candleSet.decreasingFilled = true               // 陰線は塗りつぶし
+        candleSet.neutralColor = style.newPriceColor
+        candleSet.shadowColorSameAsCandle = false
+        candleSet.shadowColor = .clear                  // ヒゲ(実体の中央の縦線)は描かない
+        candleSet.shadowWidth = 1.5                     // 枠の線の太さ(DGCharts は枠もこの太さで描く)
+        candleSet.barSpace = 0                          // 足同士の隙間なし
+        return candleSet
     }
 
     /// サブチャートのデータ(棒グラフ + 線)を作る

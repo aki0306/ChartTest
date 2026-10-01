@@ -438,4 +438,114 @@ enum TechnicalIndicators {
         }
         return (plusDI, minusDI, adx)
     }
+
+    // MARK: VWAP
+
+    /// VWAP(出来高加重平均価格)。
+    /// 同じ日の足の「代表値 × 出来高」の累計 ÷ 出来高の累計。日付が変わると計算をやり直す。
+    /// 代表値は (高値 + 安値 + 終値) ÷ 3(1本の中の約定価格の代わり)。
+    ///   ・1分足・日中足: その日の寄り付きからの VWAP
+    ///   ・日足・週足・月足: 1本ごとにやり直すので、その足の代表値になる
+    /// その日の出来高の累計が 0 の間(出来高が配信されない指数など)は nil
+    static func vwap(dates: [Date], highs: [Double], lows: [Double], closes: [Double], volumes: [Double]) -> [Double?] {
+        var result = [Double?](repeating: nil, count: closes.count)
+        let calendar = Calendar(identifier: .gregorian)
+        var priceVolumeSum = 0.0  // その日の「代表値 × 出来高」の累計
+        var volumeSum = 0.0       // その日の出来高の累計
+
+        for i in closes.indices {
+            // 日付が変わったら累計をやり直す
+            if i > 0, !calendar.isDate(dates[i], inSameDayAs: dates[i - 1]) {
+                priceVolumeSum = 0
+                volumeSum = 0
+            }
+            let typicalPrice = (highs[i] + lows[i] + closes[i]) / 3
+            priceVolumeSum += typicalPrice * volumes[i]
+            volumeSum += volumes[i]
+
+            guard volumeSum > 0 else { continue }
+            result[i] = priceVolumeSum / volumeSum
+        }
+        return result
+    }
+
+    // MARK: 新値足
+
+    /// 新値足の1本(始点 → 終点)
+    struct NewPriceLine {
+        /// この線ができた足の日付
+        let date: Date
+        /// 線の始点(前の線の終点、または転換時は前の線の始点)
+        let start: Double
+        /// 線の終点(この線ができた足の終値)
+        let end: Double
+
+        /// 上昇の線(陽線)か
+        var isUp: Bool { end > start }
+        /// 線の高いほうの値
+        var high: Double { max(start, end) }
+        /// 線の低いほうの値
+        var low: Double { min(start, end) }
+    }
+
+    /// 新値足(N本新値)。終値だけを使い、値が更新されたときだけ線を足す(時間の経過では線は増えない)。
+    ///
+    ///   ・同じ向きに更新: 陽線なら直前の線の高値を、陰線なら安値を終値が更新したら、直前の線の終点から新しい線を引く
+    ///   ・転換: 陽線のあと、直近 N 本の線の安値をすべて下回ったら陰線に転換する
+    ///           (直前の線の始点から引く。陰線のあとの陽線への転換も同様)
+    ///   ・どちらでもなければ線は増えない
+    ///
+    ///   例) N = 3、陽線 100→110、110→120、120→130 のあと
+    ///       終値 125 → 線は増えない(3本の安値 100 を下回っていない)
+    ///       終値 95  → 陰線 120→95 を引く(直前の線の始点 120 から)
+    ///
+    /// - Parameters:
+    ///   - dates: 各足の日付
+    ///   - closes: 各足の終値
+    ///   - reversalCount: 転換の判定に使う本数(N)
+    /// - Returns: 古い順の線。最初の足の終値を起点にして、そこから値が動いた足から線を作る
+    static func newPriceLines(dates: [Date], closes: [Double], reversalCount: Int) -> [NewPriceLine] {
+        guard let base = closes.first else { return [] }
+        var lines: [NewPriceLine] = []
+
+        for i in closes.indices.dropFirst() {
+            let price = closes[i]
+
+            // 1本目: 最初の足の終値から動いたら、その向きの線にする
+            guard let last = lines.last else {
+                if price != base {
+                    lines.append(NewPriceLine(date: dates[i], start: base, end: price))
+                }
+                continue
+            }
+
+            // 転換の判定に使う直近 N 本(線が N 本に満たない場合はあるだけ)
+            let recentLines = lines.suffix(max(reversalCount, 1))
+
+            if last.isUp {
+                if price > last.end {
+                    // 高値を更新: 陽線を続ける
+                    lines.append(NewPriceLine(date: dates[i], start: last.end, end: price))
+                    continue
+                }
+                let lowestLow = recentLines.map { line in line.low }.min() ?? last.low
+                if price < lowestLow {
+                    // 直近 N 本の安値をすべて下回った: 陰線に転換
+                    lines.append(NewPriceLine(date: dates[i], start: last.start, end: price))
+                }
+            } else {
+                if price < last.end {
+                    // 安値を更新: 陰線を続ける
+                    lines.append(NewPriceLine(date: dates[i], start: last.end, end: price))
+                    continue
+                }
+                let highestHigh = recentLines.map { line in line.high }.max() ?? last.high
+                if price > highestHigh {
+                    // 直近 N 本の高値をすべて上回った: 陽線に転換
+                    lines.append(NewPriceLine(date: dates[i], start: last.start, end: price))
+                }
+            }
+        }
+        return lines
+    }
 }

@@ -12,6 +12,8 @@
 //  │ ...        │ ...        │
 //  └────────────┴────────────┘
 //
+//  allowsOnlyNone = true(ローソク足以外のチャート種類)のときは、メイン・サブとも「なし」だけを並べる。
+//
 //  【責務】選択肢の表示と、タップされた指標の通知のみ。
 //  選択結果は delegate(Objective-C からも利用可)で Controller に通知し、
 //  チャートへの反映は Controller(StockChartViewController)が行う。
@@ -44,6 +46,16 @@ final class TechnicalMenuView: UIView {
         didSet { updateSelection() }
     }
 
+    /// true の場合、メイン・サブとも「なし」だけを選択肢にする(VWAP・新値足・折線チャートなど、指標を重ねられないチャート用)。
+    /// 「なし」が選択中の表示になるが、selectedMainIndicator / selectedSubIndicator は変えない
+    /// (false に戻すと、それまでの選択が表示される)
+    @objc var allowsOnlyNone = false {
+        didSet {
+            guard allowsOnlyNone != oldValue else { return }
+            rebuildColumns()
+        }
+    }
+
     // MARK: - Style
 
     /// 見出しの背景色
@@ -55,10 +67,28 @@ final class TechnicalMenuView: UIView {
 
     // MARK: - Subviews
 
-    /// メインチャート列の各行のボタン(MainChartIndicator.allCases と同じ並び)
+    /// メインチャート列の各行のボタン(mainChoices と同じ並び)
     private var mainButtons: [UIButton] = []
-    /// サブチャート列の各行のボタン(SubChartIndicator.allCases と同じ並び)
+    /// サブチャート列の各行のボタン(subChoices と同じ並び)
     private var subButtons: [UIButton] = []
+    /// メイン・サブの2列を横に並べたもの(選択肢が変わると作り直す)
+    private var columns: UIStackView?
+
+    /// メインチャート列に並べる指標
+    private var mainChoices: [MainChartIndicator] {
+        if allowsOnlyNone {
+            return [.candleOnly]
+        }
+        return MainChartIndicator.allCases
+    }
+
+    /// サブチャート列に並べる指標
+    private var subChoices: [SubChartIndicator] {
+        if allowsOnlyNone {
+            return [.hidden]
+        }
+        return SubChartIndicator.allCases
+    }
 
     // MARK: - Init
 
@@ -78,14 +108,21 @@ final class TechnicalMenuView: UIView {
     /// 2列のメニューを組み立てる
     private func setup() {
         backgroundColor = separatorColor  // 列・行の隙間が区切り線に見えるよう背景を線の色にする
+        rebuildColumns()
+    }
 
-        mainButtons = MainChartIndicator.allCases.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
-        subButtons = SubChartIndicator.allCases.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
+    /// 選択肢(mainChoices / subChoices)に合わせて2列を作り直す
+    private func rebuildColumns() {
+        columns?.removeFromSuperview()
+
+        mainButtons = mainChoices.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
+        subButtons = subChoices.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
         mainButtons.forEach { $0.addTarget(self, action: #selector(mainButtonTapped(_:)), for: .touchUpInside) }
         subButtons.forEach { $0.addTarget(self, action: #selector(subButtonTapped(_:)), for: .touchUpInside) }
 
-        // 行の高さを両列で揃えるため、行数が少ない列は空の行で埋める
-        let rowCount = max(mainButtons.count, subButtons.count)
+        // 行の高さを両列で揃えるため、行数が少ない列は空の行で埋める。
+        // 「なし」だけのときも行の高さが変わらないよう、全選択肢の行数に合わせる
+        let rowCount = max(MainChartIndicator.allCases.count, SubChartIndicator.allCases.count)
         let mainColumn = makeColumn(title: "メインチャート", rows: mainButtons, rowCount: rowCount)
         let subColumn = makeColumn(title: "サブチャート", rows: subButtons, rowCount: rowCount)
 
@@ -96,6 +133,7 @@ final class TechnicalMenuView: UIView {
         columns.spacing = 1
         columns.translatesAutoresizingMaskIntoConstraints = false
         addSubview(columns)
+        self.columns = columns
         NSLayoutConstraint.activate([
             columns.topAnchor.constraint(equalTo: topAnchor),
             columns.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -149,11 +187,18 @@ final class TechnicalMenuView: UIView {
 
     /// 選択中の行をグレー背景 + 白い太字、それ以外を通常表示にする
     private func updateSelection() {
+        // 「なし」だけのときは、その「なし」を選択中として表示する
+        var mainSelection = selectedMainIndicator
+        var subSelection = selectedSubIndicator
+        if allowsOnlyNone {
+            mainSelection = .candleOnly
+            subSelection = .hidden
+        }
         for button in mainButtons {
-            applyRowStyle(button, isSelected: button.tag == selectedMainIndicator.rawValue)
+            applyRowStyle(button, isSelected: button.tag == mainSelection.rawValue)
         }
         for button in subButtons {
-            applyRowStyle(button, isSelected: button.tag == selectedSubIndicator.rawValue)
+            applyRowStyle(button, isSelected: button.tag == subSelection.rawValue)
         }
     }
 
@@ -183,6 +228,8 @@ final class TechnicalMenuView: UIView {
 
     /// メインチャート列の行がタップされたとき
     @objc private func mainButtonTapped(_ sender: UIButton) {
+        // 「なし」だけのときは選び直すものがないので、何もしない(選択中の指標を変えない)
+        guard !allowsOnlyNone else { return }
         guard let indicator = MainChartIndicator(rawValue: sender.tag) else { return }
         selectedMainIndicator = indicator
         delegate?.technicalMenuView(self, didSelectMainIndicator: indicator)
@@ -190,6 +237,8 @@ final class TechnicalMenuView: UIView {
 
     /// サブチャート列の行がタップされたとき
     @objc private func subButtonTapped(_ sender: UIButton) {
+        // 「なし」だけのときは選び直すものがないので、何もしない(選択中の指標を変えない)
+        guard !allowsOnlyNone else { return }
         guard let indicator = SubChartIndicator(rawValue: sender.tag) else { return }
         selectedSubIndicator = indicator
         delegate?.technicalMenuView(self, didSelectSubIndicator: indicator)

@@ -5,7 +5,7 @@
 //  【Controller】株価チャート部品の制御を担当する ViewController。
 //
 //  【責務】
-//  ・状態の保持: ローソク足データ・選択中の指標・指標パラメータ・表示オプション
+//  ・状態の保持: ローソク足データ・チャートの種類・選択中の指標・指標パラメータ・表示オプション
 //  ・Model(ChartContentBuilder)で描画内容を組み立て、View(StockChartView)に渡す
 //  ・View(TechnicalMenuView / ChartSettingsView)からの操作を受け取り、状態を更新して再描画する
 //  ・テクニカル/設定タブの表示/非表示と、各パネルの開閉
@@ -47,13 +47,29 @@ final class StockChartViewController: UIViewController {
     /// 表示オプション(Y軸固定・4本値)。変更すると即座にチャートへ反映する
     var displayOptions = ChartDisplayOptions() {
         didSet {
-            chartView.displayOptions = displayOptions
+            applyDisplayOptionsToChart()
             // 設定画面でオプションを表示中なら、トグルの状態を合わせる
             if selectedSettingsItem == .displayOptions {
                 reloadSettingsRows()
             }
         }
     }
+
+    /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。
+    /// ローソク足以外では、テクニカル指標とサブチャートは表示せず、テクニカルのメニューは「なし」だけにする。
+    /// 4本値は、オンにしていてもローソク足のときだけ表示する
+    @objc var chartType: ChartType = .candlestick {
+        didSet {
+            guard chartType != oldValue else { return }
+            menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators
+            applyDisplayOptionsToChart()
+            reloadChart(keepsViewport: true)
+            onChartTypeChange?(chartType)
+        }
+    }
+
+    /// チャートの種類が変わったときに呼ばれる処理(種類を選ぶボタンの表示を合わせる場合など)
+    var onChartTypeChange: ((ChartType) -> Void)?
 
     /// メインチャートに表示する指標。変更すると表示位置を保ったまま再描画する
     @objc var mainIndicator: MainChartIndicator = .movingAverage {
@@ -167,10 +183,22 @@ final class StockChartViewController: UIViewController {
             return
         }
         let builder = ChartContentBuilder(candles: candles, parameters: parameters)
-        chartView.display(candles: candles,
-                          main: builder.mainContent(for: mainIndicator),
-                          sub: builder.subContent(for: subIndicator),
+        let content = builder.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator)
+        chartView.display(candles: content.candles,
+                          main: content.main,
+                          sub: content.sub,
                           keepsViewport: keepsViewport)
+    }
+
+    /// 表示オプションをチャートに反映する。
+    /// 4本値(十字線)はローソク足の4本値を表示するためのものなので、ローソク足以外(VWAP・新値足・折線チャート)では
+    /// 設定がオンでも表示しない(設定の値はそのまま残し、ローソク足に戻すと表示される)
+    private func applyDisplayOptionsToChart() {
+        var options = displayOptions
+        if !chartType.usesTechnicalIndicators {
+            options.showsOHLC = false
+        }
+        chartView.displayOptions = options
     }
 
     // MARK: - Setup
@@ -178,7 +206,7 @@ final class StockChartViewController: UIViewController {
     /// チャートを配置する(上下右はこのViewいっぱい、左端はタブの有無で変わる)
     private func setupChartView() {
         chartView.translatesAutoresizingMaskIntoConstraints = false
-        chartView.displayOptions = displayOptions
+        applyDisplayOptionsToChart()
         view.addSubview(chartView)
 
         chartLeadingConstraint = chartView.leadingAnchor.constraint(equalTo: view.leadingAnchor)
@@ -198,6 +226,7 @@ final class StockChartViewController: UIViewController {
         menuView.delegate = self
         menuView.selectedMainIndicator = mainIndicator
         menuView.selectedSubIndicator = subIndicator
+        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators
         view.addSubview(menuView)
 
         // 設定画面: このViewの左側に幅 75% で表示(左側リスト + 右側パネル)

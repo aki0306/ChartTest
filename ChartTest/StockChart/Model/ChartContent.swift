@@ -38,6 +38,20 @@ enum ChartColorRole: Hashable {
     case histogramPositive
     /// MACD ヒストグラム(負の値)
     case histogramNegative
+    /// VWAP
+    case vwap
+    /// 新値足(陽線・陰線とも同じ色)
+    case newPrice
+    /// 折線チャートの線
+    case closeLine
+}
+
+/// 凡例の1項目(表示する文字と、その色の役割)
+struct ChartLegendItem {
+    /// 表示する文字(例:「短期移動平均(5)」)
+    var text: String
+    /// 文字の色の役割(チャートの線と同じ色にする)
+    var colorRole: ChartColorRole
 }
 
 /// 指標の1本の線(または点列)
@@ -81,6 +95,16 @@ struct ChartCloud {
 
 /// メインチャート(ローソク足に重ねる部分)の描画内容
 struct MainChartContent {
+    /// 足(candles)の描き方
+    enum PriceStyle {
+        /// ローソク足
+        case candles
+        /// 新値足(陽線は枠だけ・陰線は塗りつぶし。ヒゲなし・隙間なし)
+        case newPrice
+        /// 描かない(VWAP など、線・点だけを描く)
+        case hidden
+    }
+
     /// 凡例の先頭に表示するタイトル(指標名など)
     var legendTitle: String?
     /// ローソク足に重ねる線・点
@@ -89,6 +113,16 @@ struct MainChartContent {
     var cloud: ChartCloud?
     /// データの右端より先に描く本数(一目均衡表の先行スパン。それ以外は 0)
     var futureCount = 0
+    /// 足の描き方
+    var priceStyle = PriceStyle.candles
+    /// 線を持たない凡例の項目(新値足の「■陰線 □陽線」など)。各線のラベルのあとに並ぶ
+    var legendItems: [ChartLegendItem] = []
+    /// 横に破線を引く価格(新値足・折線チャートの現在値)。nil なら引かない
+    var currentPrice: Double?
+    /// 表示する本数を固定する場合の本数(新値足)。
+    /// nil なら見た目の設定(StockChartStyle.visibleCount)に従う。
+    /// データがこの本数より少ない場合は、左側を空けて右寄せで表示する
+    var fixedVisibleCount: Int?
 }
 
 /// サブチャートの描画内容
@@ -109,4 +143,15 @@ struct SubChartContent {
     var fractionDigits = 0
     /// Y軸ラベルの末尾に付ける文字(「%」など)
     var suffix = ""
+}
+
+/// チャートに表示する内容一式(チャート種類ごとに ChartContentBuilder が作る)
+struct ChartContent {
+    /// X軸に並べる足(古い順)。新値足では、新値足の1本を1つの足として並べる。
+    /// 空の場合は「現在、指定の条件で表示できる情報はありません。」と表示される
+    var candles: [StockCandle]
+    /// メインチャートの内容
+    var main: MainChartContent
+    /// サブチャートの内容(nil = サブチャートなし)
+    var sub: SubChartContent?
 }
