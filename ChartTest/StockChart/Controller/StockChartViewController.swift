@@ -59,7 +59,7 @@ final class StockChartViewController: UIViewController {
     @objc var market: IndexMarket = .domestic {
         didSet {
             guard market != oldValue else { return }
-            applyMarket()
+            applyMarket(previousMarket: oldValue)
         }
     }
 
@@ -273,6 +273,24 @@ final class StockChartViewController: UIViewController {
         chartView.style = newStyle
 
         setCandles(candles)
+    }
+
+    /// すべての足種の指標パラメータを変更して、描き直す(Swift からも使える)。
+    /// 例: chartViewController.updateParametersForAllPeriods { $0.rsiPeriod = 9 }
+    /// 表示中の足種だけを変える場合は parameters を、足種を指定する場合は setParameters(_:for:) を使う
+    func updateParametersForAllPeriods(_ change: (inout IndicatorParameters) -> Void) {
+        for period in ChartPeriod.allCases {
+            var target = parameters(for: period)
+            change(&target)
+            parametersByPeriod[period] = target
+        }
+        reloadChart(keepsViewport: true)
+    }
+
+    /// 指定した足種の指標パラメータを変更して、描き直す
+    func setParameters(_ parameters: IndicatorParameters, for period: ChartPeriod) {
+        parametersByPeriod[period] = parameters
+        reloadChart(keepsViewport: true)
     }
 
     /// 指定した足種の指標パラメータ
@@ -574,7 +592,8 @@ final class StockChartViewController: UIViewController {
     // MARK: - 指数の種類
 
     /// 指数の種類に合わせて、選べる指標・チャートの種類・設定画面の項目を切り替え、描き直す
-    private func applyMarket() {
+    /// - Parameter previousMarket: 変える前の指数の種類(設定画面で選んでいた項目を探すのに使う)
+    private func applyMarket(previousMarket: IndexMarket) {
         // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
         menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
         menuView.availableMainIndicators = MainChartIndicator.choices(for: market)
@@ -595,16 +614,48 @@ final class StockChartViewController: UIViewController {
         applyDisplayOptionsToChart()
         reloadChart(keepsViewport: true)
 
-        // 設定画面の左側リストを作り直す(項目が変わるので、選択は先頭の「オプション」に戻す)
+        // 設定画面の左側リストを作り直す。編集中の内容(「決定」前の値)は残す。
+        // 選んでいた項目が新しいリストにもあればその選択を残し、なければ先頭の「オプション」に戻す
         guard isViewLoaded else { return }  // viewDidLoad で作られる
+        let previousItem = settingsItem(at: selectedSettingsIndexPath, in: previousMarket)
         selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
-        configureSettingsView()
+        if let previousItem, let indexPath = indexPathInSettingsList(of: previousItem) {
+            selectedSettingsIndexPath = indexPath
+        }
+        reloadSettingsList()
+        reloadSettingsRows()
+    }
+
+    /// 指定した指数の種類のリストで、指定した位置にある項目(範囲外なら nil)
+    private func settingsItem(at indexPath: IndexPath, in market: IndexMarket) -> ChartSettingsItem? {
+        let sections = ChartSettingsCatalog.sections(for: market)
+        guard sections.indices.contains(indexPath.section) else { return nil }
+        let items = sections[indexPath.section].items
+        guard items.indices.contains(indexPath.row) else { return nil }
+        return items[indexPath.row]
+    }
+
+    /// 今の指数の種類のリストで、指定した項目がある位置(なければ nil)
+    private func indexPathInSettingsList(of item: ChartSettingsItem) -> IndexPath? {
+        for (sectionIndex, section) in settingsSections.enumerated() {
+            if let row = section.items.firstIndex(of: item) {
+                return IndexPath(row: row, section: sectionIndex)
+            }
+        }
+        return nil
     }
 
     // MARK: - Settings(Model → 設定画面)
 
-    /// 設定画面の左側リストを Model(ChartSettingsCatalog)から作る
+    /// 設定画面を用意する(左側リストを作り、編集を始める)
     private func configureSettingsView() {
+        settingsView.periods = ChartPeriod.allCases
+        reloadSettingsList()
+        beginSettingsEditing()
+    }
+
+    /// 設定画面の左側リストを Model(ChartSettingsCatalog)から作る(指数の種類で項目が変わる)
+    private func reloadSettingsList() {
         // 見出しごとに、項目の名称(「移動平均線」など)を並べる
         var sections: [ChartSettingsView.Section] = []
         for section in settingsSections {
@@ -613,8 +664,6 @@ final class StockChartViewController: UIViewController {
         }
         settingsView.sections = sections
         settingsView.selectedIndexPath = selectedSettingsIndexPath
-        settingsView.periods = ChartPeriod.allCases
-        beginSettingsEditing()
     }
 
     /// 設定画面での編集を始める(今のパラメータから編集用のコピーを作り、タブは表示中の足種にする)
@@ -758,25 +807,27 @@ extension StockChartViewController: ChartSettingsViewDelegate {
 // MARK: - Objective-C 向けのパラメータ・オプション設定
 
 /// IndicatorParameters / ChartDisplayOptions は struct のため Objective-C から直接扱えない。
-/// よく変更するものだけを @objc プロパティとして公開する(中身は parameters / displayOptions を読み書きしているだけ)。
+/// よく変更するものだけを @objc プロパティとして公開する。
+/// ・指標の期間: 読み出しは表示中の足種の値、設定は**すべての足種**に反映する(設定画面の「すべての足に反映」と同じ)
+/// ・表示オプション: displayOptions を読み書きしているだけ
 extension StockChartViewController {
 
-    /// 短期移動平均の期間(本数)
+    /// 短期移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var shortMAPeriod: Int {
         get { parameters.shortMAPeriod }
-        set { parameters.shortMAPeriod = newValue }
+        set { updateParametersForAllPeriods { parameters in parameters.shortMAPeriod = newValue } }
     }
 
-    /// 長期移動平均の期間(本数)
+    /// 長期移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var longMAPeriod: Int {
         get { parameters.longMAPeriod }
-        set { parameters.longMAPeriod = newValue }
+        set { updateParametersForAllPeriods { parameters in parameters.longMAPeriod = newValue } }
     }
 
-    /// 出来高移動平均の期間(本数)
+    /// 出来高移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var volumeMAPeriod: Int {
         get { parameters.volumeMAPeriod }
-        set { parameters.volumeMAPeriod = newValue }
+        set { updateParametersForAllPeriods { parameters in parameters.volumeMAPeriod = newValue } }
     }
 
     /// Y軸(メイン)固定

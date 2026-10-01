@@ -167,6 +167,11 @@ extension StockChartView {
                     low = min(low, 0)
                     high = max(high, 0)
                 }
+                // 基準線(移動平均乖離率の底値・高値ラインなど)も範囲に含め、線が見えなくならないようにする
+                for level in sub.referenceLines {
+                    low = min(low, level)
+                    high = max(high, level)
+                }
 
                 // 上側は凡例と重ならないよう凡例の高さぶん(最低でも値幅の 30%)、下側は 5% の余白を取る。
                 // サブチャートはメインより背が低く、凡例の高さが占める割合が大きいので、メイン(20%)より多めに取る
