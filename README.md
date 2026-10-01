@@ -517,6 +517,70 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
    API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
    海外指数の場合は、データを渡す前に `market = .overseas` を指定します(「海外指数の場合」を参照)。
 
+### 横画面のチャートだけを使う場合
+
+縦画面は既存アプリの画面をそのまま使い、横画面のチャート(テクニカル・設定画面・チャートの種類のボタン付き)だけを組み込む場合です。
+
+#### コピーするもの・しないもの
+
+| ファイル | 必要か | 説明 |
+|---|---|---|
+| `StockChart/` フォルダ(`ChartSettingsView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
+| `LandscapeChartViewController.swift` / `Landscape.storyboard` | 必要 | 横画面(チャートの種類のボタン付き)。下のボタンが不要なら、`StockChartViewController` を直接使ってもよい |
+| `PortraitChartViewController.swift` / `Portrait.storyboard` | 不要 | このアプリの縦画面 |
+| `ViewController.swift` / `Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
+| `SampleData.swift` | 不要 | 動作確認用のダミーデータ |
+
+#### 横画面を表示する
+
+既存の縦画面から、横画面のチャートを表示します。表示の仕方は既存アプリに合わせて選んでください。
+
+- **ボタンなどで全画面に表示する**(参考画面の右上の回転ボタンのような使い方)
+
+```swift
+// Swift(既存の縦画面の ViewController から)
+let landscape = LandscapeChartViewController.instantiate()
+landscape.chartViewController.market = .domestic          // 海外指数なら .overseas(データを渡す前に指定する)
+landscape.setCandles(candles, period: .daily)             // 表示中の足種のデータ(古い順)
+landscape.modalPresentationStyle = .fullScreen
+present(landscape, animated: true)
+```
+
+```objc
+// Objective-C(既存の縦画面の ViewController から)
+LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];
+landscape.chartViewController.market = IndexMarketDomestic;   // 海外指数なら IndexMarketOverseas
+[landscape setCandles:candles period:ChartPeriodDaily];
+landscape.modalPresentationStyle = UIModalPresentationFullScreen;
+[self presentViewController:landscape animated:YES completion:nil];
+```
+
+  このとき、次の2点を既存アプリ側で追加してください(`LandscapeChartViewController` はコピーしたものを直接書き換えて構いません)。
+
+  - 横向きで表示する: `LandscapeChartViewController` に次を追加する(アプリの対応する向きに「横」が含まれている必要があります)
+
+    ```swift
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
+    ```
+
+  - 閉じる操作: `LandscapeChartViewController` には閉じるボタンがないので、ボタンを追加して `dismiss(animated:)` を呼ぶ(参考画面の右下の回転ボタンなど)
+
+- **端末を横にしたときに切り替える**
+
+  このアプリの `ViewController.swift` と同じ方法です。既存の画面に `LandscapeChartViewController` を子 ViewController として画面いっぱいに埋め込んでおき、`viewDidLayoutSubviews` で縦横を判定して、横のときだけ表示します(`ViewController.swift` の `embed` / `applyLayout` を参照)。
+
+#### 下のボタンを既存アプリのものにする場合
+
+`Landscape.storyboard` の「チャートの種類」ボタンの代わりに既存アプリのボタン(足種・更新など)を使う場合は、`StockChartViewController` を直接埋め込み、ボタンの分の余白を `chartInsets` で空けます。チャートの種類は `chartType` で切り替えます(`LandscapeChartViewController.swift` が実装例です)。
+
+```swift
+chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 下のボタンの高さ + 余白, right: 8)
+chartViewController.chartType = .lineChart               // 既存アプリのボタンで選ばれた種類
+chartViewController.setCandles(candles, period: .weekly) // 既存アプリのボタンで選ばれた足種のデータ
+```
+
+テクニカル/設定を開いている間に既存アプリのボタンにもグレーをかけたい場合は、`onPanelVisibilityChange` でパネルの開閉を受け取り、`StockChartViewController` の View をボタンより手前に出します(`LandscapeChartViewController` の `configurePanelLayering` を参照)。
+
 ### 既存アプリ側で確認が必要なこと
 
 | 項目 | このプロジェクトの設定 | 既存アプリで違う場合 |
