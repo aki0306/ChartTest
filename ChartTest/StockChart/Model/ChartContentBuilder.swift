@@ -248,7 +248,7 @@ struct ChartContentBuilder {
                 includesZero: true)
 
         case .movingAverageDeviation:
-            // 短期・長期の移動平均からの乖離率。0% に基準線
+            // 短期・長期の移動平均からの乖離率。0% と底値・高値ライン(既定 -10% / 10%)に基準線
             return SubChartContent(
                 legendTitle: "移動平均乖離率",
                 series: [
@@ -259,26 +259,29 @@ struct ChartContentBuilder {
                                 values: TechnicalIndicators.movingAverageDeviation(closes: closes, period: parameters.deviationLongPeriod),
                                 colorRole: .line(1)),
                 ],
-                referenceLines: [0], includesZero: true, fractionDigits: 1, suffix: "%")
+                referenceLines: [Double(parameters.deviationLowerLine), 0, Double(parameters.deviationUpperLine)],
+                includesZero: true, fractionDigits: 1, suffix: "%")
 
         case .rsi:
-            // 0〜100 の固定範囲。30%(売られすぎ)/ 70%(買われすぎ)に基準線
+            // 0〜100 の固定範囲。底値ライン(既定 30%・売られすぎ)/ 高値ライン(既定 70%・買われすぎ)に基準線
             return SubChartContent(
                 series: [ChartSeries(label: "RSI(\(parameters.rsiPeriod))",
                                      values: TechnicalIndicators.rsi(closes: closes, period: parameters.rsiPeriod),
                                      colorRole: .line(2))],
-                referenceLines: [30, 70], fixedRange: 0...100)
+                referenceLines: [Double(parameters.rsiLowerLine), Double(parameters.rsiUpperLine)],
+                fixedRange: 0...100)
 
         case .psychological:
-            // 0〜100 の固定範囲。25% / 75% に基準線
+            // 0〜100 の固定範囲。底値・高値ライン(既定 25% / 75%)に基準線
             return SubChartContent(
                 series: [ChartSeries(label: "サイコロジカル(\(parameters.psychologicalPeriod))",
                                      values: TechnicalIndicators.psychological(closes: closes, period: parameters.psychologicalPeriod),
                                      colorRole: .line(3))],
-                referenceLines: [25, 75], fixedRange: 0...100)
+                referenceLines: [Double(parameters.psychologicalLowerLine), Double(parameters.psychologicalUpperLine)],
+                fixedRange: 0...100)
 
         case .stochastics:
-            // %K と %D。0〜100 の固定範囲。20% / 80% に基準線
+            // %K と %D。0〜100 の固定範囲。底値・高値ライン(既定 20% / 80%)に基準線
             let result = TechnicalIndicators.stochastics(
                 highs: highs, lows: lows, closes: closes,
                 kPeriod: parameters.stochasticsKPeriod, dPeriod: parameters.stochasticsDPeriod)
@@ -288,7 +291,8 @@ struct ChartContentBuilder {
                     ChartSeries(label: "%K(\(parameters.stochasticsKPeriod))", values: result.k, colorRole: .line(0)),
                     ChartSeries(label: "%D(\(parameters.stochasticsDPeriod))", values: result.d, colorRole: .line(1)),
                 ],
-                referenceLines: [20, 80], fixedRange: 0...100)
+                referenceLines: [Double(parameters.stochasticsLowerLine), Double(parameters.stochasticsUpperLine)],
+                fixedRange: 0...100)
 
         case .macd:
             // MACD・シグナルの線 + ヒストグラム(正/負で色分け)。0 に基準線

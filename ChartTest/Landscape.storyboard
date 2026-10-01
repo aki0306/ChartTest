@@ -16,7 +16,7 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <containerView opaque="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="lCn-00-001">
-                                <rect key="frame" x="0.0" y="126" width="385" height="606"/>
+                                <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                                 <connections>
                                     <segue destination="sVC-00-001" kind="embed" id="lSg-00-001"/>
                                 </connections>
@@ -32,10 +32,10 @@
                         <viewLayoutGuide key="safeArea" id="lSf-00-001"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
-                            <constraint firstItem="lCn-00-001" firstAttribute="top" secondItem="lSf-00-001" secondAttribute="top" constant="8" id="lCt-00-001"/>
-                            <constraint firstItem="lBt-00-001" firstAttribute="top" secondItem="lCn-00-001" secondAttribute="bottom" constant="8" id="lCt-00-002"/>
-                            <constraint firstItem="lCn-00-001" firstAttribute="leading" secondItem="lSf-00-001" secondAttribute="leading" id="lCt-00-003"/>
-                            <constraint firstItem="lSf-00-001" firstAttribute="trailing" secondItem="lCn-00-001" secondAttribute="trailing" constant="8" id="lCt-00-004"/>
+                            <constraint firstItem="lCn-00-001" firstAttribute="top" secondItem="lVw-00-001" secondAttribute="top" id="lCt-00-001"/>
+                            <constraint firstAttribute="bottom" secondItem="lCn-00-001" secondAttribute="bottom" id="lCt-00-002"/>
+                            <constraint firstItem="lCn-00-001" firstAttribute="leading" secondItem="lVw-00-001" secondAttribute="leading" id="lCt-00-003"/>
+                            <constraint firstAttribute="trailing" secondItem="lCn-00-001" secondAttribute="trailing" id="lCt-00-004"/>
                             <constraint firstItem="lSf-00-001" firstAttribute="bottom" secondItem="lBt-00-001" secondAttribute="bottom" constant="8" id="lCt-00-005"/>
                             <constraint firstItem="lSf-00-001" firstAttribute="trailing" secondItem="lBt-00-001" secondAttribute="trailing" constant="8" id="lCt-00-006"/>
                         </constraints>

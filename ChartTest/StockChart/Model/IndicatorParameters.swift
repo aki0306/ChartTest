@@ -23,15 +23,45 @@ struct IndicatorParameters {
 
     // MARK: 多重移動平均線
 
-    /// 多重移動平均線で表示する期間の一覧(本数)
-    var multipleMAPeriods = [5, 25, 75]
+    /// 多重移動平均線の一番短い期間(本数)
+    var multipleMAShortestPeriod = 5
+    /// 多重移動平均線の一番長い期間(本数)
+    var multipleMALongestPeriod = 75
+    /// 多重移動平均線の本数(一番短い期間〜一番長い期間を、同じ間隔で分けて引く)
+    var multipleMACount = 3
+
+    /// 多重移動平均線で表示する期間の一覧(本数)。
+    /// 例: 最短 5・最長 75・本数 15 なら 5, 10, 15, …, 75(5 刻み)。本数 3 なら 5, 40, 75
+    var multipleMAPeriods: [Int] {
+        let shortest = min(multipleMAShortestPeriod, multipleMALongestPeriod)
+        let longest = max(multipleMAShortestPeriod, multipleMALongestPeriod)
+        // 1本だけの場合・最短と最長が同じ場合は、最短の1本だけ
+        guard multipleMACount > 1, shortest < longest else { return [shortest] }
+
+        let interval = Double(longest - shortest) / Double(multipleMACount - 1)
+        var periods: [Int] = []
+        for i in 0..<multipleMACount {
+            let period = Int((Double(shortest) + interval * Double(i)).rounded())
+            // 間隔が1本未満で同じ期間が続く場合は、重ねて引かない
+            if periods.last != period {
+                periods.append(period)
+            }
+        }
+        return periods
+    }
 
     // MARK: ボリンジャーバンド
 
     /// ボリンジャーバンドの期間(本数)
     var bollingerPeriod = 20
+    /// ボリンジャーバンドで表示する σ の本数(例: 2 なら ±1σ と ±2σ、3 なら ±1σ〜±3σ)
+    var bollingerSigmaCount = 2
+
     /// ボリンジャーバンドで表示する σ の倍率の一覧(例: [1, 2] なら ±1σ と ±2σ)
-    var bollingerSigmas: [Double] = [1, 2]
+    var bollingerSigmas: [Double] {
+        let count = max(bollingerSigmaCount, 1)
+        return (1...count).map { sigma in Double(sigma) }
+    }
 
     // MARK: 一目均衡表
 
@@ -57,14 +87,30 @@ struct IndicatorParameters {
     var deviationShortPeriod = 5
     /// 移動平均乖離率(長期)の移動平均の期間(本数)
     var deviationLongPeriod = 25
+    /// 移動平均乖離率の底値ライン(%)。この値に基準線を引く
+    var deviationLowerLine = -10
+    /// 移動平均乖離率の高値ライン(%)。この値に基準線を引く
+    var deviationUpperLine = 10
     /// RSI の期間(本数)
     var rsiPeriod = 14
+    /// RSI の底値ライン(%。売られすぎの目安)
+    var rsiLowerLine = 30
+    /// RSI の高値ライン(%。買われすぎの目安)
+    var rsiUpperLine = 70
     /// サイコロジカルラインの期間(本数)
     var psychologicalPeriod = 12
+    /// サイコロジカルラインの底値ライン(%)
+    var psychologicalLowerLine = 25
+    /// サイコロジカルラインの高値ライン(%)
+    var psychologicalUpperLine = 75
     /// ストキャスティクス %K の期間(本数)
     var stochasticsKPeriod = 9
     /// ストキャスティクス %D の期間(本数)
     var stochasticsDPeriod = 3
+    /// ストキャスティクスの底値ライン(%)
+    var stochasticsLowerLine = 20
+    /// ストキャスティクスの高値ライン(%)
+    var stochasticsUpperLine = 80
     /// MACD 短期EMA の期間(本数)
     var macdShortPeriod = 12
     /// MACD 長期EMA の期間(本数)

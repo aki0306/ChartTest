@@ -10,6 +10,7 @@
 //
 //  ・並べる足種は periods で指定する(国内指数は5種類、海外指数は3種類。IndexMarket.periods)
 //  ・タブが押されると onSelect が呼ばれる。どの足種のデータを表示するかは呼び出し側(Controller)が決める
+//  ・disabledPeriods に入れた足種のタブは薄いグレーにして、押せなくする(設定画面で、その項目を設定できない足種)
 //  ・storyboard に置く場合は、View のクラスを ChartPeriodTabView にする
 //
 
@@ -29,6 +30,11 @@ final class ChartPeriodTabView: UIView {
         didSet { updateButtonStyles() }
     }
 
+    /// 選べない足種。薄いグレーにして、押せなくする
+    var disabledPeriods: Set<ChartPeriod> = [] {
+        didSet { updateButtonStyles() }
+    }
+
     /// タブが押されたときに呼ばれる処理(押された足種が渡される)
     var onSelect: ((ChartPeriod) -> Void)?
 
@@ -38,6 +44,8 @@ final class ChartPeriodTabView: UIView {
     private let selectedColor = UIColor(red: 0.10, green: 0.47, blue: 0.95, alpha: 1)
     /// 選択していないタブの枠線・文字の色(灰色)
     private let normalColor = UIColor.gray
+    /// 選べないタブの枠線・文字の色(薄い灰色)
+    private let disabledColor = UIColor.systemGray4
     /// タブ同士の間隔
     private let spacing: CGFloat = 6
 
@@ -109,7 +117,16 @@ final class ChartPeriodTabView: UIView {
     private func updateButtonStyles() {
         for (index, button) in buttons.enumerated() {
             let isSelected = periods[index] == selectedPeriod
-            if isSelected {
+            let isDisabled = disabledPeriods.contains(periods[index])
+            button.isEnabled = !isDisabled
+            if isDisabled {
+                // 選べない: 白地に薄い灰色の枠線と文字
+                button.backgroundColor = .white
+                button.layer.borderColor = disabledColor.cgColor
+                button.setTitleColor(disabledColor, for: .normal)
+                button.setTitleColor(disabledColor, for: .disabled)
+                button.titleLabel?.font = .systemFont(ofSize: 15)
+            } else if isSelected {
                 // 選択中: 青で塗りつぶし、白の太字
                 button.backgroundColor = selectedColor
                 button.layer.borderColor = selectedColor.cgColor

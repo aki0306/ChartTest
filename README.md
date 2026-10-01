@@ -15,6 +15,40 @@
 
 `ViewController`(`Main.storyboard`)が縦画面用と横画面用の両方を読み込み、画面の向きに合わせて片方だけを表示します。
 
+### 横画面の設定画面
+
+左端の「設定」タブで開きます。指標のパラメータは**足種ごと**に設定でき、上のタブで足種を切り替えます。
+
+| 操作 | 動き |
+|---|---|
+| 足種のタブ | 編集する足種を切り替える。開いたときは表示中のチャートの足種。移動平均線以外の項目では、1分足・日中足はグレーで選べない |
+| −/+ ボタン・スライダー | 値を変える(値はスライダーの上に表示) |
+| すべての足に反映 | 表示中の値を、この項目を設定できるすべての足種にコピーする |
+| 初期値に戻す | 表示中の足種の、この項目の値を初期値に戻す |
+| 決定 | 変更をチャートに反映して閉じる(決定せずに閉じた場合、変更は捨てる) |
+
+項目ごとに設定できる値は次のとおりです(`ChartSettingsCatalog`)。
+
+| 項目 | 設定できる値 |
+|---|---|
+| 移動平均線 | 短期平均線・長期平均線 |
+| 多重移動平均線 | 最短期間・最長期間・本数(最短〜最長を同じ間隔で分けて引く。例: 5・75・15本なら 5 刻み) |
+| ボリンジャーバンド | 期間・乖離率(σ)(1〜3。3 なら ±1σ・±2σ・±3σ) |
+| 一目均衡表 | 基準線期間・転換線期間・スパン期間(先行スパン・遅行スパンをずらす本数) |
+| 移動平均乖離率 | 短期平均線・長期平均線・底値ライン(%)・高値ライン(%) |
+| RSI・サイコロジカル | 期間・底値ライン(%)・高値ライン(%) |
+| ストキャス | 高安期間・D期間・底値ライン(%)・高値ライン(%) |
+| MACD | 短期EMA・長期EMA・シグナル期間 |
+| DMI | 期間 |
+
+オプション(Y軸固定・4本値)は足種ごとではないので、パネルの中央にトグルだけを並べ、切り替えるとすぐに反映されます。
+
+テクニカル/設定を開いている間は、パネルを画面の上端〜セーフエリアの下端まで広げ、後ろの画面(チャート・下のボタン)をグレーにします。グレーの部分をタップするとパネルが閉じます(設定画面で「決定」していない変更は捨てます)。
+
+自分の画面に組み込む場合は、`StockChartViewController` を画面いっぱいに置き、チャート本体の位置は `chartInsets`(セーフエリアの端からの余白)で決めます。
+パネルは `StockChartViewController` の View の上端〜セーフエリアの下端(`panelBottomInset` でさらにあけられます)、背景のグレーは View いっぱいに表示されます。
+`LandscapeChartViewController` は、下の「チャートの種類」ボタンの分を `chartInsets.bottom` で空け、パネルを開いている間だけチャート部品をボタンより手前に出しています(`onPanelVisibilityChange`)。
+
 ### 横画面のチャートの種類
 
 右下のボタンで切り替えます(`ChartType`)。ローソク足以外では、テクニカル指標とサブチャートは表示しません。
@@ -237,7 +271,7 @@ chartViewController.mainIndicator = .bollingerBands
 chartViewController.subIndicator = .macd
 chartViewController.isTechnicalMenuEnabled = true  // テクニカル/設定タブを表示する
 chartViewController.chartType = .candlestick       // チャートの種類(.vwapLine / .vwapDots / .newPrice / .lineChart)
-chartViewController.setCandles(candles)
+chartViewController.setCandles(candles, period: .daily)   // 足種を指定すると、足種ごとの設定で描画する(省略時は日足)
 ```
 
 ```objc
@@ -251,7 +285,7 @@ chartViewController.mainIndicator = MainChartIndicatorBollingerBands;
 chartViewController.subIndicator = SubChartIndicatorMacd;
 chartViewController.isTechnicalMenuEnabled = YES;  // テクニカル/設定タブを表示する
 chartViewController.chartType = ChartTypeCandlestick;  // チャートの種類
-[chartViewController setCandles:candles];
+[chartViewController setCandles:candles period:ChartPeriodDaily];  // 足種ごとの設定で描画する
 ```
 
 このアプリの横画面(`LandscapeChartViewController`)は、これを `Landscape.storyboard` に埋め込んだものです。
@@ -338,6 +372,8 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | ファイル | 項目 |
 |---|---|---|
 | 縦画面の足種タブ(色・文字の大きさ) | [`ChartPeriodTabView.swift`](ChartTest/StockChart/View/ChartPeriodTabView.swift) | `selectedColor`・`normalColor`、`updateSelection` 内のフォント |
+| 設定画面(配置・右側の行の見た目) | [`ChartSettingsView.xib`](ChartTest/StockChart/View/ChartSettingsView.xib) | Interface Builder で開いて編集する(Content View = 画面全体、Toggle Row / Stepper Row = 右側の行の見本) |
+| 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/View/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
 | テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/View/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
 | 「テクニカル」「設定」タブ | [`StockChartViewController.swift`](ChartTest/StockChart/Controller/StockChartViewController.swift) | `configureTabButton` |
 | 4本値の枠(文字の大きさ・背景) | [`ChartCrosshairViews.swift`](ChartTest/StockChart/View/ChartCrosshairViews.swift) | `OHLCInfoView` |
@@ -352,9 +388,9 @@ chartView.increasingColor = UIColor.systemRedColor;
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
-| `StockChartViewController` | `setCandles`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
+| `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
-| `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles` | ― |
+| `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし) | ― |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
 Swift だけの設定を Objective-C から変えたい場合は、Swift 側に `@objc` プロパティを追加してください(`StockChartView.swift` と `StockChartViewController.swift` の末尾にある「Objective-C 向け」の extension が例です)。
@@ -417,7 +453,7 @@ ChartTest/
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |
 | `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる |
 | `ChartDisplayOptions.swift` | 表示オプション(Y軸固定・4本値) |
-| `ChartSettingsCatalog.swift` | 設定画面に並べる項目と、編集できるパラメータの定義 |
+| `ChartSettingsCatalog.swift` | 設定画面に並べる項目と、編集できるパラメータ・設定できる足種の定義 |
 
 ### View(`StockChart/View/`)
 
@@ -436,13 +472,13 @@ ChartTest/
 | `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
 | `ChartPeriodTabView.swift` | 足種のタブ(縦画面の上部) |
 | `TechnicalMenuView.swift` | 指標の選択メニュー(テクニカルタブ) |
-| `ChartSettingsView.swift` | 設定画面(設定タブ) |
+| `ChartSettingsView.swift` / `.xib` | 設定画面(設定タブ)。画面の配置(足種のタブ・行・下のボタン)と、右側の行の見本(トグル行・数値行)は XIB で編集する |
 
 ### Controller(`StockChart/Controller/`)
 
 | ファイル | 内容 |
 |---|---|
-| `StockChartViewController.swift` | チャートの種類・選択中の指標・パラメータ・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
+| `StockChartViewController.swift` | 足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
 
 ## データの流れ
 

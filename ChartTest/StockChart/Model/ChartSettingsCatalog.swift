@@ -106,10 +106,35 @@ enum ChartSettingsCatalog {
 
     /// 期間(本数)の一般的な設定範囲
     private static let periodRange: ClosedRange<Double> = 1...200
+    /// 底値ライン・高値ライン(0〜100% の指標)の設定範囲
+    private static let percentLineRange: ClosedRange<Double> = 0...100
+
+    /// 指定した項目を設定できる足種。
+    /// 1分足・日中足は移動平均線だけを設定できる(それ以外の項目では、設定画面のタブをグレーにして選べなくする)
+    static func periods(for item: ChartSettingsItem) -> [ChartPeriod] {
+        switch item {
+        case .main(.movingAverage):
+            return ChartPeriod.allCases
+        case .displayOptions, .main, .sub:
+            return [.daily, .weekly, .monthly]
+        }
+    }
 
     /// 指定した項目で編集できるパラメータの一覧(表示オプションの場合は空)
-    /// - Parameter parameters: 現在のパラメータ(配列の要素数に応じて項目を作るために使う)
-    static func fields(for item: ChartSettingsItem, parameters: IndicatorParameters) -> [IndicatorParameterField] {
+    ///
+    ///   | 項目           | 並べるパラメータ                                     |
+    ///   |----------------|------------------------------------------------------|
+    ///   | 移動平均線     | 短期平均線・長期平均線                               |
+    ///   | 多重移動平均線 | 最短期間・最長期間・本数                             |
+    ///   | ボリンジャー   | 期間・乖離率(σ)                                    |
+    ///   | 一目均衡表     | 基準線期間・転換線期間・スパン期間                   |
+    ///   | 移動平均乖離率 | 短期平均線・長期平均線・底値ライン・高値ライン       |
+    ///   | RSI            | 期間・底値ライン・高値ライン                         |
+    ///   | サイコロジカル | 期間・底値ライン・高値ライン                         |
+    ///   | ストキャス     | 高安期間・D期間・底値ライン・高値ライン              |
+    ///   | MACD           | 短期EMA・長期EMA・シグナル期間                       |
+    ///   | DMI            | 期間                                                 |
+    static func fields(for item: ChartSettingsItem) -> [IndicatorParameterField] {
         switch item {
         case .displayOptions:
             return []
@@ -118,26 +143,25 @@ enum ChartSettingsCatalog {
             switch indicator {
             case .movingAverage:
                 return [
-                    period("短期", \.shortMAPeriod),
-                    period("長期", \.longMAPeriod),
+                    period("短期平均線", \.shortMAPeriod),
+                    period("長期平均線", \.longMAPeriod),
                 ]
             case .multipleMovingAverage:
-                // 期間の配列の要素ごとに「1本目」「2本目」… を並べる
-                return parameters.multipleMAPeriods.indices.map { i in
-                    period("\(i + 1)本目", \.multipleMAPeriods[i])
-                }
+                return [
+                    period("最短期間", \.multipleMAShortestPeriod),
+                    period("最長期間", \.multipleMALongestPeriod),
+                    IndicatorParameterField(title: "本数", target: .int(\.multipleMACount), range: 2...15, step: 1),
+                ]
             case .bollingerBands:
-                return [period("期間", \.bollingerPeriod)]
-                    + parameters.bollingerSigmas.indices.map { i in
-                        IndicatorParameterField(title: "σ倍率\(i + 1)", target: .double(\.bollingerSigmas[i]),
-                                                range: 0.1...5, step: 0.1)
-                    }
+                return [
+                    period("期間", \.bollingerPeriod),
+                    IndicatorParameterField(title: "乖離率(σ)", target: .int(\.bollingerSigmaCount), range: 1...3, step: 1),
+                ]
             case .ichimoku:
                 return [
-                    period("転換線", \.ichimokuTenkanPeriod),
-                    period("基準線", \.ichimokuKijunPeriod),
-                    period("先行スパン2", \.ichimokuSpanBPeriod),
-                    IndicatorParameterField(title: "先行/遅行", target: .int(\.ichimokuShift), range: 1...100, step: 1),
+                    period("基準線期間", \.ichimokuKijunPeriod),
+                    period("転換線期間", \.ichimokuTenkanPeriod),
+                    IndicatorParameterField(title: "スパン期間", target: .int(\.ichimokuShift), range: 1...100, step: 1),
                 ]
             case .parabolic, .candleOnly:
                 // 設定画面には並べない
@@ -148,23 +172,27 @@ enum ChartSettingsCatalog {
             switch indicator {
             case .movingAverageDeviation:
                 return [
-                    period("短期", \.deviationShortPeriod),
-                    period("長期", \.deviationLongPeriod),
+                    period("短期平均線", \.deviationShortPeriod),
+                    period("長期平均線", \.deviationLongPeriod),
+                    IndicatorParameterField(title: "底値ライン(%)", target: .int(\.deviationLowerLine), range: -50...0, step: 1),
+                    IndicatorParameterField(title: "高値ライン(%)", target: .int(\.deviationUpperLine), range: 0...50, step: 1),
                 ]
             case .rsi:
                 return [period("期間", \.rsiPeriod)]
+                    + percentLines(lower: \.rsiLowerLine, upper: \.rsiUpperLine)
             case .psychological:
                 return [period("期間", \.psychologicalPeriod)]
+                    + percentLines(lower: \.psychologicalLowerLine, upper: \.psychologicalUpperLine)
             case .stochastics:
                 return [
-                    period("%K", \.stochasticsKPeriod),
-                    period("%D", \.stochasticsDPeriod),
-                ]
+                    period("高安期間", \.stochasticsKPeriod),
+                    period("D期間", \.stochasticsDPeriod),
+                ] + percentLines(lower: \.stochasticsLowerLine, upper: \.stochasticsUpperLine)
             case .macd:
                 return [
                     period("短期EMA", \.macdShortPeriod),
                     period("長期EMA", \.macdLongPeriod),
-                    period("シグナル", \.macdSignalPeriod),
+                    period("シグナル期間", \.macdSignalPeriod),
                 ]
             case .dmi:
                 return [period("期間", \.dmiPeriod)]
@@ -179,5 +207,14 @@ enum ChartSettingsCatalog {
     private static func period(_ title: String, _ keyPath: WritableKeyPath<IndicatorParameters, Int>)
         -> IndicatorParameterField {
         IndicatorParameterField(title: title, target: .int(keyPath), range: periodRange, step: 1)
+    }
+
+    /// 底値ライン・高値ライン(0〜100% の指標)のパラメータ定義を作る
+    private static func percentLines(lower: WritableKeyPath<IndicatorParameters, Int>,
+                                     upper: WritableKeyPath<IndicatorParameters, Int>) -> [IndicatorParameterField] {
+        [
+            IndicatorParameterField(title: "底値ライン(%)", target: .int(lower), range: percentLineRange, step: 1),
+            IndicatorParameterField(title: "高値ライン(%)", target: .int(upper), range: percentLineRange, step: 1),
+        ]
     }
 }
