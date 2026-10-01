@@ -491,6 +491,43 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 | `.newPrice` → `ChartTypeNewPrice`(新値足) |
 | `.lineChart` → `ChartTypeLineChart`(折線チャート) |
 
+## 既存アプリへの組み込み
+
+チャート部分(`ChartTest/StockChart/`)は、ほかのアプリにそのまま組み込めるよう、サンプル画面(縦画面・横画面)やダミーデータ(`SampleData`)には依存しないように作っています。
+
+### 手順
+
+1. **DGCharts を追加する**
+   Swift Package Manager で `https://github.com/ChartsOrg/Charts.git`(5.1.0 以上)を追加し、アプリのターゲットにリンクします。
+
+2. **`StockChart` フォルダをコピーする**
+   Model / View / Controller の Swift ファイルと、設定画面の `ChartSettingsView.xib` をアプリのターゲットに追加します。
+   XIB が **Copy Bundle Resources** に入っていることを確認してください(入っていないと、設定画面を開いたときに落ちます)。
+
+3. **画面に置く**(どちらか)
+
+   | 使いたいもの | 置くもの | 書き方 |
+   |---|---|---|
+   | チャートだけ | `StockChartView` | 「3. チャートだけを置く」 |
+   | テクニカル・設定画面・チャートの種類も | `StockChartViewController`(子 ViewController として埋め込む) | 「4. 指標メニュー・設定画面付きのチャート」 |
+
+   このアプリと同じ縦画面・横画面をそのまま使う場合は、`PortraitChartViewController.swift` / `Portrait.storyboard`、`LandscapeChartViewController.swift` / `Landscape.storyboard` もコピーします(中身は自由に変えて構いません)。
+
+4. **データを渡す**
+   API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
+   海外指数の場合は、データを渡す前に `market = .overseas` を指定します(「海外指数の場合」を参照)。
+
+### 既存アプリ側で確認が必要なこと
+
+| 項目 | このプロジェクトの設定 | 既存アプリで違う場合 |
+|---|---|---|
+| Objective-C から使う | `#import "ChartTest-Swift.h"` | ヘッダ名は `<既存アプリのモジュール名>-Swift.h` になる。Objective-C だけのアプリなら、Swift を使えるようにする設定(Bridging Header など)が必要 |
+| Swift の並行処理の設定 | Default Actor Isolation = **MainActor**、Swift 5 | 設定が違うと、コンパイルエラーや警告が出ることがある。同じ設定にするか、出たエラーを直す |
+| 対応 OS | iOS 18 以上で動作確認 | iOS 15 以降の API を使っているので、それより前の OS では使えない(iOS 18 未満は未確認) |
+| ダークモード | ライトモード固定 | 色はライトモード前提(白背景・黒文字)。ダークモードに対応しているアプリでは、`StockChartStyle` で見た目を調整する |
+| 型の名前 | `StockCandle`・`ChartType`・`ChartPeriod` など | 既存アプリに同じ名前の型があると衝突するので、名前を変える |
+| DGCharts の警告 | Documentation Comments = NO | Objective-C から使うと、DGCharts のヘッダで「Empty paragraph passed to '\param' command」などの警告が大量に出ることがある(エラーではない。「準備(Objective-C のみ)」を参照) |
+
 ## フォルダ構成
 
 ```
