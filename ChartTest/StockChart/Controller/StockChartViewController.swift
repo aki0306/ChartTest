@@ -43,13 +43,23 @@ final class StockChartViewController: UIViewController {
     /// setCandles(_:period:) で設定する(setCandles(_:) の場合は日足のまま)
     @objc private(set) var period: ChartPeriod = .daily
 
-    /// 指数の種類(国内/海外)。種類によって、使える表示オプションと足種が変わる。
-    /// 海外指数: オプションは Y軸(メイン)固定だけ(Y軸(サブ)固定・4本値はオンでも効かない)。1分足・日中足は設定できない
+    /// 指数の種類(国内/海外)。種類によって、選べるもの・使えるものが変わる。
+    ///
+    ///   | 項目                     | 国内指数       | 海外指数                                      |
+    ///   |--------------------------|----------------|-----------------------------------------------|
+    ///   | テクニカル(メイン)       | すべて         | 移動平均線・なし                              |
+    ///   | テクニカル(サブ)         | すべて         | なし(サブチャートは表示しない)              |
+    ///   | 設定画面の項目           | すべて         | オプション・移動平均線                        |
+    ///   | 設定画面のオプション     | すべて         | Y軸(メイン)固定(ほかはオンでも効かない)    |
+    ///   | 設定画面の足種           | 1分足〜月足    | 日足・週足・月足                              |
+    ///   | チャートの種類           | すべて         | ローソク足・折線チャート                      |
+    ///
+    /// 海外指数に変えたとき、選べない指標・チャートの種類を選んでいた場合は
+    /// 移動平均線・サブなし・ローソク足 に切り替える
     @objc var market: IndexMarket = .domestic {
         didSet {
             guard market != oldValue else { return }
-            applyDisplayOptionsToChart()
-            reloadSettingsRows()
+            applyMarket()
         }
     }
 
@@ -83,7 +93,7 @@ final class StockChartViewController: UIViewController {
     @objc var chartType: ChartType = .candlestick {
         didSet {
             guard chartType != oldValue else { return }
-            menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators
+            menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
             applyDisplayOptionsToChart()
             reloadChart(keepsViewport: true)
             onChartTypeChange?(chartType)
@@ -182,9 +192,14 @@ final class StockChartViewController: UIViewController {
     /// 設定画面の左側リストで選択中の位置
     private var selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
 
+    /// 設定画面の左側リストに並べる見出しと項目(指数の種類で変わる)
+    private var settingsSections: [ChartSettingsSection] {
+        ChartSettingsCatalog.sections(for: market)
+    }
+
     /// 設定画面で選択中の項目
     private var selectedSettingsItem: ChartSettingsItem {
-        ChartSettingsCatalog.sections[selectedSettingsIndexPath.section].items[selectedSettingsIndexPath.row]
+        settingsSections[selectedSettingsIndexPath.section].items[selectedSettingsIndexPath.row]
     }
 
     /// 設定画面で選択中の足種(タブ)
@@ -287,7 +302,8 @@ final class StockChartViewController: UIViewController {
             return
         }
         let builder = ChartContentBuilder(candles: candles, parameters: parameters)
-        let content = builder.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator)
+        let content = builder.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator,
+                                      market: market)
         chartView.display(candles: content.candles,
                           main: content.main,
                           sub: content.sub,
@@ -299,7 +315,7 @@ final class StockChartViewController: UIViewController {
     /// 設定がオンでも表示しない(設定の値はそのまま残し、ローソク足に戻すと表示される)
     private func applyDisplayOptionsToChart() {
         var options = displayOptions
-        if !chartType.usesTechnicalIndicators {
+        if !chartType.usesTechnicalIndicators(in: market) {
             options.showsOHLC = false
         }
         // この指数で使えないオプション(海外指数の Y軸(サブ)固定・4本値)は、オンでも効かないようにする
@@ -379,7 +395,9 @@ final class StockChartViewController: UIViewController {
         menuView.delegate = self
         menuView.selectedMainIndicator = mainIndicator
         menuView.selectedSubIndicator = subIndicator
-        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators
+        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
+        menuView.availableMainIndicators = MainChartIndicator.choices(for: market)
+        menuView.availableSubIndicators = SubChartIndicator.choices(for: market)
         view.addSubview(menuView)
 
         // 設定画面: このViewの左側に幅 75% で表示(左側リスト + 右側パネル)
@@ -553,13 +571,43 @@ final class StockChartViewController: UIViewController {
         }
     }
 
+    // MARK: - 指数の種類
+
+    /// 指数の種類に合わせて、選べる指標・チャートの種類・設定画面の項目を切り替え、描き直す
+    private func applyMarket() {
+        // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
+        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
+        menuView.availableMainIndicators = MainChartIndicator.choices(for: market)
+        menuView.availableSubIndicators = SubChartIndicator.choices(for: market)
+
+        // 選べない指標・チャートの種類を選んでいた場合は、選べるものに切り替える
+        // (それぞれの didSet でも描き直すが、最後にまとめて描き直す)
+        if !MainChartIndicator.choices(for: market).contains(mainIndicator) {
+            mainIndicator = .movingAverage
+        }
+        if !SubChartIndicator.choices(for: market).contains(subIndicator) {
+            subIndicator = .hidden
+        }
+        if !ChartType.choices(for: market).contains(chartType) {
+            chartType = .candlestick
+        }
+
+        applyDisplayOptionsToChart()
+        reloadChart(keepsViewport: true)
+
+        // 設定画面の左側リストを作り直す(項目が変わるので、選択は先頭の「オプション」に戻す)
+        guard isViewLoaded else { return }  // viewDidLoad で作られる
+        selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
+        configureSettingsView()
+    }
+
     // MARK: - Settings(Model → 設定画面)
 
     /// 設定画面の左側リストを Model(ChartSettingsCatalog)から作る
     private func configureSettingsView() {
         // 見出しごとに、項目の名称(「移動平均線」など)を並べる
         var sections: [ChartSettingsView.Section] = []
-        for section in ChartSettingsCatalog.sections {
+        for section in settingsSections {
             let itemTitles = section.items.map { item in item.title }
             sections.append(ChartSettingsView.Section(title: section.title, items: itemTitles))
         }

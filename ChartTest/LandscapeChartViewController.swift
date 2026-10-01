@@ -15,7 +15,7 @@
 //      let viewController = LandscapeChartViewController.instantiate()
 //      viewController.chartViewController.mainIndicator = .bollingerBands   // 必要なら指標を変える
 //      viewController.chartViewController.chartType = .newPrice             // 必要ならチャートの種類を変える
-//      viewController.chartViewController.market = .overseas               // 海外指数(オプションは Y軸(メイン)固定だけ)
+//      viewController.chartViewController.market = .overseas               // 海外指数(移動平均線・ローソク足/折線チャートだけ)
 //      viewController.setCandles(candles)
 //
 //  使い方(Objective-C):
@@ -117,22 +117,30 @@ final class LandscapeChartViewController: UIViewController {
         }
     }
 
-    /// ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる
+    /// ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
+    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)が後から変わっても反映される
     private func updateChartTypeButton() {
-        let selectedType = chartViewController.chartType
-        chartTypeButton.configuration?.title = selectedType.title
+        chartTypeButton.configuration?.title = chartViewController.chartType.title
 
-        var actions: [UIAction] = []
-        for chartType in ChartType.allCases {
-            let action = UIAction(title: chartType.title) { [weak self] _ in
-                self?.selectChartType(chartType)
+        let items = UIDeferredMenuElement.uncached { [weak self] completion in
+            guard let self else {
+                completion([])
+                return
             }
-            if chartType == selectedType {
-                action.state = .on
+            let selectedType = self.chartViewController.chartType
+            var actions: [UIAction] = []
+            for chartType in ChartType.choices(for: self.chartViewController.market) {
+                let action = UIAction(title: chartType.title) { [weak self] _ in
+                    self?.selectChartType(chartType)
+                }
+                if chartType == selectedType {
+                    action.state = .on
+                }
+                actions.append(action)
             }
-            actions.append(action)
+            completion(actions)
         }
-        chartTypeButton.menu = UIMenu(children: actions)
+        chartTypeButton.menu = UIMenu(children: [items])
     }
 
     /// チャートの種類を切り替える(ボタンの表示は onChartTypeChange で更新される)

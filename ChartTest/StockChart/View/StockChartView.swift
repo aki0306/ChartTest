@@ -368,6 +368,7 @@ final class StockChartView: UIView {
 ///   |----------------------------|---------------------------------------------------------|----------------------------------------------------------|
 ///   | 移動平均線 + 出来高で表示  | setCandles(candles)                                     | [chartView setCandles:candles]                           |
 ///   | 足種に合わせて表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
+///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseas)  | [chartView setCandles:candles period:… market:IndexMarketOverseas] |
 ///   | 指標を指定して表示         | setCandles(candles, mainIndicator: .macd, …)            | [chartView setCandles:candles mainIndicator:… subIndicator:…] |
 ///   | パラメータも指定(Swift のみ)| setCandles(candles, mainIndicator: …, subIndicator: …, parameters: …) | (IndicatorParameters は struct のため不可)     |
 extension StockChartView {
@@ -384,6 +385,17 @@ extension StockChartView {
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
     ///   - period: 足種
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        setCandles(candles, period: period, market: .domestic)
+    }
+
+    /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する。
+    ///   ・国内指数: ローソク足 + 移動平均線、サブチャートに出来高
+    ///   ・海外指数: 終値の折れ線 + 移動平均線(サブチャートなし。メインチャートを全高で表示)
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
+    ///   - market: 指数の種類
+    @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod, market: IndexMarket) {
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
         var newStyle = style
         newStyle.dateFormat = period.dateFormat
@@ -391,8 +403,15 @@ extension StockChartView {
         newStyle.visibleCount = period.visibleCount
         style = newStyle
 
-        setCandles(candles, mainIndicator: .movingAverage, subIndicator: .volume,
-                   parameters: period.indicatorParameters)
+        switch market {
+        case .domestic:
+            setCandles(candles, mainIndicator: .movingAverage, subIndicator: .volume,
+                       parameters: period.indicatorParameters)
+        case .overseas:
+            let builder = ChartContentBuilder(candles: candles, parameters: period.indicatorParameters)
+            let content = builder.closeLineContent(with: .movingAverage)
+            display(candles: content.candles, main: content.main, sub: content.sub)
+        }
     }
 
     /// ローソク足データを渡して、指定した指標で描画する(パラメータは既定値)

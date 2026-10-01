@@ -52,10 +52,11 @@ struct ChartContentBuilder {
     /// チャート種類に合わせて、表示する内容一式を作る
     /// - Parameters:
     ///   - chartType: チャートの種類
-    ///   - mainIndicator: メインチャートの指標(ローソク足のときだけ使う)
+    ///   - mainIndicator: メインチャートの指標(ローソク足・海外指数の折線チャートのときだけ使う)
     ///   - subIndicator: サブチャートの指標(ローソク足のときだけ使う)
+    ///   - market: 指数の種類(海外指数の折線チャートは、終値の線にメイン指標を重ね、現在値の破線を引く)
     func content(for chartType: ChartType, mainIndicator: MainChartIndicator,
-                 subIndicator: SubChartIndicator) -> ChartContent {
+                 subIndicator: SubChartIndicator, market: IndexMarket = .domestic) -> ChartContent {
         switch chartType {
         case .candlestick:
             return ChartContent(candles: candles,
@@ -68,7 +69,12 @@ struct ChartContentBuilder {
         case .newPrice:
             return newPriceContent()
         case .lineChart:
-            return lineChartContent()
+            switch market {
+            case .domestic:
+                return lineChartContent()
+            case .overseas:
+                return closeLineContent(with: mainIndicator, showsCurrentPrice: true)
+            }
         }
     }
 
@@ -126,6 +132,26 @@ struct ChartContentBuilder {
             currentPrice: candles.last?.close,
             fixedVisibleCount: Self.newPriceVisibleCount)
         return ChartContent(candles: lineCandles, main: main, sub: nil)
+    }
+
+    // MARK: - 終値の折れ線 + 指標(海外指数の縦画面)
+
+    /// ローソク足の代わりに終値を折れ線で描き、指定した指標を重ねる内容を作る(サブチャートなし)。
+    /// 海外指数で使う(縦画面・横画面の折線チャート)。
+    /// 凡例は指標のもの(「移動平均 短期移動平均(5) 長期移動平均(25)」など)で、終値の線は凡例に出さない
+    /// - Parameters:
+    ///   - indicator: 重ねる指標
+    ///   - showsCurrentPrice: 現在値(最新の終値)に破線を引くか(横画面の折線チャートでは引く)
+    func closeLineContent(with indicator: MainChartIndicator, showsCurrentPrice: Bool = false) -> ChartContent {
+        var main = mainContent(for: indicator)
+        main.priceStyle = .hidden
+        if showsCurrentPrice {
+            main.currentPrice = candles.last?.close
+        }
+        // 終値の線は凡例に出さない(label: nil)。指標の線より下に描くよう先頭に入れる
+        let closeLine = ChartSeries(label: nil, values: closes.map { close in close }, colorRole: .closeLine)
+        main.series.insert(closeLine, at: 0)
+        return ChartContent(candles: candles, main: main, sub: nil)
     }
 
     // MARK: - メインチャート

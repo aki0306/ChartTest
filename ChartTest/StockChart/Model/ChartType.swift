@@ -10,9 +10,10 @@
 //  | VWAP：線   | VWAP の折れ線(ローソク足は描かない)       | 使えない(サブチャートもなし)  |
 //  | VWAP：点   | VWAP の点(ローソク足は描かない)           | 使えない(サブチャートもなし)  |
 //  | 新値足     | 3本新値の新値足(X軸は時間ではなく新値の本数) | 使えない(サブチャートもなし)  |
-//  | 折線チャート | 終値の折れ線(ローソク足は描かない)       | 使えない(サブチャートもなし)  |
+//  | 折線チャート | 終値の折れ線(ローソク足は描かない)       | 国内: 使えない / 海外: 移動平均線を重ねられる(サブなし) |
 //
 //  Objective-C からも使えるよう @objc enum(Int)にしている(Objective-C での名前は ChartTypeNewPrice など)。
+//  指数の種類によって、選べる種類が変わる(choices(for:)。海外指数は ローソク足・折線チャート だけ)。
 //
 
 import Foundation
@@ -40,13 +41,36 @@ import Foundation
         }
     }
 
-    /// テクニカル指標(メイン指標・サブチャート)と、その設定を使えるか
-    var usesTechnicalIndicators: Bool {
+    /// テクニカル指標(メイン指標・サブチャート)と、その設定を使えるか。
+    /// 折線チャートは、海外指数のときだけ使える(終値の線に移動平均線を重ねる。国内指数では「なし」だけ)
+    /// - Parameter market: 指数の種類
+    func usesTechnicalIndicators(in market: IndexMarket) -> Bool {
         switch self {
         case .candlestick:
             return true
-        case .vwapLine, .vwapDots, .newPrice, .lineChart:
+        case .lineChart:
+            switch market {
+            case .domestic:
+                return false
+            case .overseas:
+                return true
+            }
+        case .vwapLine, .vwapDots, .newPrice:
             return false
+        }
+    }
+}
+
+// MARK: - 指数の種類ごとに選べるチャートの種類
+
+extension ChartType {
+    /// 指定した指数の種類で選べるチャートの種類(メニューに並べる順)
+    static func choices(for market: IndexMarket) -> [ChartType] {
+        switch market {
+        case .domestic:
+            return allCases
+        case .overseas:
+            return [.candlestick, .lineChart]
         }
     }
 }

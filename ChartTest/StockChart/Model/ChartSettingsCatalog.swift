@@ -85,7 +85,21 @@ struct IndicatorParameterField {
 /// 設定画面の項目・パラメータ定義
 enum ChartSettingsCatalog {
 
-    /// 左側リストに並べる見出しと項目
+    /// 指定した指数の種類で、左側リストに並べる見出しと項目。
+    /// 海外指数は「表示 > オプション」と「メインチャート > 移動平均線」だけ(サブチャートの設定はない)
+    static func sections(for market: IndexMarket) -> [ChartSettingsSection] {
+        switch market {
+        case .domestic:
+            return sections
+        case .overseas:
+            return [
+                ChartSettingsSection(title: "表示", items: [.displayOptions]),
+                ChartSettingsSection(title: "メインチャート", items: [.main(.movingAverage)]),
+            ]
+        }
+    }
+
+    /// 左側リストに並べる見出しと項目(国内指数)
     static let sections: [ChartSettingsSection] = [
         ChartSettingsSection(title: "表示", items: [.displayOptions]),
         ChartSettingsSection(title: "メインチャート", items: [

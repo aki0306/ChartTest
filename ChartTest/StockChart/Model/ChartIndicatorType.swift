@@ -5,6 +5,10 @@
 //  【Model】テクニカル指標の種類(メインチャート/サブチャート)の定義。
 //  Objective-C からも使えるよう @objc enum(Int)にしている。
 //
+//  指数の種類によって、選べる指標が変わる(choices(for:))。
+//    国内指数: すべて
+//    海外指数: メインは 移動平均線・なし、サブは なし だけ(サブチャートは表示しない)
+//
 
 import Foundation
 
@@ -68,6 +72,32 @@ import Foundation
         case .macd: return "MACD"
         case .dmi: return "DMI"
         case .hidden: return "なし"
+        }
+    }
+}
+
+// MARK: - 指数の種類ごとに選べる指標
+
+extension MainChartIndicator {
+    /// 指定した指数の種類で選べるメインチャートの指標(メニューに並べる順)
+    static func choices(for market: IndexMarket) -> [MainChartIndicator] {
+        switch market {
+        case .domestic:
+            return allCases
+        case .overseas:
+            return [.movingAverage, .candleOnly]
+        }
+    }
+}
+
+extension SubChartIndicator {
+    /// 指定した指数の種類で選べるサブチャートの指標(メニューに並べる順)。海外指数は「なし」だけ
+    static func choices(for market: IndexMarket) -> [SubChartIndicator] {
+        switch market {
+        case .domestic:
+            return allCases
+        case .overseas:
+            return [.hidden]
         }
     }
 }

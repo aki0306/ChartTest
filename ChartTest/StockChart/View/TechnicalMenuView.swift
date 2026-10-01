@@ -12,6 +12,7 @@
 //  │ ...        │ ...        │
 //  └────────────┴────────────┘
 //
+//  並べる指標は availableMainIndicators / availableSubIndicators で指定する(海外指数では絞り込む)。
 //  allowsOnlyNone = true(ローソク足以外のチャート種類)のときは、メイン・サブとも「なし」だけを並べる。
 //
 //  【責務】選択肢の表示と、タップされた指標の通知のみ。
@@ -56,6 +57,22 @@ final class TechnicalMenuView: UIView {
         }
     }
 
+    /// メインチャート列に並べる指標(既定はすべて)。変更するとメニューを作り直す
+    var availableMainIndicators = MainChartIndicator.allCases {
+        didSet {
+            guard availableMainIndicators != oldValue else { return }
+            rebuildColumns()
+        }
+    }
+
+    /// サブチャート列に並べる指標(既定はすべて)。変更するとメニューを作り直す
+    var availableSubIndicators = SubChartIndicator.allCases {
+        didSet {
+            guard availableSubIndicators != oldValue else { return }
+            rebuildColumns()
+        }
+    }
+
     // MARK: - Style
 
     /// 見出しの背景色
@@ -79,7 +96,7 @@ final class TechnicalMenuView: UIView {
         if allowsOnlyNone {
             return [.candleOnly]
         }
-        return MainChartIndicator.allCases
+        return availableMainIndicators
     }
 
     /// サブチャート列に並べる指標
@@ -87,7 +104,7 @@ final class TechnicalMenuView: UIView {
         if allowsOnlyNone {
             return [.hidden]
         }
-        return SubChartIndicator.allCases
+        return availableSubIndicators
     }
 
     // MARK: - Init
