@@ -15,6 +15,7 @@
 //      let viewController = LandscapeChartViewController.instantiate()
 //      viewController.chartViewController.mainIndicator = .bollingerBands   // 必要なら指標を変える
 //      viewController.chartViewController.chartType = .newPrice             // 必要ならチャートの種類を変える
+//      viewController.chartViewController.market = .overseas               // 海外指数(オプションは Y軸(メイン)固定だけ)
 //      viewController.setCandles(candles)
 //
 //  使い方(Objective-C):

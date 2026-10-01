@@ -4,6 +4,14 @@
 //
 //  【Model】設定画面「表示 > オプション」で切り替える表示オプション。
 //
+//  指数の種類によって、使えるオプションが変わる(ChartDisplayOption.options(for:))。
+//
+//  | オプション       | 国内指数 | 海外指数 |
+//  |------------------|----------|----------|
+//  | Y軸(メイン)固定  | ○       | ○       |
+//  | Y軸(サブ)固定    | ○       | ―       |
+//  | 4本値            | ○       | ―       |
+//
 
 import Foundation
 
@@ -16,4 +24,42 @@ struct ChartDisplayOptions: Equatable {
     var isSubYAxisFixed = false
     /// 4本値。true の場合、チャートをタップすると十字線と、その日の日付・始値・高値・安値・終値を表示する
     var showsOHLC = false
+}
+
+/// 表示オプションの1項目(設定画面のトグル1つ分)
+enum ChartDisplayOption: CaseIterable {
+    /// Y軸(メイン)固定
+    case mainYAxisFixed
+    /// Y軸(サブ)固定
+    case subYAxisFixed
+    /// 4本値
+    case ohlc
+
+    /// 設定画面に表示する名称
+    var title: String {
+        switch self {
+        case .mainYAxisFixed: return "Y軸(メイン)固定"
+        case .subYAxisFixed: return "Y軸(サブ)固定"
+        case .ohlc: return "4本値"
+        }
+    }
+
+    /// 対応する ChartDisplayOptions のプロパティ
+    var keyPath: WritableKeyPath<ChartDisplayOptions, Bool> {
+        switch self {
+        case .mainYAxisFixed: return \.isMainYAxisFixed
+        case .subYAxisFixed: return \.isSubYAxisFixed
+        case .ohlc: return \.showsOHLC
+        }
+    }
+
+    /// 指定した指数の種類で使えるオプション(設定画面に並べる順)。海外指数は Y軸(メイン)固定だけ
+    static func options(for market: IndexMarket) -> [ChartDisplayOption] {
+        switch market {
+        case .domestic:
+            return [.mainYAxisFixed, .subYAxisFixed, .ohlc]
+        case .overseas:
+            return [.mainYAxisFixed]
+        }
+    }
 }

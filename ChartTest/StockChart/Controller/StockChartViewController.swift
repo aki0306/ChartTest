@@ -43,6 +43,16 @@ final class StockChartViewController: UIViewController {
     /// setCandles(_:period:) で設定する(setCandles(_:) の場合は日足のまま)
     @objc private(set) var period: ChartPeriod = .daily
 
+    /// 指数の種類(国内/海外)。種類によって、使える表示オプションと足種が変わる。
+    /// 海外指数: オプションは Y軸(メイン)固定だけ(Y軸(サブ)固定・4本値はオンでも効かない)。1分足・日中足は設定できない
+    @objc var market: IndexMarket = .domestic {
+        didSet {
+            guard market != oldValue else { return }
+            applyDisplayOptionsToChart()
+            reloadSettingsRows()
+        }
+    }
+
     /// 足種ごとの指標の計算パラメータ。設定画面で足種ごとに変えられる。
     /// 初期値は足種に合わせたもの(週足の移動平均は 13/26 など。ChartPeriod.indicatorParameters)
     private var parametersByPeriod = StockChartViewController.defaultParametersByPeriod()
@@ -291,6 +301,12 @@ final class StockChartViewController: UIViewController {
         var options = displayOptions
         if !chartType.usesTechnicalIndicators {
             options.showsOHLC = false
+        }
+        // この指数で使えないオプション(海外指数の Y軸(サブ)固定・4本値)は、オンでも効かないようにする
+        // (設定の値は残すので、国内指数に戻すと元の状態で表示される)
+        let availableOptions = ChartDisplayOption.options(for: market)
+        for option in ChartDisplayOption.allCases where !availableOptions.contains(option) {
+            options[keyPath: option.keyPath] = false
         }
         chartView.displayOptions = options
     }
@@ -564,19 +580,18 @@ final class StockChartViewController: UIViewController {
     private func reloadSettingsRows() {
         switch selectedSettingsItem {
         case .displayOptions:
-            // 表示オプション: トグル3つ(足種ごとではないので、タブと下のボタンは隠す)
+            // 表示オプション: トグル(足種ごとではないので、タブと下のボタンは隠す)
             settingsView.showsPeriodControls = false
-            settingsView.rows = [
-                .toggle(title: "Y軸(メイン)固定", isOn: displayOptions.isMainYAxisFixed),
-                .toggle(title: "Y軸(サブ)固定", isOn: displayOptions.isSubYAxisFixed),
-                .toggle(title: "4本値", isOn: displayOptions.showsOHLC),
-            ]
+            // 並べるオプションは指数の種類で変わる(海外指数は Y軸(メイン)固定だけ)
+            settingsView.rows = ChartDisplayOption.options(for: market).map { option in
+                .toggle(title: option.title, isOn: displayOptions[keyPath: option.keyPath])
+            }
         case let item:
             settingsView.showsPeriodControls = true
 
             // この項目を設定できない足種(移動平均線以外の1分足・日中足)はグレーにする。
             // 選択中の足種が設定できない足種なら、日足に切り替える
-            let availablePeriods = ChartSettingsCatalog.periods(for: item)
+            let availablePeriods = settingsPeriods(for: item)
             if !availablePeriods.contains(settingsPeriod) {
                 settingsPeriod = .daily
             }
@@ -591,6 +606,14 @@ final class StockChartViewController: UIViewController {
                 .stepper(title: field.title, value: field.value(in: draft),
                          range: field.range, step: field.step, fractionDigits: field.fractionDigits)
             }
+        }
+    }
+
+    /// 指定した項目を設定できる足種(項目ごとの足種のうち、この指数で使う足種だけ)。
+    /// 海外指数では、どの項目も1分足・日中足は設定できない
+    private func settingsPeriods(for item: ChartSettingsItem) -> [ChartPeriod] {
+        return ChartSettingsCatalog.periods(for: item).filter { period in
+            market.periods.contains(period)
         }
     }
 
@@ -641,13 +664,10 @@ extension StockChartViewController: ChartSettingsViewDelegate {
 
     /// トグル(表示オプション)が切り替えられたら、対応するオプションを更新する
     func settingsView(_ settingsView: ChartSettingsView, didToggleRowAt index: Int, isOn: Bool) {
-        // 行の並びは reloadSettingsRows の .displayOptions と同じ
-        switch index {
-        case 0: displayOptions.isMainYAxisFixed = isOn
-        case 1: displayOptions.isSubYAxisFixed = isOn
-        case 2: displayOptions.showsOHLC = isOn
-        default: break
-        }
+        // 行の並びは reloadSettingsRows の .displayOptions と同じ(指数の種類で使えるオプションの順)
+        let options = ChartDisplayOption.options(for: market)
+        guard options.indices.contains(index) else { return }
+        displayOptions[keyPath: options[index].keyPath] = isOn
     }
 
     /// 足種のタブが選ばれたら、その足種の設定に切り替える
@@ -668,7 +688,7 @@ extension StockChartViewController: ChartSettingsViewDelegate {
     /// 「すべての足に反映」: 表示中の値を、この項目を設定できるすべての足種にコピーする(編集中のパラメータに対して)
     func settingsViewDidTapApplyToAllPeriods(_ settingsView: ChartSettingsView) {
         let source = draftParameters(for: settingsPeriod)
-        for period in ChartSettingsCatalog.periods(for: selectedSettingsItem) {
+        for period in settingsPeriods(for: selectedSettingsItem) {
             copySelectedItemValues(from: source, to: period)
         }
     }

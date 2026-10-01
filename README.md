@@ -43,6 +43,11 @@
 
 オプション(Y軸固定・4本値)は足種ごとではないので、パネルの中央にトグルだけを並べ、切り替えるとすぐに反映されます。
 
+指数の種類(`StockChartViewController.market`)が海外指数(`.overseas`)の場合は、次のようになります。
+
+- オプションは「Y軸(メイン)固定」だけを表示する(Y軸(サブ)固定・4本値はオンになっていても効かない。国内指数に戻すと元の状態に戻る)
+- 1分足・日中足はどの項目でもグレーで選べない(海外指数は日足・週足・月足だけを使うため)
+
 テクニカル/設定を開いている間は、パネルを画面の上端〜セーフエリアの下端まで広げ、後ろの画面(チャート・下のボタン)をグレーにします。グレーの部分をタップするとパネルが閉じます(設定画面で「決定」していない変更は捨てます)。
 
 自分の画面に組み込む場合は、`StockChartViewController` を画面いっぱいに置き、チャート本体の位置は `chartInsets`(セーフエリアの端からの余白)で決めます。
@@ -271,6 +276,7 @@ chartViewController.mainIndicator = .bollingerBands
 chartViewController.subIndicator = .macd
 chartViewController.isTechnicalMenuEnabled = true  // テクニカル/設定タブを表示する
 chartViewController.chartType = .candlestick       // チャートの種類(.vwapLine / .vwapDots / .newPrice / .lineChart)
+chartViewController.market = .domestic             // 指数の種類(海外指数なら .overseas)
 chartViewController.setCandles(candles, period: .daily)   // 足種を指定すると、足種ごとの設定で描画する(省略時は日足)
 ```
 
@@ -285,6 +291,7 @@ chartViewController.mainIndicator = MainChartIndicatorBollingerBands;
 chartViewController.subIndicator = SubChartIndicatorMacd;
 chartViewController.isTechnicalMenuEnabled = YES;  // テクニカル/設定タブを表示する
 chartViewController.chartType = ChartTypeCandlestick;  // チャートの種類
+chartViewController.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseas)
 [chartViewController setCandles:candles period:ChartPeriodDaily];  // 足種ごとの設定で描画する
 ```
 
@@ -299,6 +306,56 @@ landscape.setCandles(candles)
 LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];   // Objective-C
 [landscape setCandles:candles];
 ```
+
+#### 海外指数の場合
+
+指数の種類(`market`)に `.overseas`(Objective-C は `IndexMarketOverseas`)を指定します。**データを渡す前に**指定してください(既定は国内指数 `.domestic`)。
+
+```swift
+// Swift: 縦画面(足種のタブが 日足・週足・月足 になる)
+let portrait = PortraitChartViewController.instantiate()
+portrait.market = .overseas
+portrait.candleLoader = { period in loadCandles(period) }   // 実際のデータの読み込み
+portrait.reloadChart()
+
+// Swift: 横画面(設定画面のオプションが Y軸(メイン)固定 だけになる)
+let landscape = LandscapeChartViewController.instantiate()
+landscape.chartViewController.market = .overseas
+landscape.setCandles(candles, period: .daily)
+
+// Swift: StockChartViewController を直接使う場合
+chartViewController.market = .overseas
+chartViewController.setCandles(candles, period: .daily)
+```
+
+```objc
+// Objective-C: 縦画面
+PortraitChartViewController *portrait = [PortraitChartViewController instantiate];
+portrait.market = IndexMarketOverseas;
+portrait.candleLoader = ^NSArray<StockCandle *> *(ChartPeriod period) {
+    return [self loadCandlesForPeriod:period];   // 実際のデータの読み込み
+};
+[portrait reloadChart];
+
+// Objective-C: 横画面
+LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];
+landscape.chartViewController.market = IndexMarketOverseas;
+[landscape setCandles:candles period:ChartPeriodDaily];
+
+// Objective-C: StockChartViewController を直接使う場合
+chartViewController.market = IndexMarketOverseas;
+[chartViewController setCandles:candles period:ChartPeriodDaily];
+```
+
+海外指数にすると、次のように変わります。
+
+| 画面 | 国内指数(`.domestic`) | 海外指数(`.overseas`) |
+|---|---|---|
+| 縦画面の足種のタブ | 1分足・日中足・日足・週足・月足 | 日足・週足・月足 |
+| 設定画面のオプション | Y軸(メイン)固定・Y軸(サブ)固定・4本値 | Y軸(メイン)固定 のみ(Y軸(サブ)固定・4本値はオンでも効かない) |
+| 設定画面の足種のタブ | 移動平均線は 1分足〜月足、それ以外は 日足・週足・月足 | どの項目も 日足・週足・月足(1分足・日中足はグレー) |
+
+国内・海外を切り替えるとき(同じ画面で別の指数を表示するとき)も、`market` を変えてからデータを渡し直します。
 
 ### 5. 見た目を変える(色・文字の位置・フォントの大きさ)
 
@@ -388,7 +445,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
-| `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
+| `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし) | ― |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
