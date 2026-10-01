@@ -47,6 +47,9 @@ extension StockChartView {
         // X軸ラベルを最新の足を基準に並べる描画処理に差し替える(LatestAlignedXAxisRenderer)
         priceChart.xAxisRenderer = priceXAxisRenderer
         subChart.xAxisRenderer = subXAxisRenderer
+        // Y軸ラベルを中央揃え・枠内に収めて描けるよう、描画処理を差し替える(AlignedYAxisRenderer)
+        priceChart.rightYAxisRenderer = priceYAxisRenderer
+        subChart.rightYAxisRenderer = subYAxisRenderer
     }
 
     /// 4本値表示用の十字線・マーカー・枠を追加する(チャートの上に重ねる)。
@@ -131,33 +134,37 @@ extension StockChartView {
             // 凡例: 各チャート描画領域の左上(枠の内側)に表示する
             //
             //   外枠 ┌──────────────────────────┐
-            //        │↕6                        │
+            //        │↕3                        │
             //        │←8→移動平均 短期… 長期…  ←8→│ ← priceLegendLabel
             //        │                          │
             //  区切り線├──────────────────────────┤
-            //        │↕4                        │
+            //        │↕2                        │
             //        │←8→出来高 出来高移動平均  ←8→│ ← subLegendLabel
             //        └──────────────────────────┘
             //
-            // ・上端: メインは外枠の上端から 6pt 下、サブは区切り線の下端から 4pt 下
-            // ・左端: 外枠の左端から 8pt 右
+            // ・上端: メインは外枠の上端から style.legendTopInset(3pt)下、
+            //         サブは区切り線の下端から style.subLegendTopInset(2pt)下(applyLayoutConstraints で設定)
+            // ・左端: 外枠の左端から style.legendLeadingInset(8pt)右(applyLayoutConstraints で設定)
             // ・右端: 外枠の右端から 8pt 内側を超えない(lessThanOrEqual)。
             //         短い凡例は文字の長さぶんの幅になり、長い凡例はここで幅が制限されて文字が縮小される
             // ・高さ: 指定しない(フォントの大きさから自動で決まる。legendFont 12pt で約 15pt)
             // 凡例はチャートの描画領域の上に重なっているだけなので、チャートの線と重ならないよう
-            // Y軸の上側に余白を取っている(updateAxisRanges)
-            priceLegendLabel.topAnchor.constraint(equalTo: frameView.topAnchor, constant: 6),
-            priceLegendLabel.leadingAnchor.constraint(equalTo: frameView.leadingAnchor, constant: 8),
+            // Y軸の上側に、凡例の高さぶんの余白を取っている(updateAxisRanges)
             priceLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
-            subLegendLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor, constant: 4),
-            subLegendLabel.leadingAnchor.constraint(equalTo: frameView.leadingAnchor, constant: 8),
             subLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
 
             // データが0件のときのメッセージ: メインチャートの凡例のすぐ下(4pt 下)、凡例と同じ左端に表示する
             noDataLabel.topAnchor.constraint(equalTo: priceLegendLabel.bottomAnchor, constant: 4),
-            noDataLabel.leadingAnchor.constraint(equalTo: frameView.leadingAnchor, constant: 8),
             noDataLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
         ])
+
+        // 凡例の上端・左端(値は style で変えられるので、applyLayoutConstraints で反映する)
+        priceLegendTopConstraint = priceLegendLabel.topAnchor.constraint(equalTo: frameView.topAnchor)
+        subLegendTopConstraint = subLegendLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor)
+        legendLeadingConstraints = [priceLegendLabel, subLegendLabel, noDataLabel].map { label in
+            label.leadingAnchor.constraint(equalTo: frameView.leadingAnchor)
+        }
+        NSLayoutConstraint.activate([priceLegendTopConstraint!, subLegendTopConstraint!] + legendLeadingConstraints)
     }
 
     // MARK: - スタイルの反映
@@ -170,6 +177,10 @@ extension StockChartView {
             configureChartBasics(chart)
             configureRightAxis(chart.rightAxis)
             configureXAxis(chart.xAxis)
+        }
+        for renderer in [priceYAxisRenderer, subYAxisRenderer] {
+            renderer.centersLabels = style.centersYAxisLabels
+            renderer.keepsLabelsInside = style.keepsYAxisLabelsInside
         }
 
         // メインチャートのY軸: 区切り線付近のラベルがサブチャートの最上段ラベルと重ならないよう、
@@ -189,6 +200,8 @@ extension StockChartView {
         frameView.layer.borderColor = style.borderColor.cgColor
         frameView.layer.borderWidth = style.borderWidth
         dividerView.backgroundColor = style.dividerColor
+        priceLegendLabel.backgroundColor = style.legendBackgroundColor
+        subLegendLabel.backgroundColor = style.legendBackgroundColor
         crosshairView.lineColor = style.textColor
         valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
         dateMarker.fillColor = style.increasingColor
@@ -238,23 +251,23 @@ extension StockChartView {
     /// 右のY軸の設定(メイン/サブ共通)。ラベルは描画領域の外側(右側)、軸線は外枠と重なるので描かない
     ///
     ///   外枠 ─┐
-    ///         │←10→70,000     ← Y軸ラベル(左揃え)
+    ///         │←10→70,000     ← Y軸ラベル(左揃え。style.centersYAxisLabels で中央揃え)
     ///         │
     ///         │←10→65,000
     ///   ──────┘
     ///         |←── rightAxisWidth(90) ──→|
     ///
     /// ・ラベル領域の幅は setViewPortOffsets の right(= style.rightAxisWidth)で確保している
-    /// ・ラベルは外枠の右端(描画領域の右端)から xOffset(10pt)離した位置に左揃えで描かれる
+    /// ・ラベルは外枠の右端(描画領域の右端)から xOffset(style.yAxisLabelOffset)離した位置に描かれる
     /// ・縦位置は各グリッド線の高さに、文字の中心を合わせて描かれる
     ///   (描画領域の上下端のラベルは半分はみ出すので、labelOverflowInset で余白を取っている)
     private func configureRightAxis(_ axis: YAxis) {
-        axis.labelFont = style.axisFont
+        axis.labelFont = style.yAxisFont
         axis.labelTextColor = style.textColor
         axis.gridColor = style.gridColor
         axis.drawAxisLineEnabled = false
         axis.labelPosition = .outsideChart
-        axis.xOffset = 10
+        axis.xOffset = style.yAxisLabelOffset
         axis.drawLimitLinesBehindDataEnabled = true  // 基準線(RSI の 30/70 など)は指標の線より下に描く
     }
 
@@ -267,7 +280,7 @@ extension StockChartView {
         axis.labelPosition = .bottom
         axis.drawGridLinesEnabled = false
         axis.drawAxisLineEnabled = false
-        axis.labelFont = style.axisFont
+        axis.labelFont = style.xAxisFont
         axis.labelTextColor = style.textColor
         axis.granularity = 1                       // ラベルは1本単位(足と足の間には置かない)
         axis.granularityEnabled = true
@@ -300,6 +313,13 @@ extension StockChartView {
         // 外枠の右端 = Y軸ラベル領域の左端
         frameTrailingConstraint = frameView.trailingAnchor.constraint(
             equalTo: trailingAnchor, constant: -style.rightAxisWidth)
+
+        // 凡例の位置(上端・左端)
+        priceLegendTopConstraint?.constant = style.legendTopInset
+        subLegendTopConstraint?.constant = style.subLegendTopInset
+        for constraint in legendLeadingConstraints {
+            constraint.constant = style.legendLeadingInset
+        }
 
         // 区切り線の太さは外枠と同じ
         dividerHeightConstraint = dividerView.heightAnchor.constraint(equalToConstant: style.borderWidth)

@@ -51,7 +51,7 @@
 //      凡例とチャートの線が重ならないよう、Y軸の上側に余白を取っている(AxisRange)。
 //  ・Y軸ラベル(価格・指標の値)
 //      外枠の右側、幅 style.rightAxisWidth(90pt)の領域に DGCharts が描く。
-//      外枠の右端から 10pt(rightAxis.xOffset)離して左揃えで表示する。
+//      外枠の右端から style.yAxisLabelOffset(10pt)離して左揃え(style で中央揃えにもできる)で表示する。
 //  ・X軸ラベル(日付)
 //      外枠の下側、高さ style.xAxisLabelHeight(20pt)の領域に DGCharts が描く。
 //      サブチャートがあるときはサブ、ないときはメインのチャートにだけ表示する。
@@ -107,6 +107,14 @@ final class StockChartView: UIView {
     lazy var priceXAxisRenderer = LatestAlignedXAxisRenderer(
         viewPortHandler: priceChart.viewPortHandler, axis: priceChart.xAxis,
         transformer: priceChart.getTransformer(forAxis: .left))
+    /// メインチャートの Y軸ラベルの描画処理。中央揃え・枠内に収める表示に切り替えられるよう、DGCharts 標準のものから差し替えている
+    lazy var priceYAxisRenderer = AlignedYAxisRenderer(
+        viewPortHandler: priceChart.viewPortHandler, axis: priceChart.rightAxis,
+        transformer: priceChart.getTransformer(forAxis: .right))
+    /// サブチャートの Y軸ラベルの描画処理(同上)
+    lazy var subYAxisRenderer = AlignedYAxisRenderer(
+        viewPortHandler: subChart.viewPortHandler, axis: subChart.rightAxis,
+        transformer: subChart.getTransformer(forAxis: .right))
     /// サブチャートの X軸ラベルの描画処理(同上)
     lazy var subXAxisRenderer = LatestAlignedXAxisRenderer(
         viewPortHandler: subChart.viewPortHandler, axis: subChart.xAxis,
@@ -147,6 +155,13 @@ final class StockChartView: UIView {
     var crosshairPoint: CGPoint?
 
     // MARK: - レイアウトの制約(スタイル・サブチャートの有無によって変わるもの)
+
+    /// メインチャートの凡例の上端(style.legendTopInset)
+    var priceLegendTopConstraint: NSLayoutConstraint?
+    /// サブチャートの凡例の上端(style.subLegendTopInset)
+    var subLegendTopConstraint: NSLayoutConstraint?
+    /// 凡例の左端(style.legendLeadingInset。メイン・サブ・データなしのメッセージ)
+    var legendLeadingConstraints: [NSLayoutConstraint] = []
 
     /// サブチャートを区切り線の位置まで重ねるための制約
     var subTopConstraint: NSLayoutConstraint?
@@ -301,6 +316,7 @@ final class StockChartView: UIView {
         // DGCharts はスクロール位置をピクセル単位で保持しているため、画面回転などで幅が変わると
         // 表示範囲がずれてしまう。サイズ変更前の表示範囲(X軸の値)を覚えておき、変更後に復元する
         let oldWidth = priceChart.viewPortHandler.contentWidth
+        let oldHeight = priceChart.viewPortHandler.contentHeight
         var oldRange: (low: Double, high: Double)?
         if oldWidth > 0, priceChart.data != nil {
             oldRange = (low: priceChart.lowestVisibleX, high: priceChart.highestVisibleX)
@@ -309,8 +325,17 @@ final class StockChartView: UIView {
         super.layoutSubviews()  // ここでチャートのサイズが変わる
 
         let widthChanged = priceChart.viewPortHandler.contentWidth != oldWidth
+        let heightChanged = priceChart.viewPortHandler.contentHeight != oldHeight
         if let oldRange, widthChanged {
             restoreVisibleRange(low: oldRange.low, high: oldRange.high)
+        } else if heightChanged, priceChart.data != nil {
+            // 高さが変わると、凡例の下に空ける余白(Y軸の上側の余白)も変わるので、Y軸範囲を計算し直す。
+            // 初めてサイズが決まったとき(oldWidth が 0)は、まだ表示範囲が取れないので初期表示範囲で計算する
+            if oldWidth > 0 {
+                updateAxisRangesForVisibleCandles()
+            } else {
+                updateAxisRangesForInitialCandles()
+            }
         }
 
         // サイズが変わると十字線の画面上の位置も変わるので更新する
@@ -444,5 +469,29 @@ extension StockChartView {
     @objc var noDataMessage: String {
         get { return style.noDataMessage }
         set { style.noDataMessage = newValue }
+    }
+
+    /// 凡例のフォント(「移動平均 短期移動平均(5) …」の文字)
+    @objc var legendFont: UIFont {
+        get { return style.legendFont }
+        set { style.legendFont = newValue }
+    }
+
+    /// X軸ラベル(日付)のフォント
+    @objc var xAxisFont: UIFont {
+        get { return style.xAxisFont }
+        set { style.xAxisFont = newValue }
+    }
+
+    /// Y軸ラベル(価格・指標の値)のフォント
+    @objc var yAxisFont: UIFont {
+        get { return style.yAxisFont }
+        set { style.yAxisFont = newValue }
+    }
+
+    /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
+    @objc var legendTopInset: CGFloat {
+        get { return style.legendTopInset }
+        set { style.legendTopInset = newValue }
     }
 }

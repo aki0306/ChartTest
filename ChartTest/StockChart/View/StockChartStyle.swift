@@ -69,8 +69,10 @@ struct StockChartStyle {
 
     // MARK: - フォント
 
-    /// 軸ラベルのフォント
-    var axisFont = UIFont.systemFont(ofSize: 10)
+    /// X軸ラベル(日付)のフォント
+    var xAxisFont = UIFont.systemFont(ofSize: 10)
+    /// Y軸ラベル(価格・指標の値)のフォント
+    var yAxisFont = UIFont.systemFont(ofSize: 10)
     /// 凡例のフォント
     var legendFont = UIFont.systemFont(ofSize: 12)
 
@@ -84,6 +86,23 @@ struct StockChartStyle {
     var xAxisLabelHeight: CGFloat = 20
     /// 外枠・区切り線の線幅
     var borderWidth: CGFloat = 1
+    /// Y軸ラベルの左端の位置(外枠の右端からの距離)
+    var yAxisLabelOffset: CGFloat = 10
+    /// Y軸ラベルを、一番長いラベルの幅の中で中央揃えにするか(false なら左揃え)
+    var centersYAxisLabels = false
+    /// Y軸ラベルを描画領域の内側に収めるか(下端の「0」などを、はみ出さないよう上にずらす)
+    var keepsYAxisLabelsInside = false
+    /// 凡例の背景色(白にすると、凡例の文字の後ろのグリッド線が隠れる)
+    var legendBackgroundColor = UIColor.clear
+    /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
+    var legendTopInset: CGFloat = 3
+    /// サブチャートの凡例の上端の位置(区切り線の下端からの距離)
+    var subLegendTopInset: CGFloat = 2
+    /// 凡例の左端の位置(外枠の左端からの距離。メイン・サブ共通)
+    var legendLeadingInset: CGFloat = 8
+    /// 凡例の下端と、チャートの一番高い線・足との最小の間隔。
+    /// この間隔が空くよう、Y軸の上側の余白を自動で広げる(updateAxisRanges)
+    var legendBottomSpacing: CGFloat = 4
     /// X軸ラベルの日付フォーマット(足種ごとの値は ChartPeriod.dateFormat)
     var dateFormat = "M/d"
     /// X軸ラベルのおおよその個数(文字が長い書式のときは少なくして、ラベル同士が重ならないようにする)

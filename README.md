@@ -210,6 +210,84 @@ LandscapeChartViewController *landscape = [LandscapeChartViewController instanti
 [landscape setCandles:candles];
 ```
 
+### 5. 見た目を変える(色・文字の位置・フォントの大きさ)
+
+チャートの見た目は、すべて `StockChartView` の `style`([`StockChart/View/StockChartStyle.swift`](ChartTest/StockChart/View/StockChartStyle.swift))で決まっています。
+アプリ全体の既定値を変えるなら `StockChartStyle.swift` の初期値を書き換え、画面ごとに変えるならコードで `style` を設定します。
+
+`style` は代入するたびに描き直されるので、まとめて変更してから1回で代入します。
+
+```swift
+// Swift
+var style = chartView.style
+style.legendFont = .systemFont(ofSize: 10)          // 凡例の文字を小さく
+style.yAxisFont = .systemFont(ofSize: 9)            // 価格(Y軸)ラベルの文字を小さく
+style.legendTopInset = 2                            // 凡例をさらに上へ
+style.increasingColor = .systemRed                  // 陽線の色
+style.lineColors[0] = .systemGreen                  // 短期移動平均の色
+chartView.style = style
+```
+
+```objc
+// Objective-C(よく使うものだけ。ほかの項目は Swift 側に @objc プロパティを追加してください)
+chartView.legendFont = [UIFont systemFontOfSize:10];
+chartView.yAxisFont = [UIFont systemFontOfSize:9];
+chartView.legendTopInset = 2;
+chartView.increasingColor = UIColor.systemRedColor;
+```
+
+このアプリの縦画面は、`PortraitChartViewController` の `applyChartStyle()` で見た目を設定しています(Y軸ラベルは Times 8pt・中央揃え、凡例は 10pt・白背景)。
+チャートの大きさ(左端からの位置・高さ)は `Portrait.storyboard` の制約で決めています。
+
+`chartView` は画面ごとに次のように取り出せます。
+
+| 画面 | `chartView` の取り出し方 |
+|---|---|
+| 縦画面 | `portraitViewController.chartView`(`PortraitChartViewController`) |
+| 横画面 | `landscapeViewController.chartViewController.chartView`(`LandscapeChartViewController`) |
+| `StockChartViewController` | `chartViewController.chartView` |
+
+#### 変えられる項目(`StockChartStyle`)
+
+| 変えたいもの | 項目 | 既定値 |
+|---|---|---|
+| 陽線・陰線の色 | `increasingColor` / `decreasingColor` | 赤 / 青 |
+| 指標の線の色(移動平均など) | `lineColors`(0 = 1本目、1 = 2本目、…) | 黄緑・オレンジ・紫・水色・ピンク |
+| 出来高の棒・出来高移動平均の色 | `volumeColor` / `volumeAverageColor` | 黄緑 / 青 |
+| 一目均衡表の線の色 | `ichimokuTenkanColor` など `ichimoku〜Color` | ― |
+| VWAP・新値足・折線チャートの色 | `vwapColor` / `newPriceColor` / `lineChartColor` | 赤 / 青 / 青 |
+| 現在値の破線の色(新値足・折線チャート) | `currentPriceLineColor` | 濃いグレー |
+| 外枠・区切り線・横グリッド線の色 | `borderColor` / `dividerColor` / `gridColor` | 黒 / グレー / 薄いグレー |
+| 軸ラベル・凡例タイトル(「移動平均」など)の文字色 | `textColor` | 黒 |
+| 凡例のフォント(大きさ) | `legendFont` | 12pt |
+| 日付(X軸)ラベルのフォント(大きさ) | `xAxisFont` | 10pt |
+| 価格(Y軸)ラベルのフォント(大きさ) | `yAxisFont` | 10pt |
+| 価格(Y軸)ラベルの位置(外枠の右端からの距離) | `yAxisLabelOffset` | 10pt |
+| 価格(Y軸)ラベルの揃え方 | `centersYAxisLabels`(true で一番長いラベルの幅の中で中央揃え) | false(左揃え) |
+| 価格(Y軸)ラベルを枠内に収める | `keepsYAxisLabelsInside`(true で下端の「0」などを上にずらす) | false |
+| 凡例の背景色 | `legendBackgroundColor`(白にすると文字の後ろのグリッド線が隠れる) | 透明 |
+| メインの凡例の位置(上端) | `legendTopInset`(外枠の上端からの距離) | 3pt |
+| サブの凡例の位置(上端) | `subLegendTopInset`(区切り線からの距離) | 2pt |
+| 凡例の位置(左端) | `legendLeadingInset`(外枠の左端からの距離) | 8pt |
+| 凡例とチャートの線の間隔 | `legendBottomSpacing` | 4pt |
+| 右側の価格ラベル欄の幅 | `rightAxisWidth` | 90pt |
+| 下側の日付ラベル欄の高さ | `xAxisLabelHeight` | 20pt |
+| メインとサブの高さの比 | `priceHeightRatio`(メイン : サブ = この値 : 1) | 2.0 |
+
+- 凡例の文字の色は、線の色と同じになります(凡例だけの色はありません)。線の色を変えると、凡例の文字の色も変わります
+- 凡例の位置やフォントを変えても、チャートの線が凡例と重ならないよう、Y軸の上側の余白は自動で調整されます
+
+#### `style` 以外で決まっている見た目
+
+| 部品 | ファイル | 項目 |
+|---|---|---|
+| 縦画面の足種タブ(色・文字の大きさ) | [`ChartPeriodTabView.swift`](ChartTest/StockChart/View/ChartPeriodTabView.swift) | `selectedColor`・`normalColor`、`updateSelection` 内のフォント |
+| テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/View/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
+| 「テクニカル」「設定」タブ | [`StockChartViewController.swift`](ChartTest/StockChart/Controller/StockChartViewController.swift) | `configureTabButton` |
+| 4本値の枠(文字の大きさ・背景) | [`ChartCrosshairViews.swift`](ChartTest/StockChart/View/ChartCrosshairViews.swift) | `OHLCInfoView` |
+| 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartAxisFormatters.swift`](ChartTest/StockChart/View/ChartAxisFormatters.swift) | `ChartNumberFormatter` |
+| 凡例の文言(「短期移動平均(5)」など) | [`ChartContentBuilder.swift`](ChartTest/StockChart/Model/ChartContentBuilder.swift) | 各指標の `label` / `legendTitle` |
+
 ### Swift と Objective-C で使えるものの違い
 
 ほとんどの機能は両方から使えます。Swift の struct(`StockChartStyle`・`IndicatorParameters` など)は Objective-C から直接扱えないため、次の違いがあります。
@@ -217,7 +295,7 @@ LandscapeChartViewController *landscape = [LandscapeChartViewController instanti
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(すべての指標の期間など)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles` | ― |
@@ -297,6 +375,7 @@ ChartTest/
 | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値) |
 | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数) |
 | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |
+| `AlignedYAxisRenderer.swift` | 価格(Y軸)ラベルの中央揃え・枠内に収める描画処理 |
 | `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
 | `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
 | `ChartPeriodTabView.swift` | 足種のタブ(縦画面の上部) |

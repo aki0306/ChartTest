@@ -98,17 +98,18 @@ extension StockChartView {
 
     /// メインチャートのY軸範囲を調整する
     ///
-    /// 上側は凡例と重ならないよう値幅の 20%、下側は 5% の余白を取る
+    /// 上側は凡例と重ならないよう「凡例の高さぶん」(最低でも値幅の 20%)、下側は値幅の 5% の余白を取る
     ///
     ///   axisMaximum   ┬ ─────────────────   ← 凡例(priceLegendLabel)はこの余白部分に重なる
-    ///                 │ 余白(値幅の 20%)
+    ///                 │ 余白(凡例の高さぶん。topPadding で計算)
     ///   表示中の最高値 ┼ ─────────────────
     ///                 │ ローソク足・指標の線
     ///   表示中の最安値 ┼ ─────────────────
     ///                 │ 余白(値幅の 5%)
     ///   axisMinimum   ┴ ─────────────────
     ///
-    /// 凡例の位置は固定(外枠の上端から 6pt)なので、線が一番高くても凡例の下に収まるようにしている
+    /// チャートの高さが低い(縦画面など)と、値幅の 20% では凡例の高さに足りないので、
+    /// 画面上の高さ(pt)から必要な余白を計算して、線が一番高くても凡例の下に収まるようにしている
     private func updateMainAxisRange(from: Int, to: Int) {
         // 範囲の計算対象: 高値・安値(足を描く場合)・メイン指標の各線
         var valueArrays: [[Double?]] = []
@@ -129,8 +130,12 @@ extension StockChartView {
         }
 
         let range = Self.nonZeroRange(low: low, high: high)
-        priceChart.rightAxis.axisMaximum = high + range * 0.2
-        priceChart.rightAxis.axisMinimum = low - range * 0.05
+        let bottomPadding = range * 0.05
+        let topPadding = topPaddingForLegend(
+            priceLegendLabel, legendTop: style.legendTopInset, chart: priceChart,
+            valueRange: range + bottomPadding, minimumRatio: 0.2)
+        priceChart.rightAxis.axisMaximum = high + topPadding
+        priceChart.rightAxis.axisMinimum = low - bottomPadding
         priceChart.notifyDataSetChanged()
     }
 
@@ -141,11 +146,11 @@ extension StockChartView {
         axis.drawLabelsEnabled = true  // 値がない場合だけ、下で false にする
 
         if let fixedRange = sub.fixedRange {
-            // 固定範囲(0〜100 など)。上側は凡例用に 25% 広げる(その部分のラベルは非表示)
+            // 固定範囲(0〜100 など)。上側は凡例用に広げる(最低 25%。その部分のラベルは非表示)
             //   例) RSI: 0〜100 → 0〜125。100〜125 の部分に凡例(subLegendLabel)が重なる
             let width = fixedRange.upperBound - fixedRange.lowerBound
             axis.axisMinimum = fixedRange.lowerBound
-            axis.axisMaximum = fixedRange.upperBound + width * 0.25
+            axis.axisMaximum = fixedRange.upperBound + topPaddingForSubLegend(valueRange: width, minimumRatio: 0.25)
         } else {
             // 範囲の計算対象: サブ指標の各線・棒
             var valueArrays: [[Double?]] = []
@@ -163,16 +168,22 @@ extension StockChartView {
                     high = max(high, 0)
                 }
 
-                // 上側は凡例と重ならないよう値幅の 30%、下側は 5% の余白を取る。
+                // 上側は凡例と重ならないよう凡例の高さぶん(最低でも値幅の 30%)、下側は 5% の余白を取る。
                 // サブチャートはメインより背が低く、凡例の高さが占める割合が大きいので、メイン(20%)より多めに取る
                 let range = Self.nonZeroRange(low: low, high: high)
-                axis.axisMaximum = high + range * 0.3
+                var bottomPadding = range * 0.05
                 if sub.includesZero, low == 0 {
                     // 0 起点(出来高など): 下側の余白は取らず、0 を下端にする
-                    axis.axisMinimum = 0
-                } else {
-                    axis.axisMinimum = low - range * 0.05
+                    bottomPadding = 0
                 }
+                axis.axisMinimum = low - bottomPadding
+                axis.axisMaximum = high + topPaddingForSubLegend(valueRange: range + bottomPadding, minimumRatio: 0.3)
+
+                // ラベルの数は、描画領域の高さに収まる数(ラベル1つにつき文字 1.3 行分の高さ)にする。
+                // 縦画面などでサブチャートが低いと、5つ並べると文字同士が重なるため
+                let labelHeight = style.yAxisFont.lineHeight * 1.3
+                let fittingCount = Int(subChart.viewPortHandler.contentHeight / labelHeight)
+                axis.setLabelCount(min(max(fittingCount, 2), 5), force: false)
             } else {
                 // 値が1つもない(指数の1分足・日中足の出来高など): 棒も線もないので、Y軸のラベルも出さない。
                 // 範囲は仮に 0〜1 にしておく(前に表示していた内容の範囲が残らないように)
@@ -182,6 +193,55 @@ extension StockChartView {
             }
         }
         subChart.notifyDataSetChanged()
+    }
+
+    // MARK: - 凡例の下の余白
+
+    /// サブチャートの凡例が重ならないための、Y軸の上側の余白(値)
+    /// - Parameters:
+    ///   - valueRange: 余白を除いた表示範囲の値幅(下側の余白を含む)
+    ///   - minimumRatio: 余白の最小値(valueRange に対する割合)
+    private func topPaddingForSubLegend(valueRange: Double, minimumRatio: Double) -> Double {
+        // サブの描画領域の上端は区切り線の中心なので、凡例の上端までには区切り線の太さの半分が加わる
+        let legendTop = style.subLegendTopInset + style.borderWidth / 2
+        return topPaddingForLegend(subLegendLabel, legendTop: legendTop, chart: subChart,
+                                   valueRange: valueRange, minimumRatio: minimumRatio)
+    }
+
+    /// 凡例の下端より下に線・足が収まるための、Y軸の上側の余白(値)を求める
+    ///
+    ///   描画領域の上端 ┬──────────────┬ axisMaximum
+    ///                 │ legendTop    │
+    ///                 │ 凡例         │ reserved(pt) = legendTop + 凡例の高さ + legendBottomSpacing
+    ///                 │ 間隔         │   → 値に直すと topPadding
+    ///                 ├──────────────┼ 表示中の最高値
+    ///                 │ 線・足       │ height - reserved(pt) = valueRange(値)
+    ///   描画領域の下端 ┴──────────────┴ axisMinimum
+    ///
+    ///   「topPadding : valueRange = reserved : (height - reserved)」なので
+    ///   topPadding = valueRange × reserved ÷ (height − reserved)
+    ///
+    /// - Parameters:
+    ///   - legend: 凡例のラベル
+    ///   - legendTop: 描画領域の上端から凡例の上端までの距離(pt)
+    ///   - chart: 凡例が重なっているチャート
+    ///   - valueRange: 余白を除いた表示範囲の値幅(下側の余白を含む)
+    ///   - minimumRatio: 余白の最小値(valueRange に対する割合)。凡例がない・レイアウト前の場合はこの値になる
+    private func topPaddingForLegend(_ legend: UILabel, legendTop: CGFloat, chart: CombinedChartView,
+                                     valueRange: Double, minimumRatio: Double) -> Double {
+        let minimumPadding = valueRange * minimumRatio
+
+        // 凡例がない(「なし」の指標など)
+        guard legend.attributedText != nil else { return minimumPadding }
+        // レイアウト前で、描画領域の高さが決まっていない(サイズが決まったときに計算し直される)
+        let height = chart.viewPortHandler.contentHeight
+        guard height > 0 else { return minimumPadding }
+
+        let reserved = legendTop + legend.intrinsicContentSize.height + style.legendBottomSpacing
+        // 凡例だけで描画領域の高さの半分を超える場合は、線を描く場所がなくなるので半分で止める
+        let limitedReserved = min(reserved, height / 2)
+        let padding = valueRange * Double(limitedReserved / (height - limitedReserved))
+        return max(padding, minimumPadding)
     }
 
     // MARK: - 計算の補助

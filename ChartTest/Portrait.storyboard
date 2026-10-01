@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13122.16" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="pVC-00-001">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="25098" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="pVC-00-001">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13104.12"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="25073"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -11,27 +12,29 @@
             <objects>
                 <viewController id="pVC-00-001" customClass="PortraitChartViewController" customModule="ChartTest" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="pVw-00-001">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="pTb-00-001" customClass="ChartPeriodTabView" customModule="ChartTest" customModuleProvider="target">
-                                <rect key="frame" x="8" y="28" width="359" height="40"/>
+                                <rect key="frame" x="8" y="126" width="377" height="40"/>
                             </view>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="pCh-00-001" customClass="StockChartView" customModule="ChartTest" customModuleProvider="target">
-                                <rect key="frame" x="0.0" y="76" width="375" height="591"/>
+                                <rect key="frame" x="5" y="163" width="388" height="208"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="208" id="soj-uf-luM"/>
+                                </constraints>
                             </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="pSf-00-001"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
+                            <constraint firstItem="pCh-00-001" firstAttribute="leading" secondItem="pSf-00-001" secondAttribute="leading" constant="5" id="17p-Kp-dKJ"/>
+                            <constraint firstItem="pCh-00-001" firstAttribute="top" secondItem="pTb-00-001" secondAttribute="bottom" constant="-3" id="Nub-Fm-JQn"/>
+                            <constraint firstItem="pSf-00-001" firstAttribute="trailing" secondItem="pCh-00-001" secondAttribute="trailing" id="QJj-yQ-LGZ"/>
                             <constraint firstItem="pTb-00-001" firstAttribute="top" secondItem="pSf-00-001" secondAttribute="top" constant="8" id="pCt-00-005"/>
                             <constraint firstItem="pTb-00-001" firstAttribute="leading" secondItem="pSf-00-001" secondAttribute="leading" constant="8" id="pCt-00-006"/>
                             <constraint firstItem="pSf-00-001" firstAttribute="trailing" secondItem="pTb-00-001" secondAttribute="trailing" constant="8" id="pCt-00-007"/>
                             <constraint firstItem="pTb-00-001" firstAttribute="height" constant="40" id="pCt-00-008"/>
-                            <constraint firstItem="pCh-00-001" firstAttribute="top" secondItem="pTb-00-001" secondAttribute="bottom" constant="8" id="pCt-00-001"/>
-                            <constraint firstItem="pCh-00-001" firstAttribute="bottom" secondItem="pSf-00-001" secondAttribute="bottom" id="pCt-00-002"/>
-                            <constraint firstItem="pCh-00-001" firstAttribute="leading" secondItem="pSf-00-001" secondAttribute="leading" id="pCt-00-003"/>
-                            <constraint firstItem="pCh-00-001" firstAttribute="trailing" secondItem="pSf-00-001" secondAttribute="trailing" id="pCt-00-004"/>
                         </constraints>
                     </view>
                     <connections>
@@ -41,6 +44,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="pFR-00-001" sceneMemberID="firstResponder"/>
             </objects>
+            <point key="canvasLocation" x="138.1679389312977" y="130.98591549295776"/>
         </scene>
     </scenes>
 </document>
