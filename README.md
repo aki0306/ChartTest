@@ -63,6 +63,10 @@ Swift のクラスは、Xcode が自動で作るヘッダ `<プロダクトモ�
 #import "ChartTest-Swift.h"
 ```
 
+このヘッダは DGCharts の自動生成ヘッダ(`DGCharts-Swift.h`)も読み込みます。そこには説明が空の `\param` などがあり、ドキュメントコメントのチェックが有効だと、DGCharts のモジュールのビルド中に「Empty paragraph passed to '\param' command」などの警告が大量に出ます。
+このアプリでは、ビルド設定の **Documentation Comments**(`CLANG_WARN_DOCUMENTATION_COMMENTS`)を `NO` にして、この警告を出さないようにしています。
+(DGCharts のモジュールは `.m` ファイルとは別にビルドされるので、`.m` の `#pragma clang diagnostic` では止められません)
+
 動くサンプル:
 
 | ファイル | 内容 |
