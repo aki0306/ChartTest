@@ -519,6 +519,51 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
    API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
    海外指数の場合は、データを渡す前に `market = .overseas` を指定します(「海外指数の場合」を参照)。
 
+### API のレスポンス(足種ごと)を渡す
+
+既存アプリで足種ごとに取得したレスポンス(辞書の配列)は、[`ChartResponseLoader`](ChartTest/StockChart/Controller/ChartResponseLoader.swift) のメソッドでチャートに渡せます。
+縦画面・横画面に関係なく、どこからでも呼べます。引数は Swift では `[[String: Any]]`、Objective-C では `NSArray<NSDictionary *> *` なので、`NSMutableArray` のまま渡せます(並び順は問いません。日付の古い順に並べ替えて描きます)。
+
+| 足種 | Objective-C | Swift |
+|---|---|---|
+| 1分足 | `[ChartResponseLoader setOneMinuteResponse:array to:target]` | `ChartResponseLoader.setOneMinuteResponse(array, to: target)` |
+| 日中足 | `[ChartResponseLoader setIntradayResponse:array to:target]` | `ChartResponseLoader.setIntradayResponse(array, to: target)` |
+| 日足 | `[ChartResponseLoader setDailyResponse:array to:target]` | `ChartResponseLoader.setDailyResponse(array, to: target)` |
+| 週足 | `[ChartResponseLoader setWeeklyResponse:array to:target]` | `ChartResponseLoader.setWeeklyResponse(array, to: target)` |
+| 月足 | `[ChartResponseLoader setMonthlyResponse:array to:target]` | `ChartResponseLoader.setMonthlyResponse(array, to: target)` |
+| 足種を引数で指定 | `[ChartResponseLoader setResponse:array period:ChartPeriodDaily to:target]` | `ChartResponseLoader.setResponse(array, period: .daily, to: target)` |
+
+描画先(`target`)には、次のどれでも渡せます(`StockCandleReceiving` に対応しているもの)。
+
+| 描画先 | 使う場面 |
+|---|---|
+| `StockChartView` | 既存アプリの縦画面などに、チャートだけを置く場合 |
+| `StockChartViewController` | テクニカル・設定画面付きのチャートを埋め込む場合 |
+| `LandscapeChartViewController` | このアプリの横画面をそのまま使う場合 |
+
+```objc
+// Objective-C: レスポンスの辞書を配列に入れて、そのまま渡す
+NSMutableArray *responseArray = [NSMutableArray array];
+[responseArray addObject:@{@"date": @"2026/10/01", @"open": @"66,000", @"high": @66500,
+                           @"low": @65800, @"close": @"66300", @"volume": @2400000000}];
+[ChartResponseLoader setDailyResponse:responseArray to:landscapeViewController];   // 横画面
+[ChartResponseLoader setDailyResponse:responseArray to:self.chartView];            // 縦画面(StockChartView)
+```
+
+海外指数の場合は、描画先の `market` を先に `.overseas` にしておきます(`StockChartView` は `chartView.market`、横画面は `landscape.chartViewController.market`)。
+
+辞書 → `StockCandle` の変換は [`StockCandleResponseParser`](ChartTest/StockChart/Model/StockCandleResponseParser.swift)(Model)が行います。
+
+| 項目 | 内容 |
+|---|---|
+| キーの名前 | `StockCandleResponseParser.Key`(今は仮の名前 `date`・`open`・`high`・`low`・`close`・`volume`。既存アプリのレスポンスに合わせて直す) |
+| 日付の形式 | `StockCandleResponseParser.dateFormats`(今は仮の形式 `yyyy/MM/dd HH:mm` など。上から順に試す) |
+| 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
+| 読めない件 | 日付・始値・高値・安値・終値のどれかが読めない件(空・`"-"` など)は飛ばす。出来高がない件は 0 にする |
+| 変換だけを使う | Swift: `StockCandleResponseParser.candles(from: array)` / Objective-C: `[StockCandleResponseParser candlesFrom:array]` |
+
+※ 配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちます(Swift の `[[String: Any]]` に変換できないため)。
+
 ### 横画面のチャートだけを使う場合
 
 縦画面は既存アプリの画面をそのまま使い、横画面のチャート(テクニカル・設定画面・チャートの種類のボタン付き)だけを組み込む場合です。
@@ -613,6 +658,7 @@ ChartTest/
 | ファイル | 内容 |
 |---|---|
 | `StockCandle.swift` | ローソク足1本分のデータ(日付・始値・高値・安値・終値・出来高) |
+| `StockCandleResponseParser.swift` | API のレスポンス(辞書の配列)を `StockCandle` の配列に変換する(キーの名前・日付の形式はここで決める) |
 | `TechnicalIndicators.swift` | 指標の計算(移動平均・ボリンジャーバンド・一目均衡表・RSI・MACD・VWAP・新値足 など) |
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
@@ -646,6 +692,7 @@ ChartTest/
 
 | ファイル | 内容 |
 |---|---|
+| `ChartResponseLoader.swift` | API のレスポンス(足種ごと)を、どこからでもチャートに渡して描画するユーティリティ(描画先は `StockCandleReceiving`) |
 | `StockChartViewController.swift` | 足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
 
 ## データの流れ

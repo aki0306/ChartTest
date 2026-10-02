@@ -24,6 +24,10 @@
 //      viewController.chartViewController.chartType = ChartTypeNewPrice;
 //      [viewController setCandles:candles];
 //
+//  API のレスポンス(足種ごと)を渡す場合(Objective-C):
+//      [ChartResponseLoader setDailyResponse:responseArray to:viewController];   // 辞書の配列(NSMutableArray のままでよい)
+//      (ChartResponseLoader は縦画面の StockChartView にも使える)
+//
 
 import UIKit
 
@@ -160,3 +164,8 @@ final class LandscapeChartViewController: UIViewController {
         chartViewController.setCandles(candles, period: period)
     }
 }
+
+// MARK: - API のレスポンスの描画先にする
+
+/// ChartResponseLoader の描画先にできるようにする(setCandles(_:period:) は上で定義済み)
+extension LandscapeChartViewController: StockCandleReceiving {}

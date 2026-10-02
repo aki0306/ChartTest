@@ -78,6 +78,11 @@ final class StockChartView: UIView {
         }
     }
 
+    /// 指数の種類(国内/海外)。setCandles(_:period:) での描き方が変わる
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: 終値の折れ線 + 移動平均線・サブなし)。
+    /// 変更しても描き直さないので、データを渡す前に設定する
+    @objc var market: IndexMarket = .domestic
+
     /// 表示オプション(Y軸固定・4本値)。変更すると即座に反映する
     var displayOptions = ChartDisplayOptions() {
         didSet {
@@ -385,7 +390,8 @@ extension StockChartView {
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
     ///   - period: 足種
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
-        setCandles(candles, period: period, market: .domestic)
+        // 指数の種類は market の値(既定は国内指数)
+        setCandles(candles, period: period, market: market)
     }
 
     /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する。
@@ -396,6 +402,8 @@ extension StockChartView {
     ///   - period: 足種
     ///   - market: 指数の種類
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod, market: IndexMarket) {
+        self.market = market
+
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
         var newStyle = style
         newStyle.dateFormat = period.dateFormat
