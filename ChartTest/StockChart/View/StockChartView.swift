@@ -343,7 +343,13 @@ final class StockChartView: UIView {
             }
         }
 
-        // サイズが変わると十字線の画面上の位置も変わるので更新する
+        // 十字線の位置はこの View の座標で覚えているので、サイズが変わると(画面の回転など)外枠の外を指してしまう。
+        // サイズが変わったら、最新の足の位置から置き直す(次の updateCrosshair で決め直される)
+        if widthChanged {
+            crosshairPoint = nil
+        } else if heightChanged {
+            crosshairPoint = nil
+        }
         updateCrosshair()
     }
 

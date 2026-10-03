@@ -50,8 +50,8 @@ final class StockChartViewController: UIViewController {
     ///   | テクニカル(メイン)       | すべて         | 移動平均線・なし                              |
     ///   | テクニカル(サブ)         | すべて         | なし(サブチャートは表示しない)              |
     ///   | 設定画面の項目           | すべて         | オプション・移動平均線                        |
-    ///   | 設定画面のオプション     | すべて         | Y軸(メイン)固定(ほかはオンでも効かない)    |
-    ///   | 設定画面の足種           | 1分足〜月足    | 日足・週足・月足                              |
+    ///   | 設定画面のオプション     | すべて         | Y軸(メイン)固定・4本値(Y軸(サブ)固定はオンでも効かない) |
+    ///   | 設定画面の足種のタブ     | 1分足〜月足    | 日足・週足・月足(1分足・日中足のタブは出さない)      |
     ///   | チャートの種類           | すべて         | ローソク足・折線チャート                      |
     ///
     /// 海外指数に変えたとき、選べない指標・チャートの種類を選んでいた場合は
@@ -330,10 +330,10 @@ final class StockChartViewController: UIViewController {
 
     /// 表示オプションをチャートに反映する。
     /// 4本値(十字線)はローソク足の4本値を表示するためのものなので、ローソク足以外(VWAP・新値足・折線チャート)では
-    /// 設定がオンでも表示しない(設定の値はそのまま残し、ローソク足に戻すと表示される)
+    /// 設定がオンでも表示しない(海外指数の折線チャートも同じ。設定の値はそのまま残し、ローソク足に戻すと表示される)
     private func applyDisplayOptionsToChart() {
         var options = displayOptions
-        if !chartType.usesTechnicalIndicators(in: market) {
+        if chartType != .candlestick {
             options.showsOHLC = false
         }
         // この指数で使えないオプション(海外指数の Y軸(サブ)固定・4本値)は、オンでも効かないようにする
@@ -649,13 +649,16 @@ final class StockChartViewController: UIViewController {
 
     /// 設定画面を用意する(左側リストを作り、編集を始める)
     private func configureSettingsView() {
-        settingsView.periods = ChartPeriod.allCases
         reloadSettingsList()
         beginSettingsEditing()
     }
 
-    /// 設定画面の左側リストを Model(ChartSettingsCatalog)から作る(指数の種類で項目が変わる)
+    /// 設定画面の左側リストと足種のタブを、指数の種類に合わせて作る
+    /// (海外指数は、左側リストの項目が少なく、足種のタブは 日足・週足・月足 だけ)
     private func reloadSettingsList() {
+        // 足種のタブ: 指数の種類で使う足種だけを並べる(海外指数は 1分足・日中足のタブを出さない)
+        settingsView.periods = market.periods
+
         // 見出しごとに、項目の名称(「移動平均線」など)を並べる
         var sections: [ChartSettingsView.Section] = []
         for section in settingsSections {
@@ -679,7 +682,7 @@ final class StockChartViewController: UIViewController {
         case .displayOptions:
             // 表示オプション: トグル(足種ごとではないので、タブと下のボタンは隠す)
             settingsView.showsPeriodControls = false
-            // 並べるオプションは指数の種類で変わる(海外指数は Y軸(メイン)固定だけ)
+            // 並べるオプションは指数の種類で変わる(海外指数は Y軸(サブ)固定を除く)
             settingsView.rows = ChartDisplayOption.options(for: market).map { option in
                 .toggle(title: option.title, isOn: displayOptions[keyPath: option.keyPath])
             }

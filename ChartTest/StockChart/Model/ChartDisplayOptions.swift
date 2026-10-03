@@ -10,7 +10,7 @@
 //  |------------------|----------|----------|
 //  | Y軸(メイン)固定  | ○       | ○       |
 //  | Y軸(サブ)固定    | ○       | ―       |
-//  | 4本値            | ○       | ―       |
+//  | 4本値            | ○       | ○       |
 //
 
 import Foundation
@@ -53,13 +53,14 @@ enum ChartDisplayOption: CaseIterable {
         }
     }
 
-    /// 指定した指数の種類で使えるオプション(設定画面に並べる順)。海外指数は Y軸(メイン)固定だけ
+    /// 指定した指数の種類で使えるオプション(設定画面に並べる順)。
+    /// 海外指数はサブチャートがないので、Y軸(サブ)固定を除く(Y軸(メイン)固定・4本値)
     static func options(for market: IndexMarket) -> [ChartDisplayOption] {
         switch market {
         case .domestic:
             return [.mainYAxisFixed, .subYAxisFixed, .ohlc]
         case .overseas:
-            return [.mainYAxisFixed]
+            return [.mainYAxisFixed, .ohlc]
         }
     }
 }
