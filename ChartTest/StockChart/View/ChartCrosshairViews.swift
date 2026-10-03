@@ -52,12 +52,12 @@ final class CrosshairOverlayView: UIView {
         hide()
     }
 
-    /// 線の色・太さ・破線を設定する
+    /// 線の色・太さを設定する(実線)
     private func applyLineStyle() {
         for line in [verticalLine, horizontalLine] {
             line.strokeColor = lineColor.cgColor
-            line.lineWidth = 0.8
-            line.lineDashPattern = [4, 3]  // 4pt 描いて 3pt 空ける破線
+            line.lineWidth = 1
+            line.lineDashPattern = nil  // 破線にせず、実線で引く
             line.fillColor = nil
         }
     }

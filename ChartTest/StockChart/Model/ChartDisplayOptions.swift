@@ -22,7 +22,8 @@ struct ChartDisplayOptions: Equatable {
     var isMainYAxisFixed = false
     /// Y軸(サブ)固定。サブチャートについて isMainYAxisFixed と同じ
     var isSubYAxisFixed = false
-    /// 4本値。true の場合、チャートをタップすると十字線と、その日の日付・始値・高値・安値・終値を表示する
+    /// 4本値。true の場合、十字線と、その日の日付・始値・高値・安値・終値を表示する
+    /// (十字線は指でなぞると動く。タップでは、右の価格ラベルの欄で横線だけ、下の日付ラベルの欄で縦線だけが動く)
     var showsOHLC = false
 }
 

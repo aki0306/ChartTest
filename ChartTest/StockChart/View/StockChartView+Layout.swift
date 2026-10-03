@@ -67,20 +67,39 @@ extension StockChartView {
 
     /// 十字線を動かすジェスチャーを、メイン・サブそれぞれのチャートに付ける。
     /// 4本値がオンのときだけ有効にする(applyDisplayOptions)
-    ///   タップ       : タップした位置に十字線を移動
-    ///   1本指ドラッグ: 十字線を指の位置に追従させる
-    /// 4本値オン中はチャートのスクロールを2本指に切り替えるので(updateChartPanTouches)、1本指のドラッグと競合しない
+    ///   タップ       : 価格・日付のラベルの欄をタップすると、その位置に十字線を移動
+    ///   1本指ドラッグ: 価格・日付のラベルの欄からなぞると、十字線を指の位置に追従させる
+    /// 枠の内側は、4本値がオンでもチャートのスクロール(1本指)・拡大(ピンチ)に使う。
+    /// ラベルの欄からなぞったときは、十字線だけを動かしてスクロールはしない(canBeginScroll)
     private func addCrosshairGestures() {
         for chart in [priceChart, subChart] {
+            // ラベルの欄(十字線を動かす欄)からなぞり始めたときは、チャートをスクロールしない
+            chart.canBeginScroll = { [weak self, weak chart] pointInChart in
+                guard let self, let chart else { return true }
+                return !self.isCrosshairDragStart(at: chart.convert(pointInChart, to: self))
+            }
+
             let tap = UITapGestureRecognizer(target: self, action: #selector(chartTapped(_:)))
+            tap.isEnabled = false  // 4本値オンのときだけ有効にする(applyDisplayOptions)
             let pan = UIPanGestureRecognizer(target: self, action: #selector(chartPanned(_:)))
             pan.maximumNumberOfTouches = 1
-            pan.delegate = self  // 4本値オンのときだけ開始する(gestureRecognizerShouldBegin)
+            // 4本値オンで、ラベルの欄からなぞり始めたときだけ開始する(gestureRecognizerShouldBegin)。
+            // 下でチャートのスクロールがこのパンの失敗を待つようにするので、常に有効にしておく
+            // (無効にすると、スクロールが待ったままになることがあるため)
+            pan.delegate = self
 
             for recognizer in [tap, pan] {
-                recognizer.isEnabled = false
                 chart.addGestureRecognizer(recognizer)
                 crosshairRecognizers.append(recognizer)
+            }
+
+            // チャートのスクロール(DGCharts のパン)は、十字線のドラッグが始まらないと分かってから始める。
+            // ラベルの欄からなぞったときは十字線だけが動き、チャートは一緒にスクロールしない
+            // (スクロールすると、動かしていない方の線の日付・価格まで変わってしまうため)
+            for recognizer in chart.gestureRecognizers ?? [] {
+                guard recognizer is UIPanGestureRecognizer else { continue }
+                guard recognizer.delegate === chart else { continue }  // DGCharts のスクロール用のパンだけ
+                recognizer.require(toFail: pan)
             }
         }
     }

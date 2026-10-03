@@ -17,8 +17,16 @@
 //                         /\           ← 日付のマーカー(dateMarker)
 //                        |8/19|
 //
-//  ・横線は指の高さ、縦線は指に一番近い足の中心に引く
-//  ・4本値オン中は、1本指のドラッグで十字線を動かし、2本指でチャートをスクロールする
+//  ・横線は指の高さ、縦線は指に一番近い足の中心に引く(線は黒い実線)
+//  ・動かす線は、触った場所で決める(CrosshairArea / CrosshairMoveTarget)
+//      | 触った場所                         | ドラッグ                 | タップ                       |
+//      | 枠の内側                           | 動かさない               | 動かさない                   |
+//      | 右の価格ラベルの欄(メインの高さ) | 横線だけ                 | 横線だけをその高さに移動     |
+//      | 下の日付ラベルの欄                 | 縦線(日付・4本値)だけ  | 縦線だけをその位置の足に移動 |
+//    横線は、メインチャートの高さの範囲だけで動かす(サブチャートの横の欄は触っても動かさない)
+//    ドラッグで動かす線は、なぞり始めた場所で決める(途中で別の欄に指が移っても変えない)
+//  ・枠の内側は、4本値オン中もチャートのスクロール(1本指)・拡大(ピンチ)に使う。
+//    ラベルの欄からなぞったときは、十字線だけを動かしてスクロールはしない
 //
 
 import UIKit
@@ -30,11 +38,12 @@ extension StockChartView {
 
     /// 表示オプション(Y軸固定・4本値)を反映する。displayOptions が変わると呼ばれる
     func applyDisplayOptions() {
-        // 4本値: オンのときだけ十字線のジェスチャーを受け付け、チャートのスクロールを2本指に切り替える
+        // 4本値: オンのときだけ十字線のタップを受け付ける(チャートのスクロール・拡大はオン/オフに関係なく使える)。
+        // ドラッグ(パン)は常に有効のまま、開始してよいかを gestureRecognizerShouldBegin で判定する
         for recognizer in crosshairRecognizers {
+            guard recognizer is UITapGestureRecognizer else { continue }
             recognizer.isEnabled = displayOptions.showsOHLC
         }
-        updateChartPanTouches()
 
         // オン/オフが切り替わったら、十字線は次回表示時に最新の足の位置から始める
         crosshairPoint = nil
@@ -51,55 +60,137 @@ extension StockChartView {
         updateCrosshair()
     }
 
-    /// DGCharts のスクロール(パン)に必要な指の本数を切り替える。
-    /// 4本値オン中は1本指のドラッグを十字線の移動に使うため、スクロールは2本指にする
-    private func updateChartPanTouches() {
-        let touches: Int
-        if displayOptions.showsOHLC {
-            touches = 2
-        } else {
-            touches = 1
-        }
+    // MARK: - ジェスチャー
 
-        for chart in [priceChart, subChart] {
-            for recognizer in chart.gestureRecognizers ?? [] {
-                // パン(ドラッグ)以外は対象外
-                guard let pan = recognizer as? UIPanGestureRecognizer else { continue }
-                // 自分で追加した十字線用のパンは対象外(DGCharts が持つスクロール用のパンだけ変更する)
-                guard !crosshairRecognizers.contains(pan) else { continue }
-                pan.minimumNumberOfTouches = touches
+    /// タップ: 外枠の外側をタップしたときだけ、十字線を動かす(枠の内側のタップでは動かさない)
+    ///   ・右の価格ラベルの欄 → 横線だけを、タップした高さに移動する
+    ///   ・下の日付ラベルの欄 → 縦線(日付・4本値)だけを、タップした位置の足に移動する
+    @objc func chartTapped(_ recognizer: UITapGestureRecognizer) {
+        guard let chart = recognizer.view else { return }
+        let point = chart.convert(recognizer.location(in: chart), to: self)
+
+        switch crosshairArea(of: point) {
+        case .priceLabels:
+            moveCrosshair(to: point, target: .horizontalOnly)
+        case .dateLabels:
+            moveCrosshair(to: point, target: .verticalOnly)
+        case .inside, .other:
+            break  // 枠の内側(と左・上の外側)のタップでは動かさない
+        }
+    }
+
+    /// 1本指ドラッグ: 十字線を指の位置に追従させる。動かす線は、なぞり始めた場所で決める
+    ///   ・下の日付ラベルの欄からなぞる → 縦線(日付・4本値)だけ
+    ///   ・右の価格ラベルの欄(メインチャートの高さ)からなぞる → 横線(価格)だけ
+    ///   ・枠の内側などからなぞる → 動かさない
+    @objc func chartPanned(_ recognizer: UIPanGestureRecognizer) {
+        guard let chart = recognizer.view else { return }
+        let point = chart.convert(recognizer.location(in: chart), to: self)
+
+        switch recognizer.state {
+        case .began:
+            crosshairDragTarget = dragTarget(startingAt: point)
+            if let target = crosshairDragTarget {
+                moveCrosshair(to: point, target: target)
+            }
+        case .changed:
+            if let target = crosshairDragTarget {
+                moveCrosshair(to: point, target: target)
+            }
+        default:
+            // 指を離した・キャンセルされた。縦線を動かしていた場合は、選んだ足の中心に合わせ直す
+            let wasMovingVerticalLine = crosshairDragTarget == .verticalOnly
+            crosshairDragTarget = nil
+            if wasMovingVerticalLine {
+                snapCrosshairToCandleCenter()
             }
         }
     }
 
-    // MARK: - ジェスチャー
-
-    /// タップ: タップした位置に十字線を移動する
-    @objc func chartTapped(_ recognizer: UITapGestureRecognizer) {
-        guard let chart = recognizer.view else { return }
-        let pointInChart = recognizer.location(in: chart)
-        moveCrosshair(to: chart.convert(pointInChart, to: self))
+    /// 縦線を、今選ばれている足(十字線の X に一番近い足)の中心に合わせる
+    private func snapCrosshairToCandleCenter() {
+        guard let point = crosshairPoint else { return }
+        guard !candles.isEmpty else { return }
+        let index = nearestCandleIndex(toX: point.x)
+        if let centerX = candleCenterX(at: index, within: frameView.frame) {
+            crosshairPoint = CGPoint(x: centerX, y: point.y)
+        }
+        updateCrosshair()
     }
 
-    /// 1本指ドラッグ: 十字線を指の位置に追従させる
-    @objc func chartPanned(_ recognizer: UIPanGestureRecognizer) {
-        guard let chart = recognizer.view else { return }
-        switch recognizer.state {
-        case .began, .changed:
-            let pointInChart = recognizer.location(in: chart)
-            moveCrosshair(to: chart.convert(pointInChart, to: self))
-        default:
-            break
+    /// 指定した位置(このViewの座標)からなぞり始めたら、十字線を動かすか(4本値オンで、ラベルの欄のとき)
+    func isCrosshairDragStart(at point: CGPoint) -> Bool {
+        guard displayOptions.showsOHLC else { return false }
+        return dragTarget(startingAt: point) != nil
+    }
+
+    /// なぞり始めた場所から、ドラッグで動かす線を決める(nil = 動かさない)
+    private func dragTarget(startingAt point: CGPoint) -> CrosshairMoveTarget? {
+        switch crosshairArea(of: point) {
+        case .priceLabels:
+            return .horizontalOnly
+        case .dateLabels:
+            return .verticalOnly
+        case .inside, .other:
+            return nil  // 枠の内側(と左・上の外側)では動かさない
         }
     }
 
+    /// メインチャートの描画領域の高さの範囲(このViewの座標)。外枠の上端〜区切り線(サブなしなら外枠の下端)
+    private var mainChartYRange: ClosedRange<CGFloat> {
+        let frameRect = frameView.frame
+        var bottom = frameRect.maxY
+        if hasSubChart {
+            bottom = dividerView.frame.minY
+        }
+        return frameRect.minY...max(bottom, frameRect.minY)
+    }
+
+    /// 指の位置が、外枠に対してどこにあるか
+    private func crosshairArea(of point: CGPoint) -> CrosshairArea {
+        let frameRect = frameView.frame
+        if frameRect.contains(point) {
+            return .inside
+        }
+        // 右の価格ラベルの欄(外枠の右側で、メインチャートの高さ。サブチャートの横は含めない)
+        if point.x > frameRect.maxX {
+            if mainChartYRange.contains(point.y) {
+                return .priceLabels
+            }
+            return .other
+        }
+        // 下の日付ラベルの欄(外枠の下側で、外枠の左端〜右端の位置)
+        if point.y > frameRect.maxY {
+            if (frameRect.minX...frameRect.maxX).contains(point.x) {
+                return .dateLabels
+            }
+            return .other
+        }
+        return .other
+    }
+
     /// 十字線を指定した位置(このViewの座標)に移動する。外枠の外は外枠の端に寄せる
-    private func moveCrosshair(to point: CGPoint) {
+    /// - Parameter target: 動かす線(縦線だけ・横線だけ・両方)。動かさない方の線は、今の位置のまま
+    private func moveCrosshair(to point: CGPoint, target: CrosshairMoveTarget) {
         guard displayOptions.showsOHLC else { return }
         let frameRect = frameView.frame
         let x = min(max(point.x, frameRect.minX), frameRect.maxX)  // 外枠の左端〜右端に収める
-        let y = min(max(point.y, frameRect.minY), frameRect.maxY)  // 外枠の上端〜下端に収める
-        crosshairPoint = CGPoint(x: x, y: y)
+        // 横線はメインチャートの高さの範囲に収める(指がサブチャートの横まで移っても、メインの下端で止める)
+        let mainRange = mainChartYRange
+        let y = min(max(point.y, mainRange.lowerBound), mainRange.upperBound)
+
+        // 今の十字線の位置(まだ置いていなければ、最新の足の位置)から、動かす線だけを変える
+        var newPoint = latestCandlePoint()
+        if let crosshairPoint {
+            newPoint = crosshairPoint
+        }
+        switch target {
+        case .verticalOnly:
+            newPoint.x = x
+        case .horizontalOnly:
+            newPoint.y = y
+        }
+        crosshairPoint = newPoint
         updateCrosshair()
     }
 
@@ -125,13 +216,19 @@ extension StockChartView {
         let index = nearestCandleIndex(toX: point.x)
         let candle = candles[index]
 
-        // 縦線の X(足の中心)。足が外枠の外(表示範囲外)なら nil で、縦線は描かない
-        let lineX = candleCenterX(at: index, within: frameRect)
+        // 縦線の X。ふだんは足の中心(足が外枠の外なら nil で、縦線は描かない)。
+        // 日付ラベルの欄からなぞっている間は、足ごとにカクカク跳ばないよう、指の位置にそのまま合わせる
+        // (4本値・日付は指に一番近い足のものを出す。指を離したら足の中心に合わせ直す)
+        var lineX = candleCenterX(at: index, within: frameRect)
+        if crosshairDragTarget == .verticalOnly {
+            lineX = point.x
+        }
         // 横線の Y(指の高さ)
         let lineY = point.y
 
+        // 横線は、外枠の右の価格ラベルの欄を通って、右端の矢印のマーカーまで引く
         crosshairView.show(x: lineX, verticalRange: frameRect.minY...frameRect.maxY,
-                           y: lineY, horizontalRange: frameRect.minX...frameRect.maxX)
+                           y: lineY, horizontalRange: frameRect.minX...bounds.maxX)
         showValueMarker(atY: lineY, frameRect: frameRect)
         showYAxisMarker(atY: lineY)
         showDateMarker(atX: lineX, date: candle.date, frameRect: frameRect)
@@ -302,10 +399,33 @@ extension StockChartView: UIGestureRecognizerDelegate {
 
     /// 十字線を動かすドラッグは、4本値オンのときだけ開始する
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        // 自分で追加した十字線用のパンか
+        // 自分で追加した十字線用のパンか: 4本値オンで、ラベルの欄からなぞり始めたときだけ開始する
+        // (枠の内側からなぞったときはチャートのスクロールに譲る)
         if gestureRecognizer is UIPanGestureRecognizer, crosshairRecognizers.contains(gestureRecognizer) {
-            return displayOptions.showsOHLC
+            return isCrosshairDragStart(at: gestureRecognizer.location(in: self))
         }
         return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
+}
+
+// MARK: - 十字線を動かすときの種類
+
+/// 十字線のどの線を動かすか
+enum CrosshairMoveTarget {
+    /// 縦線(日付・4本値)だけ(下の日付ラベルの欄)
+    case verticalOnly
+    /// 横線(価格)だけ(右の価格ラベルの欄)
+    case horizontalOnly
+}
+
+/// 指の位置が、外枠に対してどこにあるか
+enum CrosshairArea {
+    /// 外枠の内側
+    case inside
+    /// 右の価格ラベルの欄
+    case priceLabels
+    /// 下の日付ラベルの欄
+    case dateLabels
+    /// それ以外(左・上の外側、角)
+    case other
 }

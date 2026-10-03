@@ -162,6 +162,8 @@ final class StockChartView: UIView {
     /// 十字線の位置(このViewの座標)。指の位置に合わせて動く。
     /// 縦線はこの X に一番近い足に合わせる。nil の場合は次回表示時に最新の足の位置に置く
     var crosshairPoint: CGPoint?
+    /// ドラッグ中に動かす十字線の線(なぞり始めた場所で決める。nil = ドラッグしていない・動かさない)
+    var crosshairDragTarget: CrosshairMoveTarget?
 
     // MARK: - レイアウトの制約(スタイル・サブチャートの有無によって変わるもの)
 
