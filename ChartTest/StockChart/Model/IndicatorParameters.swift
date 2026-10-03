@@ -35,13 +35,16 @@ struct IndicatorParameters {
     var multipleMAPeriods: [Int] {
         let shortest = min(multipleMAShortestPeriod, multipleMALongestPeriod)
         let longest = max(multipleMAShortestPeriod, multipleMALongestPeriod)
-        // 1本だけの場合・最短と最長が同じ場合は、最短の1本だけ
-        guard multipleMACount > 1, shortest < longest else { return [shortest] }
+        // 1本だけの場合は、最短の1本だけ
+        guard multipleMACount > 1 else { return [shortest] }
+        // 最短と最長が同じ場合も、最短の1本だけ
+        guard shortest < longest else { return [shortest] }
 
+        // 隣の線との期間の差(例: 5〜75 を3本なら (75 - 5) ÷ 2 = 35 → 5, 40, 75)
         let interval = Double(longest - shortest) / Double(multipleMACount - 1)
         var periods: [Int] = []
-        for i in 0..<multipleMACount {
-            let period = Int((Double(shortest) + interval * Double(i)).rounded())
+        for lineNumber in 0..<multipleMACount {
+            let period = Int((Double(shortest) + interval * Double(lineNumber)).rounded())
             // 間隔が1本未満で同じ期間が続く場合は、重ねて引かない
             if periods.last != period {
                 periods.append(period)

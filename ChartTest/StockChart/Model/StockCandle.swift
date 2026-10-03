@@ -57,11 +57,18 @@ extension Array where Element == Double {
         guard period > 0 else { return [Double?](repeating: nil, count: count) }
 
         var result = [Double?](repeating: nil, count: count)
-        var sum = 0.0
-        for (i, value) in enumerated() {
-            sum += value                                // 新しい値を合計に加える
-            if i >= period { sum -= self[i - period] }  // 期間から外れた古い値を合計から引く
-            if i >= period - 1 { result[i] = sum / Double(period) }
+        var sum = 0.0  // 直近 period 本の合計
+        for (index, value) in enumerated() {
+            // 新しい値を合計に加える
+            sum += value
+            // period 本より前の値は期間から外れたので、合計から引く
+            if index >= period {
+                sum -= self[index - period]
+            }
+            // period 本たまったら平均を出す(それまでは nil のまま)
+            if index >= period - 1 {
+                result[index] = sum / Double(period)
+            }
         }
         return result
     }

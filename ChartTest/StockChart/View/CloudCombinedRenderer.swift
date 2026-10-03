@@ -36,9 +36,11 @@ nonisolated final class CloudCombinedRenderer: CombinedChartRenderer {
 
     override func drawData(context: CGContext) {
         // 雲はローソク足や線の下に来るよう、通常の描画より先に塗る
-        if let cloud, let chart {
-            MainActor.assumeIsolated {
-                drawCloud(cloud, chart: chart, context: context)
+        if let cloud {
+            if let chart {
+                MainActor.assumeIsolated {
+                    drawCloud(cloud, chart: chart, context: context)
+                }
             }
         }
         super.drawData(context: context)

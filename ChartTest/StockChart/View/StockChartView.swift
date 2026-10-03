@@ -30,8 +30,16 @@
 //  ・StockChartView+Layout.swift         … 部品の配置(Auto Layout)と見た目の設定
 //  ・StockChartView+Rendering.swift      … データを DGCharts の形に変換して描画する・凡例の文字列を作る
 //  ・StockChartView+AxisRange.swift      … スクロール/ズームの同期と、表示範囲に合わせたY軸範囲の調整
-//  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線・4本値の表示
+//  ・StockChartView+HighLowLabels.swift  … 表示中の範囲の最高値・最安値の文字
+//  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線・4本値の表示・操作
+//  ・StockChartStyle.swift               … 見た目の設定(色・フォント・余白など)
+//  部品(このView の中で使うもの)
+//  ・ChartCrosshairViews.swift           … 十字線・4本値の枠・マーカーの部品
 //  ・ChartAxisFormatters.swift           … 軸ラベルの書式(X軸の日付・Y軸の数値)
+//  ・LatestAlignedXAxisRenderer.swift    … X軸ラベル(日付)をどの足の下に置くか
+//  ・AlignedYAxisRenderer.swift          … Y軸ラベルの揃え方
+//  ・CloudCombinedRenderer.swift         … 一目均衡表の雲の塗りつぶし
+//  ・SafePinchCombinedChartView.swift    … ピンチ操作のクラッシュ対策をしたチャート
 //  初めて読む場合は、このファイル → Layout → Rendering → AxisRange → Crosshair の順がおすすめ。
 //
 //  【描画の流れ】
@@ -45,8 +53,8 @@
 //  ・凡例(priceLegendLabel / subLegendLabel)
 //      「移動平均 短期移動平均(5) 長期移動平均(25)」のような1行のテキスト。
 //      DGCharts 標準の凡例は使わず、UILabel を外枠の内側・左上に重ねて表示している。
-//        メイン: 外枠の上端から 6pt 下、左端から 8pt 右
-//        サブ  : 区切り線の下端から 4pt 下、左端から 8pt 右
+//        メイン: 外枠の上端から style.legendTopInset(3pt)下、左端から style.legendLeadingInset(8pt)右
+//        サブ  : 区切り線の下端から style.subLegendTopInset(2pt)下、左端から 8pt 右
 //      文字列は Model(ChartContentBuilder)が付けた legendTitle / label から作る(Rendering)。
 //      凡例とチャートの線が重ならないよう、Y軸の上側に余白を取っている(AxisRange)。
 //  ・Y軸ラベル(価格・指標の値)
@@ -324,35 +332,48 @@ final class StockChartView: UIView {
         // 表示範囲がずれてしまう。サイズ変更前の表示範囲(X軸の値)を覚えておき、変更後に復元する
         let oldWidth = priceChart.viewPortHandler.contentWidth
         let oldHeight = priceChart.viewPortHandler.contentHeight
-        var oldRange: (low: Double, high: Double)?
-        if oldWidth > 0, priceChart.data != nil {
-            oldRange = (low: priceChart.lowestVisibleX, high: priceChart.highestVisibleX)
-        }
+        let oldRange = currentVisibleRange()
 
         super.layoutSubviews()  // ここでチャートのサイズが変わる
 
         let widthChanged = priceChart.viewPortHandler.contentWidth != oldWidth
         let heightChanged = priceChart.viewPortHandler.contentHeight != oldHeight
-        if let oldRange, widthChanged {
+
+        if widthChanged, let oldRange {
+            // 幅が変わった(画面の回転など): 変更前と同じ範囲(何本目〜何本目)が見えるように戻す。
+            // Y軸範囲もこの中で計算し直す
             restoreVisibleRange(low: oldRange.low, high: oldRange.high)
-        } else if heightChanged, priceChart.data != nil {
-            // 高さが変わると、凡例の下に空ける余白(Y軸の上側の余白)も変わるので、Y軸範囲を計算し直す。
-            // 初めてサイズが決まったとき(oldWidth が 0)は、まだ表示範囲が取れないので初期表示範囲で計算する
-            if oldWidth > 0 {
-                updateAxisRangesForVisibleCandles()
-            } else {
-                updateAxisRangesForInitialCandles()
-            }
+        } else if heightChanged {
+            // 高さが変わった(初めてサイズが決まったときを含む):
+            // 凡例の下に空ける余白(Y軸の上側の余白)が変わるので、Y軸範囲を計算し直す
+            updateAxisRangesAfterHeightChange(isFirstLayout: oldWidth == 0)
         }
 
         // 十字線の位置はこの View の座標で覚えているので、サイズが変わると(画面の回転など)外枠の外を指してしまう。
         // サイズが変わったら、最新の足の位置から置き直す(次の updateCrosshair で決め直される)
-        if widthChanged {
-            crosshairPoint = nil
-        } else if heightChanged {
+        let sizeChanged = widthChanged || heightChanged
+        if sizeChanged {
             crosshairPoint = nil
         }
         updateCrosshair()
+    }
+
+    /// 今見えている X軸の範囲(何本目〜何本目)。まだ表示していない・レイアウト前なら nil
+    private func currentVisibleRange() -> (low: Double, high: Double)? {
+        guard priceChart.data != nil else { return nil }
+        guard priceChart.viewPortHandler.contentWidth > 0 else { return nil }
+        return (low: priceChart.lowestVisibleX, high: priceChart.highestVisibleX)
+    }
+
+    /// 高さが変わったあとに、Y軸範囲を計算し直す
+    /// - Parameter isFirstLayout: 初めてサイズが決まったときか(このときはまだ表示範囲が取れないので、初期表示範囲で計算する)
+    private func updateAxisRangesAfterHeightChange(isFirstLayout: Bool) {
+        guard priceChart.data != nil else { return }
+        if isFirstLayout {
+            updateAxisRangesForInitialCandles()
+        } else {
+            updateAxisRangesForVisibleCandles()
+        }
     }
 
     /// 指定した X軸の範囲(low〜high)が表示されるよう、両チャートの拡大率とスクロール位置を設定する
@@ -462,6 +483,8 @@ extension StockChartView {
 /// よく変更する設定だけを @objc プロパティとして公開する(中身は style を読み書きしているだけ)。
 extension StockChartView {
 
+    // MARK: チャート全体
+
     /// 初期表示する本数。0 以下を指定すると全件表示(Swift 側の visibleCount = nil に相当)
     @objc var visibleCount: Int {
         get {
@@ -506,6 +529,8 @@ extension StockChartView {
         set { style.noDataMessage = newValue }
     }
 
+    // MARK: 文字・ラベル
+
     /// 凡例のフォント(「移動平均 短期移動平均(5) …」の文字)
     @objc var legendFont: UIFont {
         get { return style.legendFont }
@@ -542,11 +567,7 @@ extension StockChartView {
         set { style.legendTopInset = newValue }
     }
 
-    /// 4本値の日付のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
-    @objc var dateMarkerImage: UIImage? {
-        get { return style.dateMarkerImage }
-        set { style.dateMarkerImage = newValue }
-    }
+    // MARK: 4本値
 
     /// 4本値を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
     @objc var crosshairFadeDelay: TimeInterval {
@@ -558,6 +579,12 @@ extension StockChartView {
     @objc var crosshairFadedAlpha: CGFloat {
         get { return style.crosshairFadedAlpha }
         set { style.crosshairFadedAlpha = newValue }
+    }
+
+    /// 4本値の日付のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
+    @objc var dateMarkerImage: UIImage? {
+        get { return style.dateMarkerImage }
+        set { style.dateMarkerImage = newValue }
     }
 
     /// 4本値の価格のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)

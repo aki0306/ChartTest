@@ -32,7 +32,7 @@ import UIKit
 
 final class TechnicalMenuView: UIView {
 
-    // MARK: - Public
+    // MARK: - 設定(外から変更する)
 
     /// 選択結果の通知先
     @objc weak var delegate: TechnicalMenuViewDelegate?
@@ -73,7 +73,7 @@ final class TechnicalMenuView: UIView {
         }
     }
 
-    // MARK: - Style
+    // MARK: - 見た目
 
     /// 見出しの背景色
     private let headerColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
@@ -82,7 +82,7 @@ final class TechnicalMenuView: UIView {
     /// 行の区切り線の色
     private let separatorColor = UIColor.systemGray4
 
-    // MARK: - Subviews
+    // MARK: - 部品
 
     /// メインチャート列の各行のボタン(mainChoices と同じ並び)
     private var mainButtons: [UIButton] = []
@@ -107,7 +107,7 @@ final class TechnicalMenuView: UIView {
         return availableSubIndicators
     }
 
-    // MARK: - Init
+    // MARK: - 初期化
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -120,7 +120,7 @@ final class TechnicalMenuView: UIView {
         setup()
     }
 
-    // MARK: - Setup
+    // MARK: - メニューの組み立て
 
     /// 2列のメニューを組み立てる
     private func setup() {
@@ -132,10 +132,19 @@ final class TechnicalMenuView: UIView {
     private func rebuildColumns() {
         columns?.removeFromSuperview()
 
-        mainButtons = mainChoices.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
-        subButtons = subChoices.map { makeRowButton(title: $0.title, tag: $0.rawValue) }
-        mainButtons.forEach { $0.addTarget(self, action: #selector(mainButtonTapped(_:)), for: .touchUpInside) }
-        subButtons.forEach { $0.addTarget(self, action: #selector(subButtonTapped(_:)), for: .touchUpInside) }
+        // 指標ごとに1行のボタンを作る(タップされたら、tag に入れた rawValue でどの指標かを判別する)
+        mainButtons = []
+        for indicator in mainChoices {
+            let button = makeRowButton(title: indicator.title, tag: indicator.rawValue)
+            button.addTarget(self, action: #selector(mainButtonTapped(_:)), for: .touchUpInside)
+            mainButtons.append(button)
+        }
+        subButtons = []
+        for indicator in subChoices {
+            let button = makeRowButton(title: indicator.title, tag: indicator.rawValue)
+            button.addTarget(self, action: #selector(subButtonTapped(_:)), for: .touchUpInside)
+            subButtons.append(button)
+        }
 
         // 行の高さを両列で揃えるため、行数が少ない列は空の行で埋める。
         // 「なし」だけのときも行の高さが変わらないよう、全選択肢の行数に合わせる
@@ -173,10 +182,12 @@ final class TechnicalMenuView: UIView {
         header.backgroundColor = headerColor
 
         // 空の行(区切り線を出さないよう、行と同じ背景色にする)
-        let fillers: [UIView] = (0..<max(rowCount - rows.count, 0)).map { _ in
-            let view = UIView()
-            view.backgroundColor = .white
-            return view
+        let fillerCount = max(rowCount - rows.count, 0)
+        var fillers: [UIView] = []
+        for _ in 0..<fillerCount {
+            let filler = UIView()
+            filler.backgroundColor = .white
+            fillers.append(filler)
         }
 
         // 見出し・行・空の行をすべて同じ高さで並べる。spacing の隙間が行の区切り線になる
@@ -200,7 +211,7 @@ final class TechnicalMenuView: UIView {
         return button
     }
 
-    // MARK: - Selection
+    // MARK: - 選択中の行の表示
 
     /// 選択中の行をグレー背景 + 白い太字、それ以外を通常表示にする
     private func updateSelection() {
@@ -241,7 +252,7 @@ final class TechnicalMenuView: UIView {
         button.configuration = config
     }
 
-    // MARK: - Actions
+    // MARK: - 操作
 
     /// メインチャート列の行がタップされたとき
     @objc private func mainButtonTapped(_ sender: UIButton) {

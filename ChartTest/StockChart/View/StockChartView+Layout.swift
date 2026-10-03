@@ -8,12 +8,14 @@
 //  ・applyStyle()               … style が変わるたび。色・フォント・軸の設定と、スタイルに依存する制約
 //  ・updateSubChartVisibility() … サブチャートの有無が変わるたび。制約と描画領域を切り替える
 //
-//  【部品の重なり順】(下から)
-//   priceChart / subChart(チャート本体)
-//   → crosshairView など(十字線・4本値)
-//   → frameView / dividerView(外枠・区切り線)
-//   → priceLegendLabel / subLegendLabel(凡例)
-//  チャートより上にある部品はタッチを受け取らない(isUserInteractionEnabled = false)ので、
+//  【部品の重なり順】(奥から手前へ。arrangeSubviewOrder で決める)
+//   1. dateMarker(日付の赤い矢印)      … チャートより奥。透明なチャートが描く日付ラベルが矢印の上に重なって見える
+//   2. priceChart / subChart(チャート本体)
+//   3. crosshairView(十字線)
+//   4. highPriceLabel / lowPriceLabel(最高値・最安値の文字)
+//   5. frameView / dividerView(外枠・区切り線)、凡例、データなしのメッセージ
+//   6. ohlcInfoView / valueMarker / yAxisMarker(4本値の枠・マーカー) … 一番手前
+//  チャートより手前にある部品はタッチを受け取らない(isUserInteractionEnabled = false)ので、
 //  スクロールやタップはすべて下のチャートに届く。
 //
 
@@ -30,6 +32,13 @@ extension StockChartView {
         addCrosshairParts()
         addCrosshairGestures()
         addOverlays()
+        arrangeSubviewOrder()
+        activateFixedConstraints()
+        applyStyle()
+    }
+
+    /// 部品の重なり順を整える(追加した順に手前に重なるので、追加後に一部だけ入れ替える)
+    private func arrangeSubviewOrder() {
         // 4本値の枠・マーカーは、最高値・最安値の文字や凡例より手前に表示する
         for view in [ohlcInfoView, valueMarker, yAxisMarker] {
             bringSubviewToFront(view)
@@ -37,8 +46,6 @@ extension StockChartView {
         // 日付のマーカー(矢印)は、チャートより奥に置く。
         // チャートの背景は透明なので、矢印の上にチャートが描く日付ラベルの文字が重なって見える
         sendSubviewToBack(dateMarker)
-        activateFixedConstraints()
-        applyStyle()
     }
 
     /// チャート本体(メイン・サブ)を追加する
@@ -192,12 +199,15 @@ extension StockChartView {
         ])
 
         // 凡例の上端・左端(値は style で変えられるので、applyLayoutConstraints で反映する)
-        priceLegendTopConstraint = priceLegendLabel.topAnchor.constraint(equalTo: frameView.topAnchor)
-        subLegendTopConstraint = subLegendLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor)
-        legendLeadingConstraints = [priceLegendLabel, subLegendLabel, noDataLabel].map { label in
+        let priceLegendTop = priceLegendLabel.topAnchor.constraint(equalTo: frameView.topAnchor)
+        let subLegendTop = subLegendLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor)
+        let legendLeadings = [priceLegendLabel, subLegendLabel, noDataLabel].map { label in
             label.leadingAnchor.constraint(equalTo: frameView.leadingAnchor)
         }
-        NSLayoutConstraint.activate([priceLegendTopConstraint!, subLegendTopConstraint!] + legendLeadingConstraints)
+        NSLayoutConstraint.activate([priceLegendTop, subLegendTop] + legendLeadings)
+        priceLegendTopConstraint = priceLegendTop
+        subLegendTopConstraint = subLegendTop
+        legendLeadingConstraints = legendLeadings
     }
 
     // MARK: - スタイルの反映
@@ -399,12 +409,17 @@ extension StockChartView {
         // 制約の切り替え。先に無効化してから有効化する(同時に有効になると制約が衝突するため)
         let constraintsWithSub = [priceHeightConstraint, frameBottomWithSubConstraint]
         let constraintsWithoutSub = [priceBottomConstraint, frameBottomWithoutSubConstraint]
+        var constraintsToDeactivate = constraintsWithSub
+        var constraintsToActivate = constraintsWithoutSub
         if showsSub {
-            constraintsWithoutSub.forEach { $0?.isActive = false }
-            constraintsWithSub.forEach { $0?.isActive = true }
-        } else {
-            constraintsWithSub.forEach { $0?.isActive = false }
-            constraintsWithoutSub.forEach { $0?.isActive = true }
+            constraintsToDeactivate = constraintsWithoutSub
+            constraintsToActivate = constraintsWithSub
+        }
+        for constraint in constraintsToDeactivate {
+            constraint?.isActive = false
+        }
+        for constraint in constraintsToActivate {
+            constraint?.isActive = true
         }
 
         subChart.isHidden = !showsSub

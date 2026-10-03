@@ -58,9 +58,14 @@ struct IndicatorParameterField {
     /// 表示に使う小数点以下の桁数(整数なら 0)
     var fractionDigits: Int {
         switch target {
-        case .int: return 0
-        // 刻みの桁に合わせる(0.1 刻みなら 1 桁、0.01 刻みなら 2 桁)
-        case .double: return max(0, Int((-log10(step)).rounded(.up)))
+        case .int:
+            return 0
+        case .double:
+            // 刻みの桁に合わせる。log10 で「10 の何乗か」を求める
+            //   0.1 刻み  → log10(0.1)  = -1 → 1 桁
+            //   0.02 刻み → log10(0.02) = -1.69… → 切り上げて 2 桁
+            let digits = Int((-log10(step)).rounded(.up))
+            return max(0, digits)
         }
     }
 

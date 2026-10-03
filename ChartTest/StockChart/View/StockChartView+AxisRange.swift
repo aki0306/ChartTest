@@ -181,64 +181,96 @@ extension StockChartView {
     }
 
     /// サブチャートのY軸範囲を調整する
+    ///   ・固定範囲の指標(RSI など 0〜100): 範囲は変えず、上側に凡例の分だけ広げる
+    ///   ・それ以外(出来高・MACD など): 見えている範囲の値に合わせて計算する
     private func updateSubAxisRange(from: Int, to: Int) {
         guard let sub = subContent else { return }
-        let axis = subChart.rightAxis
-        axis.drawLabelsEnabled = true  // 値がない場合だけ、下で false にする
+        subChart.rightAxis.drawLabelsEnabled = true  // 値がない場合だけ、applyAutoSubAxisRange で false にする
 
         if let fixedRange = sub.fixedRange {
-            // 固定範囲(0〜100 など)。上側は凡例用に広げる(最低 25%。その部分のラベルは非表示)
-            //   例) RSI: 0〜100 → 0〜125。100〜125 の部分に凡例(subLegendLabel)が重なる
-            let width = fixedRange.upperBound - fixedRange.lowerBound
-            axis.axisMinimum = fixedRange.lowerBound
-            axis.axisMaximum = fixedRange.upperBound + topPaddingForSubLegend(valueRange: width, minimumRatio: 0.25)
+            applyFixedSubAxisRange(fixedRange)
         } else {
-            // 範囲の計算対象: サブ指標の各線・棒
-            var valueArrays: [[Double?]] = []
-            for series in sub.series {
-                valueArrays.append(series.values)
-            }
-            if let bars = sub.bars {
-                valueArrays.append(bars.values)
-            }
-
-            if var (low, high) = Self.valueRange(of: valueArrays, from: from, to: to) {
-                // 0 を必ず含める指標(出来高・MACD など)は、範囲を 0 まで広げる
-                if sub.includesZero {
-                    low = min(low, 0)
-                    high = max(high, 0)
-                }
-                // 基準線(移動平均乖離率の底値・高値ラインなど)も範囲に含め、線が見えなくならないようにする
-                for level in sub.referenceLines {
-                    low = min(low, level)
-                    high = max(high, level)
-                }
-
-                // 上側は凡例と重ならないよう凡例の高さぶん(最低でも値幅の 30%)、下側は 5% の余白を取る。
-                // サブチャートはメインより背が低く、凡例の高さが占める割合が大きいので、メイン(20%)より多めに取る
-                let range = Self.nonZeroRange(low: low, high: high)
-                var bottomPadding = range * 0.05
-                if sub.includesZero, low == 0 {
-                    // 0 起点(出来高など): 下側の余白は取らず、0 を下端にする
-                    bottomPadding = 0
-                }
-                axis.axisMinimum = low - bottomPadding
-                axis.axisMaximum = high + topPaddingForSubLegend(valueRange: range + bottomPadding, minimumRatio: 0.3)
-
-                // ラベルの数は、描画領域の高さに収まる数(ラベル1つにつき文字 1.3 行分の高さ)にする。
-                // 縦画面などでサブチャートが低いと、5つ並べると文字同士が重なるため
-                let labelHeight = style.yAxisFont.lineHeight * 1.3
-                let fittingCount = Int(subChart.viewPortHandler.contentHeight / labelHeight)
-                axis.setLabelCount(min(max(fittingCount, 2), 5), force: false)
-            } else {
-                // 値が1つもない(指数の1分足・日中足の出来高など): 棒も線もないので、Y軸のラベルも出さない。
-                // 範囲は仮に 0〜1 にしておく(前に表示していた内容の範囲が残らないように)
-                axis.axisMinimum = 0
-                axis.axisMaximum = 1
-                axis.drawLabelsEnabled = false
-            }
+            applyAutoSubAxisRange(for: sub, from: from, to: to)
         }
         subChart.notifyDataSetChanged()
+    }
+
+    /// 固定範囲(0〜100 など)のサブチャートのY軸。上側は凡例用に広げる(最低 25%。その部分のラベルは非表示)
+    ///   例) RSI: 0〜100 → 0〜125。100〜125 の部分に凡例(subLegendLabel)が重なる
+    private func applyFixedSubAxisRange(_ fixedRange: ClosedRange<Double>) {
+        let axis = subChart.rightAxis
+        let width = fixedRange.upperBound - fixedRange.lowerBound
+        axis.axisMinimum = fixedRange.lowerBound
+        axis.axisMaximum = fixedRange.upperBound + topPaddingForSubLegend(valueRange: width, minimumRatio: 0.25)
+    }
+
+    /// 見えている範囲の値に合わせて、サブチャートのY軸を決める
+    ///
+    ///   axisMaximum ┬ 余白(凡例の高さぶん。最低でも値幅の 30%)
+    ///   最大値      ┼ 線・棒
+    ///   最小値      ┼ 余白(値幅の 5%。0 起点の出来高などは 0)
+    ///   axisMinimum ┴
+    private func applyAutoSubAxisRange(for sub: SubChartContent, from: Int, to: Int) {
+        let axis = subChart.rightAxis
+
+        // 範囲の計算対象: サブ指標の各線・棒
+        var valueArrays: [[Double?]] = []
+        for series in sub.series {
+            valueArrays.append(series.values)
+        }
+        if let bars = sub.bars {
+            valueArrays.append(bars.values)
+        }
+
+        guard var (low, high) = Self.valueRange(of: valueArrays, from: from, to: to) else {
+            // 値が1つもない(指数の1分足・日中足の出来高など): 棒も線もないので、Y軸のラベルも出さない。
+            // 範囲は仮に 0〜1 にしておく(前に表示していた内容の範囲が残らないように)
+            axis.axisMinimum = 0
+            axis.axisMaximum = 1
+            axis.drawLabelsEnabled = false
+            return
+        }
+
+        // 0 を必ず含める指標(出来高・MACD など)は、範囲を 0 まで広げる
+        if sub.includesZero {
+            low = min(low, 0)
+            high = max(high, 0)
+        }
+        // 基準線(移動平均乖離率の底値・高値ラインなど)も範囲に含め、線が見えなくならないようにする
+        for level in sub.referenceLines {
+            low = min(low, level)
+            high = max(high, level)
+        }
+
+        // 上側は凡例と重ならないよう凡例の高さぶん(最低でも値幅の 30%)、下側は 5% の余白を取る。
+        // サブチャートはメインより背が低く、凡例の高さが占める割合が大きいので、メイン(20%)より多めに取る
+        let range = Self.nonZeroRange(low: low, high: high)
+        let bottomPadding = subAxisBottomPadding(for: sub, low: low, range: range)
+        axis.axisMinimum = low - bottomPadding
+        axis.axisMaximum = high + topPaddingForSubLegend(valueRange: range + bottomPadding, minimumRatio: 0.3)
+
+        axis.setLabelCount(subAxisLabelCount(), force: false)
+    }
+
+    /// サブチャートのY軸の下側の余白(値)。
+    /// 0 起点の指標(出来高など)は、余白を取らずに 0 を下端にする。それ以外は値幅の 5%
+    private func subAxisBottomPadding(for sub: SubChartContent, low: Double, range: Double) -> Double {
+        if sub.includesZero {
+            if low == 0 {
+                return 0
+            }
+        }
+        return range * 0.05
+    }
+
+    /// サブチャートのY軸ラベルの数。描画領域の高さに収まる数(ラベル1つにつき文字 1.3 行分の高さ)にする。
+    /// 縦画面などでサブチャートが低いと、5つ並べると文字同士が重なるため(2〜5 個)
+    private func subAxisLabelCount() -> Int {
+        let labelHeight = style.yAxisFont.lineHeight * 1.3
+        let fittingCount = Int(subChart.viewPortHandler.contentHeight / labelHeight)
+        let minimumCount = 2
+        let maximumCount = 5
+        return min(max(fittingCount, minimumCount), maximumCount)
     }
 
     // MARK: - 凡例の下の余白

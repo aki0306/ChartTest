@@ -34,7 +34,7 @@ import UIKit
 
 final class StockChartViewController: UIViewController {
 
-    // MARK: - State(Model の状態)
+    // MARK: - 状態(Model の状態)
 
     /// 表示中のローソク足データ(古い順)
     private var candles: [StockCandle] = []
@@ -154,7 +154,7 @@ final class StockChartViewController: UIViewController {
         }
     }
 
-    // MARK: - Views
+    // MARK: - 部品(View)
 
     /// チャート本体。見た目は chartView.style で変更できる
     @objc let chartView = StockChartView()
@@ -171,7 +171,7 @@ final class StockChartViewController: UIViewController {
     /// 2つのタブを縦に並べるスタック
     private let tabStack = UIStackView()
 
-    // MARK: - Panels
+    // MARK: - パネル(テクニカル/設定)の状態
 
     /// 開閉できるパネルの種類
     private enum Panel {
@@ -210,7 +210,7 @@ final class StockChartViewController: UIViewController {
     /// (決定せずに閉じた場合は捨てる)
     private var draftParametersByPeriod: [ChartPeriod: IndicatorParameters] = [:]
 
-    // MARK: - Layout
+    // MARK: - レイアウト
 
     /// タブの幅
     private let tabWidth: CGFloat = 30
@@ -233,7 +233,7 @@ final class StockChartViewController: UIViewController {
     /// タブの左端: 設定画面を開いているとき(設定画面の右端に付ける)
     private var tabSettingsOpenedConstraint: NSLayoutConstraint?
 
-    // MARK: - Lifecycle
+    // MARK: - ライフサイクル
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -246,7 +246,7 @@ final class StockChartViewController: UIViewController {
         updateMenuAvailability()
     }
 
-    // MARK: - Public
+    // MARK: - 外から呼ぶ入口
 
     /// ローソク足データを設定して描画する。
     /// Objective-C からは `[chartViewController setCandles:candles]` で呼び出せる。
@@ -310,7 +310,7 @@ final class StockChartViewController: UIViewController {
         return result
     }
 
-    // MARK: - Model → View
+    // MARK: - 描画(Model → View)
 
     /// 現在の状態から Model で描画内容を組み立て、View に表示させる
     /// - Parameter keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する
@@ -336,7 +336,7 @@ final class StockChartViewController: UIViewController {
         if chartType != .candlestick {
             options.showsOHLC = false
         }
-        // この指数で使えないオプション(海外指数の Y軸(サブ)固定・4本値)は、オンでも効かないようにする
+        // この指数で使えないオプション(海外指数の Y軸(サブ)固定)は、オンでも効かないようにする
         // (設定の値は残すので、国内指数に戻すと元の状態で表示される)
         let availableOptions = ChartDisplayOption.options(for: market)
         for option in ChartDisplayOption.allCases where !availableOptions.contains(option) {
@@ -345,7 +345,7 @@ final class StockChartViewController: UIViewController {
         chartView.displayOptions = options
     }
 
-    // MARK: - Setup
+    // MARK: - 組み立て
 
     /// チャートを配置する(上下右はこのViewいっぱい、左端はタブの有無で変わる)
     private func setupChartView() {
@@ -355,13 +355,15 @@ final class StockChartViewController: UIViewController {
 
         // チャートはセーフエリアの内側に、chartInsets の余白を空けて置く(余白の値は applyChartInsets で設定)
         let safeArea = view.safeAreaLayoutGuide
-        chartLeadingConstraint = chartView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor)
-        chartTopConstraint = chartView.topAnchor.constraint(equalTo: safeArea.topAnchor)
-        chartBottomConstraint = chartView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
-        chartTrailingConstraint = chartView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor)
-        NSLayoutConstraint.activate([
-            chartLeadingConstraint!, chartTopConstraint!, chartBottomConstraint!, chartTrailingConstraint!,
-        ])
+        let leading = chartView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor)
+        let top = chartView.topAnchor.constraint(equalTo: safeArea.topAnchor)
+        let bottom = chartView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+        let trailing = chartView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor)
+        NSLayoutConstraint.activate([leading, top, bottom, trailing])
+        chartLeadingConstraint = leading
+        chartTopConstraint = top
+        chartBottomConstraint = bottom
+        chartTrailingConstraint = trailing
         applyChartInsets()
     }
 
@@ -402,10 +404,10 @@ final class StockChartViewController: UIViewController {
         let safeArea = view.safeAreaLayoutGuide
 
         // パネルの下端はセーフエリアの下端(ホームインジケーターの上)で止め、さらに panelBottomInset の分だけあける
-        menuBottomConstraint = menuView.bottomAnchor.constraint(
-            equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -panelBottomInset)
-        settingsBottomConstraint = settingsView.bottomAnchor.constraint(
-            equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -panelBottomInset)
+        let menuBottom = menuView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -panelBottomInset)
+        let settingsBottom = settingsView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -panelBottomInset)
+        menuBottomConstraint = menuBottom
+        settingsBottomConstraint = settingsBottom
 
         // 指標の選択メニュー: このViewの左側に幅 45% で表示
         menuView.translatesAutoresizingMaskIntoConstraints = false
@@ -426,12 +428,12 @@ final class StockChartViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             menuView.topAnchor.constraint(equalTo: view.topAnchor),
-            menuBottomConstraint!,
+            menuBottom,
             menuView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
             menuView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.45),
 
             settingsView.topAnchor.constraint(equalTo: view.topAnchor),
-            settingsBottomConstraint!,
+            settingsBottom,
             settingsView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
             settingsView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.75),
         ])
@@ -477,7 +479,7 @@ final class StockChartViewController: UIViewController {
         button.addTarget(self, action: action, for: .touchUpInside)
     }
 
-    // MARK: - Panels(開閉)
+    // MARK: - パネルの開閉
 
     /// isTechnicalMenuEnabled に合わせて、タブの表示とチャートの左端位置を切り替える
     private func updateMenuAvailability() {
@@ -523,69 +525,98 @@ final class StockChartViewController: UIViewController {
     }
 
     /// 指定したパネルを開く(もう一方は閉じる)。nil の場合は両方閉じる
+    ///   1. 状態を変える(設定画面を開くときは、編集用のコピーを作り直す)
+    ///   2. タブをパネルの右側(閉じたときは左端)に移す
+    ///   3. 開くパネルと背景のグレーを、透明な状態で表示しておく
+    ///   4. フェードで、開くパネルを不透明に・閉じるパネルを透明にする
+    ///   5. 閉じたパネルを隠す(タッチを受けないように)
     private func setOpenPanel(_ panel: Panel?, animated: Bool) {
-        // 設定画面を開くときは、今のパラメータから編集用のコピーを作り直す
-        if panel == .settings, openPanel != .settings {
-            beginSettingsEditing()
+        // 設定画面を新しく開くときは、今のパラメータから編集用のコピーを作り直す
+        if panel == .settings {
+            if openPanel != .settings {
+                beginSettingsEditing()
+            }
         }
+
         // パネルを開く/閉じるが切り替わるときは、外の画面にも知らせる(背景をグレーにするため)
-        let wasOpen = openPanel != nil
-        let willOpen = panel != nil
+        let wasOpen = isPanelOpen
         openPanel = panel
-        if wasOpen != willOpen {
-            onPanelVisibilityChange?(willOpen)
+        if wasOpen != isPanelOpen {
+            onPanelVisibilityChange?(isPanelOpen)
         }
-        if willOpen {
+
+        updateTabPosition()
+        showOpeningPanelTransparently()
+        if animated {
+            UIView.animate(withDuration: 0.25, animations: {
+                self.applyPanelAlpha()
+            }, completion: { _ in
+                self.hideClosedPanels()
+            })
+        } else {
+            applyPanelAlpha()
+            hideClosedPanels()
+        }
+    }
+
+    /// パネルの種類と、そのパネルの View の組
+    private var panelViews: [(kind: Panel, view: UIView)] {
+        return [(kind: .technical, view: menuView), (kind: .settings, view: settingsView)]
+    }
+
+    /// タブの位置を、開いているパネルに合わせる(先に全部無効にしてから、対応する制約だけを有効にする)
+    private func updateTabPosition() {
+        for constraint in [tabClosedConstraint, tabTechnicalOpenedConstraint, tabSettingsOpenedConstraint] {
+            constraint?.isActive = false
+        }
+        switch openPanel {
+        case .technical:
+            tabTechnicalOpenedConstraint?.isActive = true
+        case .settings:
+            tabSettingsOpenedConstraint?.isActive = true
+        case nil:
+            tabClosedConstraint?.isActive = true
+        }
+    }
+
+    /// 開くパネルと背景のグレーを、フェードインできるよう透明な状態で表示しておく
+    private func showOpeningPanelTransparently() {
+        if isPanelOpen {
             dimmingView.isHidden = false
         }
-
-        // タブの位置: 先に全部無効化してから、開いているパネルに対応する制約を有効化する
-        [tabClosedConstraint, tabTechnicalOpenedConstraint, tabSettingsOpenedConstraint].forEach { $0?.isActive = false }
-        switch panel {
-        case .technical: tabTechnicalOpenedConstraint?.isActive = true
-        case .settings: tabSettingsOpenedConstraint?.isActive = true
-        case nil: tabClosedConstraint?.isActive = true
+        for panel in panelViews {
+            guard panel.kind == openPanel else { continue }  // 開くパネルだけが対象
+            guard panel.view.isHidden else { continue }      // すでに表示中ならそのまま
+            panel.view.isHidden = false
+            panel.view.alpha = 0
         }
+    }
 
-        // 開くパネルはフェードインのために一旦透明で表示する
-        let panels: [(Panel, UIView)] = [(.technical, menuView), (.settings, settingsView)]
-        for (kind, view) in panels {
-            guard kind == panel else { continue }  // 開くパネルだけが対象
-            guard view.isHidden else { continue }  // すでに表示中ならそのまま
-            view.isHidden = false
-            view.alpha = 0
-        }
-
-        let changes = {
-            for (kind, view) in panels {
-                if kind == panel {
-                    view.alpha = 1  // 開くパネルは不透明に
-                } else {
-                    view.alpha = 0  // それ以外は透明に
-                }
-            }
-            // 背景のグレー: どちらかのパネルを開いているときだけ表示する
-            if willOpen {
-                self.dimmingView.alpha = 1
+    /// フェードの最後の状態にする: 開いているパネルは不透明・それ以外は透明。
+    /// 背景のグレーは、どちらかのパネルを開いているときだけ表示する
+    private func applyPanelAlpha() {
+        for panel in panelViews {
+            if panel.kind == openPanel {
+                panel.view.alpha = 1
             } else {
-                self.dimmingView.alpha = 0
-            }
-            self.view.layoutIfNeeded()
-        }
-        let completion: (Bool) -> Void = { _ in
-            // 閉じ終わったパネルは非表示にしてタッチを受けないようにする
-            for (kind, view) in panels where kind != self.openPanel {
-                view.isHidden = true
-            }
-            if self.openPanel == nil {
-                self.dimmingView.isHidden = true
+                panel.view.alpha = 0
             }
         }
-        if animated {
-            UIView.animate(withDuration: 0.25, animations: changes, completion: completion)
+        if isPanelOpen {
+            dimmingView.alpha = 1
         } else {
-            changes()
-            completion(true)
+            dimmingView.alpha = 0
+        }
+        view.layoutIfNeeded()  // タブの移動もアニメーションさせる
+    }
+
+    /// 閉じ終わったパネル(と、パネルを閉じたときは背景のグレー)を隠して、タッチを受けないようにする
+    private func hideClosedPanels() {
+        for panel in panelViews where panel.kind != openPanel {
+            panel.view.isHidden = true
+        }
+        if !isPanelOpen {
+            dimmingView.isHidden = true
         }
     }
 
@@ -645,7 +676,7 @@ final class StockChartViewController: UIViewController {
         return nil
     }
 
-    // MARK: - Settings(Model → 設定画面)
+    // MARK: - 設定画面(Model → 設定画面)
 
     /// 設定画面を用意する(左側リストを作り、編集を始める)
     private func configureSettingsView() {
@@ -845,7 +876,7 @@ extension StockChartViewController {
         set { displayOptions.isSubYAxisFixed = newValue }
     }
 
-    /// 4本値(タップで十字線と4本値を表示)
+    /// 4本値(十字線と、その足の日付・始値・高値・安値・終値を表示する)
     @objc var showsOHLC: Bool {
         get { displayOptions.showsOHLC }
         set { displayOptions.showsOHLC = newValue }

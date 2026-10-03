@@ -53,7 +53,7 @@ protocol ChartSettingsViewDelegate: AnyObject {
 
 final class ChartSettingsView: UIView {
 
-    // MARK: - Types
+    // MARK: - 表示用の型
 
     /// 左側リストの見出しごとのまとまり(表示用)
     struct Section {
@@ -71,14 +71,17 @@ final class ChartSettingsView: UIView {
         case stepper(title: String, value: Double, range: ClosedRange<Double>, step: Double, fractionDigits: Int)
     }
 
-    // MARK: - Public
+    // MARK: - 設定(外から変更する)
 
     /// 操作の通知先
     weak var delegate: ChartSettingsViewDelegate?
 
     /// 左側リストの内容
     var sections: [Section] = [] {
-        didSet { tableView.reloadData(); updateListSelection() }
+        didSet {
+            tableView.reloadData()
+            updateListSelection()
+        }
     }
 
     /// 左側リストで選択中の項目
@@ -114,14 +117,14 @@ final class ChartSettingsView: UIView {
         set { contentView.periodTabView.selectedPeriod = newValue }
     }
 
-    // MARK: - Style(左リスト)
+    // MARK: - 見た目(左リスト)
 
     /// 見出しの背景色
     private let headerColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
     /// 選択中の項目の背景色
     private let selectedRowColor = UIColor(white: 0.40, alpha: 1)
 
-    // MARK: - XIB
+    // MARK: - XIB の部品
 
     /// ChartSettingsView.xib(画面全体の配置と、行の見本が入っている)
     private static let nib = UINib(nibName: "ChartSettingsView", bundle: Bundle(for: ChartSettingsView.self))
@@ -136,7 +139,7 @@ final class ChartSettingsView: UIView {
     private lazy var rowsCenterYConstraint = rowsStack.centerYAnchor.constraint(
         equalTo: contentView.rowsScrollView.frameLayoutGuide.centerYAnchor)
 
-    // MARK: - Init
+    // MARK: - 初期化
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -149,7 +152,7 @@ final class ChartSettingsView: UIView {
         setup()
     }
 
-    // MARK: - Setup
+    // MARK: - 組み立て
 
     /// XIB の Content View を、このViewいっぱいに貼り付け、操作を受け取れるようにする
     private func setup() {
@@ -180,11 +183,16 @@ final class ChartSettingsView: UIView {
         contentView.confirmButton.addTarget(self, action: #selector(confirmTapped), for: .touchUpInside)
     }
 
-    // MARK: - Rows(右側)
+    // MARK: - 右側の行
 
     /// rows の内容で右側の行を作り直す
     private func rebuildRows() {
-        rowsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        // 前の行を取り除く
+        for oldRow in rowsStack.arrangedSubviews {
+            oldRow.removeFromSuperview()
+        }
+
+        // 行を作って並べる
         var titleLabels: [UILabel] = []
         for (index, row) in rows.enumerated() {
             let (rowView, titleLabel) = makeRowView(row, index: index)
@@ -192,8 +200,10 @@ final class ChartSettingsView: UIView {
             titleLabels.append(titleLabel)
         }
         // 名称ラベルの幅を全行で「一番長い名称の幅」に揃え、操作部品の左端を縦に揃える
-        let maxWidth = titleLabels.map { $0.intrinsicContentSize.width }.max() ?? 0
-        titleLabels.forEach { $0.widthAnchor.constraint(equalToConstant: ceil(maxWidth)).isActive = true }
+        let maxWidth = titleLabels.map { label in label.intrinsicContentSize.width }.max() ?? 0
+        for label in titleLabels {
+            label.widthAnchor.constraint(equalToConstant: ceil(maxWidth)).isActive = true
+        }
     }
 
     /// 1行分のView(XIB の見本から作った行)と、その名称ラベルを作る
@@ -239,7 +249,8 @@ final class ChartSettingsView: UIView {
     /// (XIB を読み込むと中の3つがすべて新しく作られるので、その中から欲しい種類だけを取り出して使う)
     private static func loadFromNib<PartView: UIView>(_ type: PartView.Type) -> PartView {
         let objects = nib.instantiate(withOwner: nil)
-        guard let view = objects.compactMap({ $0 as? PartView }).first else {
+        let views = objects.compactMap { object in object as? PartView }
+        guard let view = views.first else {
             // XIB にその種類の View がない(Custom Class の設定ミス)。すぐ気付けるよう落とす
             fatalError("ChartSettingsView.xib に \(String(describing: type)) がありません")
         }
@@ -263,7 +274,7 @@ final class ChartSettingsView: UIView {
         delegate?.settingsViewDidTapConfirm(self)
     }
 
-    // MARK: - List(左側)
+    // MARK: - 左側のリスト
 
     /// 選択中の項目の見た目を更新する
     private func updateListSelection() {
@@ -463,9 +474,10 @@ final class ChartSettingsStepperRow: UIView {
     }
 
     /// スライダーが動かされたとき(XIB で Value Changed に接続)。刻み(step)に合わせて値を丸める
+    ///   例) 範囲 1〜200・刻み 1 で、つまみが 25.4 の位置 → 下限から 24.4 刻み → 24 刻みに丸めて 25
     @IBAction private func sliderChanged(_ sender: UISlider) {
-        let steps = ((Double(sender.value) - range.lowerBound) / step).rounded()
-        setValue(range.lowerBound + steps * step)
+        let stepCount = ((Double(sender.value) - range.lowerBound) / step).rounded()  // 下限から何刻み目か
+        setValue(range.lowerBound + stepCount * step)
     }
 
     /// 値を変え(範囲内に丸める)、表示を更新して通知する

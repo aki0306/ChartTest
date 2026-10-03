@@ -174,7 +174,7 @@ extension StockChartView {
     }
 
     /// 十字線を指定した位置(このViewの座標)に移動する。外枠の外は外枠の端に寄せる
-    /// - Parameter target: 動かす線(縦線だけ・横線だけ・両方)。動かさない方の線は、今の位置のまま
+    /// - Parameter target: 動かす線(縦線だけ・横線だけ)。動かさない方の線は、今の位置のまま
     private func moveCrosshair(to point: CGPoint, target: CrosshairMoveTarget) {
         guard displayOptions.showsOHLC else { return }
         let frameRect = frameView.frame
@@ -434,12 +434,16 @@ extension StockChartView: UIGestureRecognizerDelegate {
 
     /// 十字線を動かすドラッグは、4本値オンのときだけ開始する
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        // 自分で追加した十字線用のパンか: 4本値オンで、ラベルの欄からなぞり始めたときだけ開始する
-        // (枠の内側からなぞったときはチャートのスクロールに譲る)
-        if gestureRecognizer is UIPanGestureRecognizer, crosshairRecognizers.contains(gestureRecognizer) {
-            return isCrosshairDragStart(at: gestureRecognizer.location(in: self))
+        // 自分で追加した十字線用のパンだけを判定する(それ以外は標準の動きのまま)
+        guard gestureRecognizer is UIPanGestureRecognizer else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
         }
-        return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        guard crosshairRecognizers.contains(gestureRecognizer) else {
+            return super.gestureRecognizerShouldBegin(gestureRecognizer)
+        }
+        // 4本値オンで、ラベルの欄からなぞり始めたときだけ開始する
+        // (枠の内側からなぞったときはチャートのスクロールに譲る)
+        return isCrosshairDragStart(at: gestureRecognizer.location(in: self))
     }
 }
 

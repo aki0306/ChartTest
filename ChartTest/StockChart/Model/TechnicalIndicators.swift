@@ -162,9 +162,9 @@ enum TechnicalIndicators {
         var result = [Double?](repeating: nil, count: highs.count)
         guard period > 0 else { return result }
         for i in highs.indices where i >= period - 1 {
-            let range = (i - period + 1)...i
-            let highest = highs[range].max()!
-            let lowest = lows[range].min()!
+            let range = (i - period + 1)...i  // i 本目までの直近 period 本
+            guard let highest = highs[range].max() else { continue }
+            guard let lowest = lows[range].min() else { continue }
             result[i] = (highest + lowest) / 2
         }
         return result
@@ -255,8 +255,12 @@ enum TechnicalIndicators {
             var gain = 0.0
             var loss = 0.0
             for j in (i - period + 1)...i {
-                let change = closes[j] - closes[j - 1]
-                if change > 0 { gain += change } else { loss -= change }
+                let change = closes[j] - closes[j - 1]  // 前日からの値動き
+                if change > 0 {
+                    gain += change   // 上昇幅
+                } else {
+                    loss -= change   // 下落幅(マイナスなので引いてプラスにする)
+                }
             }
             // 期間中まったく値動きがない場合は中立の 50 とする
             if gain + loss == 0 {
@@ -294,15 +298,16 @@ enum TechnicalIndicators {
         let count = closes.count
         var k = [Double?](repeating: nil, count: count)
         var d = [Double?](repeating: nil, count: count)
-        guard kPeriod > 0, dPeriod > 0 else { return (k, d) }
+        guard kPeriod > 0 else { return (k, d) }
+        guard dPeriod > 0 else { return (k, d) }
 
         // 各位置の (終値 − 最安値) と (最高値 − 最安値)
         var numerators = [Double?](repeating: nil, count: count)
         var denominators = [Double?](repeating: nil, count: count)
         for i in 0..<count where i >= kPeriod - 1 {
-            let range = (i - kPeriod + 1)...i
-            let highest = highs[range].max()!
-            let lowest = lows[range].min()!
+            let range = (i - kPeriod + 1)...i  // i 本目までの直近 kPeriod 本
+            guard let highest = highs[range].max() else { continue }
+            guard let lowest = lows[range].min() else { continue }
             numerators[i] = closes[i] - lowest
             denominators[i] = highest - lowest
             if highest == lowest {
@@ -374,7 +379,9 @@ enum TechnicalIndicators {
         var plusDI = [Double?](repeating: nil, count: count)
         var minusDI = [Double?](repeating: nil, count: count)
         var adx = [Double?](repeating: nil, count: count)
-        guard period > 0, count > period else { return (plusDI, minusDI, adx) }
+        guard period > 0 else { return (plusDI, minusDI, adx) }
+        // 初期値を作るのに period + 1 本必要(前日との差を取るため)
+        guard count > period else { return (plusDI, minusDI, adx) }
 
         var smoothedTR = 0.0
         var smoothedPlusDM = 0.0
@@ -403,7 +410,10 @@ enum TechnicalIndicators {
                 smoothedTR += trueRange
                 smoothedPlusDM += plusDM
                 smoothedMinusDM += minusDM
-                if i < period { continue }
+                // period 本たまるまでは DI を出さない
+                if i < period {
+                    continue
+                }
             } else {
                 // 以降は Wilder 方式で平滑化
                 smoothedTR = smoothedTR - smoothedTR / Double(period) + trueRange
@@ -454,10 +464,13 @@ enum TechnicalIndicators {
         var volumeSum = 0.0       // その日の出来高の累計
 
         for i in closes.indices {
-            // 日付が変わったら累計をやり直す
-            if i > 0, !calendar.isDate(dates[i], inSameDayAs: dates[i - 1]) {
-                priceVolumeSum = 0
-                volumeSum = 0
+            // 日付が変わったら累計をやり直す(最初の足は前の足がないので比べない)
+            if i > 0 {
+                let isNewDay = !calendar.isDate(dates[i], inSameDayAs: dates[i - 1])
+                if isNewDay {
+                    priceVolumeSum = 0
+                    volumeSum = 0
+                }
             }
             let typicalPrice = (highs[i] + lows[i] + closes[i]) / 3
             priceVolumeSum += typicalPrice * volumes[i]

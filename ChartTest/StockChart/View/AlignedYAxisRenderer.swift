@@ -41,7 +41,9 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
     ///   - textAlign: 揃え方(右のY軸を外側に描く場合は左揃え)
     override func drawYLabels(context: CGContext, fixedPosition: CGFloat, positions: [CGPoint],
                               offset: CGFloat, textAlign: TextAlignment) {
-        guard centersLabels || keepsLabelsInside else {
+        // どちらの調整もしない場合は、DGCharts 標準の描き方にする
+        let needsAdjustment = centersLabels || keepsLabelsInside
+        if !needsAdjustment {
             super.drawYLabels(context: context, fixedPosition: fixedPosition, positions: positions,
                               offset: offset, textAlign: textAlign)
             return
@@ -52,37 +54,39 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
             .foregroundColor: axis.labelTextColor,
         ]
 
-        // 描くラベル(DGCharts 標準と同じく、上端・下端のラベルを描かない設定に従う)
-        var from = 0
+        // 描くラベルの範囲(DGCharts 標準と同じく、一番下・一番上のラベルを描かない設定に従う)
+        var firstEntry = 0
         if !axis.isDrawBottomYLabelEntryEnabled {
-            from = 1
+            firstEntry = 1
         }
-        var to = axis.entryCount
+        var endEntry = axis.entryCount  // この番号の手前まで描く
         if !axis.isDrawTopYLabelEntryEnabled {
-            to = axis.entryCount - 1
+            endEntry = axis.entryCount - 1
         }
-        guard from < to else { return }
+        guard firstEntry < endEntry else { return }
+        let entries = Array(firstEntry..<endEntry)
 
-        let texts = (from..<to).map { index in axis.getFormattedLabel(index) }
+        // 各ラベルの文字と幅(中央揃えでは、一番長いラベルの幅を基準にする)
+        let texts = entries.map { entry in axis.getFormattedLabel(entry) }
         let widths = texts.map { text in (text as NSString).size(withAttributes: attributes).width }
         let maxWidth = widths.max() ?? 0
         let lineHeight = axis.labelFont.lineHeight
 
-        for (i, index) in (from..<to).enumerated() {
+        for (labelNumber, entry) in entries.enumerated() {
             // 横位置: 中央揃えなら、一番長いラベルの幅の中で中央に置く
             var x = fixedPosition + axis.labelXOffset
             if centersLabels {
-                x += (maxWidth - widths[i]) / 2
+                x += (maxWidth - widths[labelNumber]) / 2
             }
 
             // 縦位置: 文字の上端。枠内に収める場合は、上端・下端からはみ出さないようにずらす
-            var y = positions[index].y + offset
+            var y = positions[entry].y + offset
             if keepsLabelsInside {
-                y = min(y, viewPortHandler.contentBottom - lineHeight)
-                y = max(y, viewPortHandler.contentTop)
+                y = min(y, viewPortHandler.contentBottom - lineHeight)  // 下端からはみ出さない
+                y = max(y, viewPortHandler.contentTop)                  // 上端からはみ出さない
             }
 
-            context.drawText(texts[i], at: CGPoint(x: x, y: y), align: .left, attributes: attributes)
+            context.drawText(texts[labelNumber], at: CGPoint(x: x, y: y), align: .left, attributes: attributes)
         }
     }
 }

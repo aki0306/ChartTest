@@ -58,21 +58,29 @@ final class ChartAxisValueFormatter: AxisValueFormatter {
     }
 
     func stringForValue(_ value: Double, axis: AxisBase?) -> String {
-        // 下端付近のラベルを隠す
-        if let axis, axis.axisRange > 0 {
-            // 軸の下端を 0、上端を 1 としたときの位置
-            let positionFromBottom = (value - axis.axisMinimum) / axis.axisRange
-            if positionFromBottom < hiddenBottomRatio {
-                return ""
-            }
-        }
-
-        // 指定値より上のラベルを隠す(小数の誤差で 100.0000001 などになっても隠れないよう、少しだけ余裕を持たせる)
-        if let hiddenAbove, value > hiddenAbove + 1e-9 {
+        if isNearBottom(value, axis: axis) {
             return ""
         }
-
+        if isAboveHiddenLimit(value) {
+            return ""
+        }
         return formatter.string(from: NSNumber(value: value)) ?? ""
+    }
+
+    /// 軸の下端付近(下から hiddenBottomRatio の割合以内)の値か
+    private func isNearBottom(_ value: Double, axis: AxisBase?) -> Bool {
+        guard let axis else { return false }
+        guard axis.axisRange > 0 else { return false }
+        // 軸の下端を 0、上端を 1 としたときの位置
+        let positionFromBottom = (value - axis.axisMinimum) / axis.axisRange
+        return positionFromBottom < hiddenBottomRatio
+    }
+
+    /// hiddenAbove より大きい値か。
+    /// 小数の誤差で 100 が 100.0000001 などになっても隠れないよう、少しだけ余裕を持たせて比べる
+    private func isAboveHiddenLimit(_ value: Double) -> Bool {
+        guard let hiddenAbove else { return false }
+        return value > hiddenAbove + 1e-9
     }
 }
 

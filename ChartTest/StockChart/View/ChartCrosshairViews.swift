@@ -6,7 +6,7 @@
 //
 //  ・CrosshairOverlayView: 十字線(縦線 + 横線)を描く
 //  ・OHLCInfoView: 選択中の足の日付・始値・高値・安値・終値を表示する枠
-//  ・CrosshairMarkerLabel: 横線の値・縦線の日付・Y軸側の矢印などのマーカー
+//  ・CrosshairMarkerLabel: 横線の値(グレーの六角形)・縦線と横線の位置を指す赤い矢印のマーカー
 //
 //    ┌──────────────────────────────┐
 //    │          2026/04/06          │
@@ -47,7 +47,9 @@ final class CrosshairOverlayView: UIView {
     private func setup() {
         isUserInteractionEnabled = false
         backgroundColor = .clear
-        [verticalLine, horizontalLine].forEach { layer.addSublayer($0) }
+        for line in [verticalLine, horizontalLine] {
+            layer.addSublayer(line)
+        }
         applyLineStyle()
         hide()
     }
@@ -154,8 +156,13 @@ final class OHLCInfoView: UIView {
 
         dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         dateLabel.textAlignment = .center
-        [upperLabel, lowerLabel].forEach { $0.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular) }
-        [dateLabel, upperLabel, lowerLabel].forEach { $0.textColor = .white }
+        for label in [upperLabel, lowerLabel] {
+            // 数字の幅をそろえる(値が変わっても文字の位置がずれないように)
+            label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        }
+        for label in [dateLabel, upperLabel, lowerLabel] {
+            label.textColor = .white
+        }
 
         let stack = UIStackView(arrangedSubviews: [dateLabel, upperLabel, lowerLabel])
         stack.axis = .vertical
@@ -187,10 +194,12 @@ final class OHLCInfoView: UIView {
 
 /// 十字線に付けるマーカー(形付きの背景 + 文字)。
 ///
-///   hexagon  : ＜ 60,660.98 ＞   横線の値(外枠の左端)
-///   arrowUp  :    /\             縦線の日付(X軸)。上向きの矢印の中に日付
-///               | 8/19 |
-///   arrowLeft:  ◀■               横線の位置を示すY軸側の矢印(文字なし)
+///   hexagon  : ＜ 60,660.98 ＞   横線の値(外枠の左端寄り)
+///   arrowUp  :    /\             縦線の位置を示す、日付ラベルの欄の矢印(文字なし)
+///               |  |
+///   arrowLeft:  ◀■               横線の位置を示す、Y軸側の矢印(文字なし)
+///
+/// backgroundImage を設定すると、形を塗る代わりに画像を描く
 final class CrosshairMarkerLabel: UILabel {
 
     /// マーカーの形
@@ -238,48 +247,49 @@ final class CrosshairMarkerLabel: UILabel {
         backgroundColor = .clear  // 背景は draw で形に沿って塗る
         textColor = .white
         textAlignment = .center
-        let fontSize: CGFloat
-        switch shape {
-        case .arrowUp:
-            // 日付の矢印はX軸ラベル領域に収まるよう少し小さい文字にする
-            fontSize = 11
-        case .hexagon, .arrowLeft:
-            fontSize = 12
-        }
-        font = .monospacedDigitSystemFont(ofSize: fontSize, weight: .semibold)
+        font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
     }
 
-    /// 余白を含めたサイズ(文字なしの矢印は固定サイズ)
+    /// マーカーの大きさ
+    ///   ・文字なし・画像あり: 画像の大きさそのまま
+    ///   ・それ以外: 中身(文字、または文字なしの固定サイズ)+ 余白。画像ありなら画像より小さくしない
     override var intrinsicContentSize: CGSize {
-        // 文字ありなら文字の大きさそのまま
-        var textSize = super.intrinsicContentSize
         let hasText = !(text ?? "").isEmpty
         if !hasText {
-            // 文字なしで画像あり: 画像の大きさそのまま
             if let backgroundImage {
                 return backgroundImage.size
             }
-            // 文字なし: 形ごとの固定サイズ
-            switch shape {
-            case .arrowUp:
-                // 日付の欄の矢印: 余白を含めて 24 x 20(日付ラベルの欄の高さに合わせる)
-                textSize = CGSize(width: 12, height: 12)
-            case .hexagon, .arrowLeft:
-                textSize = CGSize(width: 10, height: 16)
-            }
         }
-        var size = CGSize(width: textSize.width + padding.left + padding.right,
-                          height: textSize.height + padding.top + padding.bottom)
+
+        // 中身の大きさ: 文字ありなら文字の大きさ、文字なしなら形ごとの固定サイズ
+        var contentSize = super.intrinsicContentSize
+        if !hasText {
+            contentSize = noTextContentSize
+        }
+        var size = CGSize(width: contentSize.width + padding.left + padding.right,
+                          height: contentSize.height + padding.top + padding.bottom)
+
         // 画像ありなら、画像より小さくはしない(文字が短くても画像の形が崩れないように)
         if let backgroundImage {
             size.width = max(size.width, backgroundImage.size.width)
             size.height = max(size.height, backgroundImage.size.height)
         }
         return size
+    }
+
+    /// 文字なしのときの中身の大きさ(余白を除く)
+    private var noTextContentSize: CGSize {
+        switch shape {
+        case .arrowUp:
+            // 日付の欄の矢印: 余白を含めて 24 x 20(日付ラベルの欄の高さに合わせる)
+            return CGSize(width: 12, height: 12)
+        case .hexagon, .arrowLeft:
+            return CGSize(width: 10, height: 16)
+        }
     }
 
     /// 背景(画像、または形に沿った塗り)を描き、その上に文字を描く

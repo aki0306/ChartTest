@@ -76,7 +76,7 @@ struct StockChartStyle {
     /// 凡例のフォント
     var legendFont = UIFont.systemFont(ofSize: 12)
 
-    // MARK: - レイアウト
+    // MARK: - レイアウト(チャート全体)
 
     /// メインチャートとサブチャートの描画領域の高さ比(メイン : サブ = priceHeightRatio : 1)
     var priceHeightRatio: CGFloat = 2.0
@@ -86,26 +86,29 @@ struct StockChartStyle {
     var xAxisLabelHeight: CGFloat = 20
     /// 外枠・区切り線の線幅
     var borderWidth: CGFloat = 1
+
+    // MARK: - X軸ラベル(日付)
+
+    /// X軸ラベルの日付フォーマット(足種ごとの値は ChartPeriod.dateFormat)
+    var dateFormat = "M/d"
+    /// X軸ラベルのおおよその個数(文字が長い書式のときは少なくして、ラベル同士が重ならないようにする)
+    var xAxisLabelCount = 7
+    /// X軸ラベル同士の最小の間隔(pt)。0 より大きいと、xAxisLabelCount は使わず、
+    /// この間隔を空けて画面の幅に入るだけラベルを並べる(横画面など、幅が広いときに日付を増やせる)。
+    /// 0 なら xAxisLabelCount の個数くらいで並べる
+    var xAxisLabelSpacing: CGFloat = 0
+
+    // MARK: - Y軸ラベル(価格・指標の値)
+
     /// Y軸ラベルの左端の位置(外枠の右端からの距離)
     var yAxisLabelOffset: CGFloat = 10
     /// Y軸ラベルを、一番長いラベルの幅の中で中央揃えにするか(false なら左揃え)
     var centersYAxisLabels = false
     /// Y軸ラベルを描画領域の内側に収めるか(下端の「0」などを、はみ出さないよう上にずらす)
     var keepsYAxisLabelsInside = false
-    /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ。StockChartView+HighLowLabels)
-    var showsHighLowLabels = false
-    /// 最高値・最安値の文字のフォント
-    var highLowLabelFont = UIFont.systemFont(ofSize: 14)
-    /// 4本値の日付のマーカー(下の日付ラベルの欄の、縦線を指す赤い矢印)の画像。
-    /// nil なら、increasingColor で上向き矢印の形を塗る。画像はそのままの大きさで表示する
-    var dateMarkerImage: UIImage?
-    /// 4本値の価格のマーカー(右の価格ラベルの欄の、横線の位置を指す赤い矢印)の画像。
-    /// nil なら、increasingColor で左向き矢印の形を塗る。画像はそのままの大きさで表示する
-    var yAxisMarkerImage: UIImage?
-    /// 4本値(十字線・マーカー・4本値の枠)を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
-    var crosshairFadeDelay: TimeInterval = 3
-    /// 4本値を薄く表示するときの不透明度(0 = 見えない 〜 1 = 元の濃さ)。また動かすと元の濃さに戻る
-    var crosshairFadedAlpha: CGFloat = 0.4
+
+    // MARK: - 凡例
+
     /// 凡例の背景色(白にすると、凡例の文字の後ろのグリッド線が隠れる)
     var legendBackgroundColor = UIColor.clear
     /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
@@ -117,14 +120,26 @@ struct StockChartStyle {
     /// 凡例の下端と、チャートの一番高い線・足との最小の間隔。
     /// この間隔が空くよう、Y軸の上側の余白を自動で広げる(updateAxisRanges)
     var legendBottomSpacing: CGFloat = 4
-    /// X軸ラベルの日付フォーマット(足種ごとの値は ChartPeriod.dateFormat)
-    var dateFormat = "M/d"
-    /// X軸ラベルのおおよその個数(文字が長い書式のときは少なくして、ラベル同士が重ならないようにする)
-    var xAxisLabelCount = 7
-    /// X軸ラベル同士の最小の間隔(pt)。0 より大きいと、xAxisLabelCount は使わず、
-    /// この間隔を空けて画面の幅に入るだけラベルを並べる(横画面など、幅が広いときに日付を増やせる)。
-    /// 0 なら xAxisLabelCount の個数くらいで並べる
-    var xAxisLabelSpacing: CGFloat = 0
+
+    // MARK: - 最高値・最安値
+
+    /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ。StockChartView+HighLowLabels)
+    var showsHighLowLabels = false
+    /// 最高値・最安値の文字のフォント
+    var highLowLabelFont = UIFont.systemFont(ofSize: 14)
+
+    // MARK: - 4本値(十字線)
+
+    /// 4本値(十字線・マーカー・4本値の枠)を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
+    var crosshairFadeDelay: TimeInterval = 3
+    /// 4本値を薄く表示するときの不透明度(0 = 見えない 〜 1 = 元の濃さ)。また動かすと元の濃さに戻る
+    var crosshairFadedAlpha: CGFloat = 0.4
+    /// 4本値の日付のマーカー(下の日付ラベルの欄の、縦線を指す赤い矢印)の画像。
+    /// nil なら、increasingColor で上向き矢印の形を塗る。画像はそのままの大きさで表示する
+    var dateMarkerImage: UIImage?
+    /// 4本値の価格のマーカー(右の価格ラベルの欄の、横線の位置を指す赤い矢印)の画像。
+    /// nil なら、increasingColor で左向き矢印の形を塗る。画像はそのままの大きさで表示する
+    var yAxisMarkerImage: UIImage?
 
     // MARK: - 文言
 

@@ -34,25 +34,28 @@ final class SampleData: NSObject {
         var dates: [Date] = []
         var date = end
         while dates.count < days {
-            if !calendar.isDateInWeekend(date) { dates.insert(date, at: 0) }
+            // 古い順に並べるため、先頭に入れる
+            if !calendar.isDateInWeekend(date) {
+                dates.insert(date, at: 0)
+            }
             date = calendar.date(byAdding: .day, value: -1, to: date)!
         }
 
         var candles: [StockCandle] = []
-        var prevClose = 66_000.0
-        for d in dates {
+        var previousClose = 66_000.0
+        for candleDate in dates {
             // 66,000 付近に戻る力をかけて、値が大きく離れすぎないようにする
-            let revert = (66_000 - prevClose) * 0.08
+            let revert = (66_000 - previousClose) * 0.08
             // 始値は前日終値の近く、終値は始値から上下にランダム
-            let open = prevClose + revert + Double.random(in: -400...400, using: &rng)
+            let open = previousClose + revert + Double.random(in: -400...400, using: &rng)
             let close = open + Double.random(in: -1_200...1_200, using: &rng)
             // 高値/安値は実体(始値〜終値)の外側にヒゲとして伸ばす
             let high = max(open, close) + Double.random(in: 0...500, using: &rng)
             let low = min(open, close) - Double.random(in: 0...500, using: &rng)
             // 出来高は 16億〜32億株
             let volume = Double.random(in: 1.6e9...3.2e9, using: &rng)
-            candles.append(StockCandle(date: d, open: open, high: high, low: low, close: close, volume: volume))
-            prevClose = close
+            candles.append(StockCandle(date: candleDate, open: open, high: high, low: low, close: close, volume: volume))
+            previousClose = close
         }
         return candles
     }

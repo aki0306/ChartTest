@@ -41,6 +41,15 @@ final class LandscapeChartViewController: UIViewController {
     /// チャートの種類を切り替えるボタン(タップで種類のメニューを表示する)
     @IBOutlet private weak var chartTypeButton: UIButton!
 
+    /// テクニカル/設定のパネルを開いた・閉じたときに呼ばれる処理(true = 開いた)。
+    /// この画面の上に重ねたボタンなど(このアプリでは ViewController の 国内指数/海外指数 の切り替え)を、
+    /// パネルを開いている間はパネルの奥に回す場合に使う。
+    /// 閉じたときは、パネルを閉じるアニメーション(panelAnimationDuration 秒)が終わってから呼ばれる
+    var onPanelVisibilityChange: ((Bool) -> Void)?
+
+    /// パネルを開閉するアニメーションの秒数(StockChartViewController と同じ)
+    static let panelAnimationDuration: TimeInterval = 0.25
+
     /// コンテナビューの embed で受け取った共通チャート部品(画面の読み込み時に設定される)
     private var embeddedChartViewController: StockChartViewController?
 
@@ -48,7 +57,11 @@ final class LandscapeChartViewController: UIViewController {
     /// 画面を読み込むまでは存在しないので、まだなら読み込んでから返す
     @objc var chartViewController: StockChartViewController {
         loadViewIfNeeded()
-        return embeddedChartViewController!
+        guard let embeddedChartViewController else {
+            // storyboard のコンテナビューの embed が外れている(設定ミス)。すぐ気付けるよう落とす
+            fatalError("Landscape.storyboard のコンテナビューに StockChartViewController が埋め込まれていません")
+        }
+        return embeddedChartViewController
     }
 
     override func viewDidLoad() {
@@ -92,12 +105,14 @@ final class LandscapeChartViewController: UIViewController {
             guard let containerView = self.chartViewController.view.superview else { return }
             if isOpen {
                 self.view.bringSubviewToFront(containerView)
+                self.onPanelVisibilityChange?(true)
             } else {
-                // 背景のグレーが消えるのを待ってから(パネルを閉じるアニメーションと同じ 0.25 秒)、ボタンを手前に戻す
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                // 背景のグレーが消えるのを待ってから(パネルを閉じるアニメーションと同じ秒数)、ボタンを手前に戻す
+                DispatchQueue.main.asyncAfter(deadline: .now() + Self.panelAnimationDuration) {
                     // 待っている間にもう一度開いた場合は、チャート部品を手前のままにする
                     guard !self.chartViewController.isPanelOpen else { return }
                     self.view.bringSubviewToFront(self.chartTypeButton)
+                    self.onPanelVisibilityChange?(false)
                 }
             }
         }

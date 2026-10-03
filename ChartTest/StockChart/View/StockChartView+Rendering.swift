@@ -136,9 +136,12 @@ extension StockChartView {
                 // 直近 visibleCount 本を表示し、右端(最新)にスクロールしておく。
                 // (レイアウト前の場合、moveViewToX はサイズ確定後に DGCharts が自動で実行する)
                 chart.fitScreen()
-                if let visibleCount = effectiveVisibleCount, visibleCount < totalCount {
-                    chart.setVisibleXRangeMaximum(Double(visibleCount))
-                    chart.moveViewToX(Double(totalCount))
+                // 表示本数の指定があり、全体の本数より少ない場合だけ、拡大して右端に寄せる(それ以外は全件表示)
+                if let visibleCount = effectiveVisibleCount {
+                    if visibleCount < totalCount {
+                        chart.setVisibleXRangeMaximum(Double(visibleCount))
+                        chart.moveViewToX(Double(totalCount))
+                    }
                 }
                 chart.notifyDataSetChanged()
             }

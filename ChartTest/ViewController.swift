@@ -54,6 +54,11 @@ class ViewController: UIViewController {
         // 国内指数/海外指数の切り替えボタン(最初は国内指数)
         setupMarketControl()
         showCharts(for: .domestic)
+
+        // 横画面でテクニカル/設定のパネルを開いている間は、切り替えボタンをパネル(と背景のグレー)の奥に回す
+        landscapeViewController.onPanelVisibilityChange = { [weak self] isOpen in
+            self?.updateMarketControlLayering(isPanelOpen: isOpen)
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -95,6 +100,17 @@ class ViewController: UIViewController {
             marketControl.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             marketControl.heightAnchor.constraint(equalToConstant: 36),
         ])
+    }
+
+    /// 切り替えボタンの重なり順を、横画面のパネルの開閉に合わせる
+    ///   ・開いている間: 横画面のチャート画面の奥に回す(パネル・背景のグレーの下になり、押せなくなる)
+    ///   ・閉じている間: 一番手前に戻す(横画面のチャート画面は透明な部分もタップを受けるので、奥にあると押せない)
+    private func updateMarketControlLayering(isPanelOpen: Bool) {
+        if isPanelOpen {
+            view.insertSubview(marketControl, belowSubview: landscapeViewController.view)
+        } else {
+            view.bringSubviewToFront(marketControl)
+        }
     }
 
     /// 切り替えボタンが押されたら、選ばれた指数の種類で表示し直す
