@@ -38,7 +38,8 @@ import Foundation
 
 extension StockChartView: StockCandleReceiving {}
 extension StockChartViewController: StockCandleReceiving {}
-// LandscapeChartViewController は StockChart フォルダの外(このアプリの画面)なので、そちらのファイルで対応させている
+// LandscapeChartViewController(このアプリの横画面)は、そのファイルで対応させている
+// (横画面を使わない場合に LandscapeChartViewController.swift を削除しても、このファイルがビルドできるように)
 
 /// API のレスポンス(辞書の配列)を、足種ごとにチャートへ渡して描画する。
 /// Objective-C からも使えるよう NSObject を継承したクラスにしている(インスタンスは作らない)

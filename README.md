@@ -496,7 +496,8 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 
 ## 既存アプリへの組み込み
 
-チャート部分(`ChartTest/StockChart/`)は、ほかのアプリにそのまま組み込めるよう、サンプル画面(縦画面・横画面)やダミーデータ(`SampleData`)には依存しないように作っています。
+チャート部分(`ChartTest/StockChart/`)は、ほかのアプリにそのまま組み込めるよう、ダミーデータ(`SampleData`)やサンプルの画面切り替え(`ViewController`)には依存しないように作っています。
+`StockChart/Controller/` にある縦画面・横画面(`PortraitChartViewController` / `LandscapeChartViewController`)は、`ChartTest/` 直下の `Portrait.storyboard` / `Landscape.storyboard` から作る画面です。使う場合は storyboard もコピーします。
 
 ### 手順
 
@@ -514,7 +515,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
    | チャートだけ | `StockChartView` | 「3. チャートだけを置く」 |
    | テクニカル・設定画面・チャートの種類も | `StockChartViewController`(子 ViewController として埋め込む) | 「4. 指標メニュー・設定画面付きのチャート」 |
 
-   このアプリと同じ縦画面・横画面をそのまま使う場合は、`PortraitChartViewController.swift` / `Portrait.storyboard`、`LandscapeChartViewController.swift` / `Landscape.storyboard` もコピーします(中身は自由に変えて構いません)。
+   このアプリと同じ縦画面・横画面をそのまま使う場合は、`ChartTest/` 直下の `Portrait.storyboard` / `Landscape.storyboard` もコピーします(画面のクラス `PortraitChartViewController` / `LandscapeChartViewController` は `StockChart/Controller/` に入っています。中身は自由に変えて構いません)。
 
 4. **データを渡す**
    API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
@@ -574,8 +575,8 @@ NSMutableArray *responseArray = [NSMutableArray array];
 | ファイル | 必要か | 説明 |
 |---|---|---|
 | `StockChart/` フォルダ(`ChartSettingsView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
-| `LandscapeChartViewController.swift` / `Landscape.storyboard` | 必要 | 横画面(チャートの種類のボタン付き)。下のボタンが不要なら、`StockChartViewController` を直接使ってもよい |
-| `PortraitChartViewController.swift` / `Portrait.storyboard` | 不要 | このアプリの縦画面 |
+| `Landscape.storyboard`(`ChartTest/` 直下) | 必要 | 横画面(チャートの種類のボタン付き)。画面のクラス `LandscapeChartViewController` は `StockChart/Controller/` に入っている。下のボタンが不要なら、`StockChartViewController` を直接使ってもよい |
+| `Portrait.storyboard`、`StockChart/Controller/PortraitChartViewController.swift` | 不要 | このアプリの縦画面。フォルダごとコピーした場合、`PortraitChartViewController.swift` は削除してよい |
 | `ViewController.swift` / `Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
 | `SampleData.swift` | 不要 | 動作確認用のダミーデータ |
 
@@ -645,8 +646,8 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 ```
 ChartTest/
 ├─ ViewController.swift              … 縦/横の画面を切り替えるだけの画面
-├─ PortraitChartViewController.swift … 縦画面(足種のタブ + StockChartView)
-├─ LandscapeChartViewController.swift… 横画面(StockChartViewController を埋め込む)
+├─ Portrait.storyboard               … 縦画面のレイアウト(PortraitChartViewController)
+├─ Landscape.storyboard              … 横画面のレイアウト(LandscapeChartViewController)
 ├─ SampleData.swift                  … 動作確認用のダミーデータ(足種ごと)
 └─ StockChart/                       … チャートの共通部品(MVC で役割を分けている)
    ├─ Model/       … 計算とデータ(UIKit・DGCharts に依存しない)
@@ -694,6 +695,8 @@ ChartTest/
 | ファイル | 内容 |
 |---|---|
 | `ChartResponseLoader.swift` | API のレスポンス(足種ごと)を、どこからでもチャートに渡して描画するユーティリティ(描画先は `StockCandleReceiving`) |
+| `PortraitChartViewController.swift` | 縦画面(足種のタブ + StockChartView)。`Portrait.storyboard` から作る |
+| `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、チャートの種類のボタンを付ける)。`Landscape.storyboard` から作る |
 | `StockChartViewController.swift` | 足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
 
 ## データの流れ
