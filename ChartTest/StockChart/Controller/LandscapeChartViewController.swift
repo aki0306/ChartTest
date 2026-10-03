@@ -62,6 +62,9 @@ final class LandscapeChartViewController: UIViewController {
         // 下は「チャートの種類」ボタン(高さ 36)と上下の間隔 8 ずつの分を空ける
         chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 8 + 36 + 8, right: 8)
 
+        // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する
+        chartViewController.chartView.showsHighLowLabels = true
+
         // 必要に応じて設定を変更できる(例)
         // chartViewController.mainIndicator = .bollingerBands     // メインチャートの指標
         // chartViewController.subIndicator = .macd                // サブチャートの指標

@@ -92,6 +92,10 @@ struct StockChartStyle {
     var centersYAxisLabels = false
     /// Y軸ラベルを描画領域の内側に収めるか(下端の「0」などを、はみ出さないよう上にずらす)
     var keepsYAxisLabelsInside = false
+    /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ。StockChartView+HighLowLabels)
+    var showsHighLowLabels = false
+    /// 最高値・最安値の文字のフォント
+    var highLowLabelFont = UIFont.systemFont(ofSize: 14)
     /// 凡例の背景色(白にすると、凡例の文字の後ろのグリッド線が隠れる)
     var legendBackgroundColor = UIColor.clear
     /// メインチャートの凡例の上端の位置(外枠の上端からの距離)

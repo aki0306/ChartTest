@@ -77,7 +77,7 @@
 | 指数 | タブ |
 |---|---|
 | 国内指数(`.domestic`) | 1分足・日中足・日足・週足・月足 |
-| 海外指数(`.overseas`) | 日足・週足・月足(チャートは終値の折れ線 + 移動平均線で、サブチャート(出来高)なし) |
+| 海外指数(`.overseas`) | 日足・週足・月足(チャートはローソク足 + 移動平均線で、サブチャート(出来高)なし) |
 
 足種ごとに、次の表示が変わります(`ChartPeriod`)。
 
@@ -314,7 +314,7 @@ LandscapeChartViewController *landscape = [LandscapeChartViewController instanti
 指数の種類(`market`)に `.overseas`(Objective-C は `IndexMarketOverseas`)を指定します。**データを渡す前に**指定してください(既定は国内指数 `.domestic`)。
 
 ```swift
-// Swift: 縦画面(足種のタブが 日足・週足・月足 になり、チャートは終値の折れ線 + 移動平均線・サブチャートなし)
+// Swift: 縦画面(足種のタブが 日足・週足・月足 になり、チャートはローソク足 + 移動平均線・サブチャートなし)
 let portrait = PortraitChartViewController.instantiate()
 portrait.market = .overseas
 portrait.candleLoader = { period in loadCandles(period) }   // 実際のデータの読み込み
@@ -354,7 +354,7 @@ chartViewController.market = IndexMarketOverseas;
 | 画面 | 国内指数(`.domestic`) | 海外指数(`.overseas`) |
 |---|---|---|
 | 縦画面の足種のタブ | 1分足・日中足・日足・週足・月足 | 日足・週足・月足 |
-| 縦画面のチャート | ローソク足 + 移動平均線、サブチャートに出来高 | 終値の折れ線 + 移動平均線(サブチャートなし。メインチャートを全高で表示) |
+| 縦画面のチャート | ローソク足 + 移動平均線、サブチャートに出来高 | ローソク足 + 移動平均線(サブチャートなし。メインチャートを全高で表示) |
 | 横画面のテクニカル | メイン・サブとも全項目 | メインは 移動平均線・なし、サブは なし のみ(サブチャートは表示しない) |
 | 横画面のチャートの種類 | ローソク足・VWAP：線・VWAP：点・新値足・折線チャート | ローソク足・折線チャート のみ |
 | 横画面の折線チャート | 終値の折れ線だけ(テクニカルは「なし」のみ) | 終値の折れ線 + 移動平均線(テクニカルで 移動平均線・なし を選べる)、現在値の破線 |
@@ -422,6 +422,8 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 価格(Y軸)ラベルの揃え方 | `centersYAxisLabels`(true で一番長いラベルの幅の中で中央揃え) | false(左揃え) |
 | 価格(Y軸)ラベルを枠内に収める | `keepsYAxisLabelsInside`(true で下端の「0」などを上にずらす) | false |
 | 凡例の背景色 | `legendBackgroundColor`(白にすると文字の後ろのグリッド線が隠れる) | 透明 |
+| 最高値・最安値の表示 | `showsHighLowLabels`(表示中の範囲の最高値・最安値を、その足の上・下に表示する。ローソク足のときだけ。Objective-C は `chartView.showsHighLowLabels`) | false(横画面では true) |
+| 最高値・最安値の文字のフォント | `highLowLabelFont` | 14pt |
 | メインの凡例の位置(上端) | `legendTopInset`(外枠の上端からの距離) | 3pt |
 | サブの凡例の位置(上端) | `subLegendTopInset`(区切り線からの距離) | 2pt |
 | 凡例の位置(左端) | `legendLeadingInset`(外枠の左端からの距離) | 8pt |
@@ -680,6 +682,7 @@ ChartTest/
 | `StockChartView+Rendering.swift` | `ChartContent` を DGCharts のデータに変換して描く・凡例を作る |
 | `StockChartView+AxisRange.swift` | スクロール/ズームの同期と、Y軸の範囲の調整 |
 | `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線・4本値の表示 |
+| `StockChartView+HighLowLabels.swift` | 表示中の範囲の最高値・最安値を、その足の上・下に表示する |
 | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値) |
 | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数) |
 | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |

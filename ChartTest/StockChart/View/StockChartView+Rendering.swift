@@ -53,6 +53,9 @@ extension StockChartView {
         priceChart.data = nil
         subChart.data = nil
         priceRenderer.cloud = nil
+        // 前のデータの最高値・最安値の文字が残らないようにする
+        highPriceLabel.isHidden = true
+        lowPriceLabel.isHidden = true
     }
 
     /// X軸の範囲とラベルの書式を設定する(メイン/サブ共通)

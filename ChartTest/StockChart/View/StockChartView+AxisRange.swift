@@ -87,6 +87,8 @@ extension StockChartView {
         }
 
         updateMainAxisRange(from: mainLower, to: mainUpper)
+        // 最高値・最安値の文字は、Y軸固定のときも「今見えている範囲」の値を出す
+        updateHighLowLabels(from: lower, to: upper)
         if hasSubChart {
             updateSubAxisRange(from: subLower, to: subUpper)
         }
@@ -130,13 +132,52 @@ extension StockChartView {
         }
 
         let range = Self.nonZeroRange(low: low, high: high)
-        let bottomPadding = range * 0.05
-        let topPadding = topPaddingForLegend(
-            priceLegendLabel, legendTop: style.legendTopInset, chart: priceChart,
-            valueRange: range + bottomPadding, minimumRatio: 0.2)
-        priceChart.rightAxis.axisMaximum = high + topPadding
-        priceChart.rightAxis.axisMinimum = low - bottomPadding
+
+        // 上側: 凡例の分。下側: なし(最低でも値幅の 5%)
+        var topPoints: CGFloat = 0
+        if priceLegendLabel.attributedText != nil {
+            topPoints = style.legendTopInset + priceLegendLabel.intrinsicContentSize.height + style.legendBottomSpacing
+        }
+        var bottomPoints: CGFloat = 0
+        // 最高値・最安値の文字を出す場合は、一番高い足の上・一番安い足の下に、文字の分の余白も空ける
+        if drawsHighLowLabels {
+            let labelSpace = style.highLowLabelFont.lineHeight + highLowLabelGap
+            topPoints += labelSpace
+            bottomPoints += labelSpace
+        }
+        let paddings = Self.axisPaddings(
+            valueRange: range, topPoints: topPoints, bottomPoints: bottomPoints,
+            height: priceChart.viewPortHandler.contentHeight, minimumTopRatio: 0.2, minimumBottomRatio: 0.05)
+        priceChart.rightAxis.axisMaximum = high + paddings.top
+        priceChart.rightAxis.axisMinimum = low - paddings.bottom
         priceChart.notifyDataSetChanged()
+    }
+
+    /// 上下に指定した高さ(pt)の余白を空けるための、Y軸の上側・下側の余白(値)を求める
+    ///
+    ///   描画領域の上端 ┬ topPoints(凡例・最高値の文字)    → 上側の余白(値)
+    ///                 │ 線・足(valueRange)
+    ///   描画領域の下端 ┴ bottomPoints(最安値の文字)       → 下側の余白(値)
+    ///
+    /// - Parameters:
+    ///   - valueRange: 余白を除いた値幅
+    ///   - topPoints: 上に空ける高さ(pt)
+    ///   - bottomPoints: 下に空ける高さ(pt)
+    ///   - height: 描画領域の高さ(pt)。0 ならレイアウト前なので、最小値だけを返す
+    ///   - minimumTopRatio: 上側の余白の最小値(valueRange に対する割合)
+    ///   - minimumBottomRatio: 下側の余白の最小値(valueRange に対する割合)
+    static func axisPaddings(valueRange: Double, topPoints: CGFloat, bottomPoints: CGFloat, height: CGFloat,
+                             minimumTopRatio: Double, minimumBottomRatio: Double) -> (top: Double, bottom: Double) {
+        let minimumTop = valueRange * minimumTopRatio
+        let minimumBottom = valueRange * minimumBottomRatio
+        guard height > 0 else { return (minimumTop, minimumBottom) }
+
+        // 線・足を描く部分の高さ。余白が大きすぎる場合でも、高さの半分は線・足のために残す
+        let dataHeight = max(height - topPoints - bottomPoints, height / 2)
+        let valuePerPoint = valueRange / Double(dataHeight)
+        let top = max(Double(topPoints) * valuePerPoint, minimumTop)
+        let bottom = max(Double(bottomPoints) * valuePerPoint, minimumBottom)
+        return (top, bottom)
     }
 
     /// サブチャートのY軸範囲を調整する

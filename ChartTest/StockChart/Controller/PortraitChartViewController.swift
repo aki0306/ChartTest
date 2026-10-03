@@ -52,7 +52,7 @@ final class PortraitChartViewController: UIViewController {
     // MARK: - 設定(外から変更する)
 
     /// 指数の種類(国内/海外)。種類によってタブに並ぶ足種と、チャートの描き方が変わる
-    /// (海外指数: 日足・週足・月足だけ。終値の折れ線 + 移動平均線で、サブチャートなし)
+    /// (海外指数: 日足・週足・月足だけ。ローソク足 + 移動平均線で、サブチャートなし)
     @objc var market: IndexMarket = .domestic {
         didSet {
             guard isViewLoaded else { return }  // viewDidLoad でタブを作るときに反映される
@@ -123,7 +123,7 @@ final class PortraitChartViewController: UIViewController {
 
         // データを読み込み、足種・指数の種類に合った設定で描画する
         // (X軸の書式・初期表示本数・移動平均の期間・出来高の凡例名が足種ごとに変わる。
-        //  海外指数は、終値の折れ線 + 移動平均線で、サブチャート(出来高)なし)。
+        //  海外指数は、ローソク足 + 移動平均線で、サブチャート(出来高)なし)。
         // データが0件の場合は「現在、指定の条件で表示できる情報はありません。」と表示される
         var candles: [StockCandle] = []
         if let candleLoader {

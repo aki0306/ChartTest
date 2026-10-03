@@ -87,6 +87,13 @@ extension StockChartView {
 
     /// 外枠・区切り線・凡例を追加する(チャートの上に重ねる)
     private func addOverlays() {
+        // 最高値・最安値の文字: 位置は表示範囲に合わせて frame を直接設定する(StockChartView+HighLowLabels)
+        for label in [highPriceLabel, lowPriceLabel] {
+            label.isUserInteractionEnabled = false
+            label.isHidden = true
+            addSubview(label)
+        }
+
         for view in [frameView, dividerView, priceLegendLabel, subLegendLabel, noDataLabel] {
             view.translatesAutoresizingMaskIntoConstraints = false
             view.isUserInteractionEnabled = false  // タッチは下のチャートに届ける

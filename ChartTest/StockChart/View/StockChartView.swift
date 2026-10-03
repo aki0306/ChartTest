@@ -79,7 +79,7 @@ final class StockChartView: UIView {
     }
 
     /// 指数の種類(国内/海外)。setCandles(_:period:) での描き方が変わる
-    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: 終値の折れ線 + 移動平均線・サブなし)。
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
     /// 変更しても描き直さないので、データを渡す前に設定する
     @objc var market: IndexMarket = .domestic
 
@@ -134,6 +134,10 @@ final class StockChartView: UIView {
     let subLegendLabel = UILabel()
     /// データが0件のときのメッセージ(「現在、指定の条件で表示できる情報はありません。」)。メインチャートの凡例の下に表示する
     let noDataLabel = UILabel()
+    /// 表示中の範囲の最高値(その足の上に表示。style.showsHighLowLabels が true のとき)
+    let highPriceLabel = UILabel()
+    /// 表示中の範囲の最安値(その足の下に表示。style.showsHighLowLabels が true のとき)
+    let lowPriceLabel = UILabel()
 
     // MARK: - 部品(4本値の表示用)
 
@@ -402,7 +406,7 @@ extension StockChartView {
 
     /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する。
     ///   ・国内指数: ローソク足 + 移動平均線、サブチャートに出来高
-    ///   ・海外指数: 終値の折れ線 + 移動平均線(サブチャートなし。メインチャートを全高で表示)
+    ///   ・海外指数: ローソク足 + 移動平均線(サブチャートなし。メインチャートを全高で表示)
     /// - Parameters:
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
     ///   - period: 足種
@@ -422,9 +426,9 @@ extension StockChartView {
             setCandles(candles, mainIndicator: .movingAverage, subIndicator: .volume,
                        parameters: period.indicatorParameters)
         case .overseas:
-            let builder = ChartContentBuilder(candles: candles, parameters: period.indicatorParameters)
-            let content = builder.closeLineContent(with: .movingAverage)
-            display(candles: content.candles, main: content.main, sub: content.sub)
+            // サブチャート(出来高)は出さない
+            setCandles(candles, mainIndicator: .movingAverage, subIndicator: .hidden,
+                       parameters: period.indicatorParameters)
         }
     }
 
@@ -520,6 +524,12 @@ extension StockChartView {
     @objc var yAxisFont: UIFont {
         get { return style.yAxisFont }
         set { style.yAxisFont = newValue }
+    }
+
+    /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ)
+    @objc var showsHighLowLabels: Bool {
+        get { return style.showsHighLowLabels }
+        set { style.showsHighLowLabels = newValue }
     }
 
     /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
