@@ -438,6 +438,9 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 凡例の背景色 | `legendBackgroundColor`(白にすると文字の後ろのグリッド線が隠れる) | 透明 |
 | 最高値・最安値の表示 | `showsHighLowLabels`(表示中の範囲の最高値・最安値を、その足の上・下に表示する。ローソク足のときだけ。Objective-C は `chartView.showsHighLowLabels`) | false(横画面では true) |
 | 最高値・最安値の文字のフォント | `highLowLabelFont` | 14pt |
+| 4本値の日付のマーカーの画像 | `dateMarkerImage`(下の日付ラベルの欄の赤い矢印の代わりに描く背景画像。日付の文字の幅に合わせて伸ばす) | nil(`increasingColor` で矢印の形を塗る) |
+| 日付のマーカーの画像の伸ばさない部分 | `dateMarkerImageCapInsets`(上下左右の端からの幅。角や矢印の先が崩れないように指定する) | 0(画像全体を伸ばす) |
+| 4本値の価格のマーカーの画像 | `yAxisMarkerImage`(右端の赤い矢印の代わりに描く画像。そのままの大きさで、横線の高さに中心を合わせる) | nil(`increasingColor` で矢印の形を塗る) |
 | メインの凡例の位置(上端) | `legendTopInset`(外枠の上端からの距離) | 3pt |
 | サブの凡例の位置(上端) | `subLegendTopInset`(区切り線からの距離) | 2pt |
 | 凡例の位置(左端) | `legendLeadingInset`(外枠の左端からの距離) | 8pt |
@@ -448,6 +451,23 @@ chartView.increasingColor = UIColor.systemRedColor;
 
 - 凡例の文字の色は、線の色と同じになります(凡例だけの色はありません)。線の色を変えると、凡例の文字の色も変わります
 - 凡例の位置やフォントを変えても、チャートの線が凡例と重ならないよう、Y軸の上側の余白は自動で調整されます
+- 4本値のマーカーを画像にする場合は、Assets に画像を追加して次のように設定します(Objective-C も同じプロパティ名で、`chartView` から設定できます)。
+  日付のマーカーの画像は、文字より小さくても画像の大きさより小さくはなりません。文字が長いときは `dateMarkerImageCapInsets` の内側だけが伸びます
+
+  ```swift
+  let chartView = landscapeViewController.chartViewController.chartView
+  chartView.dateMarkerImage = UIImage(named: "dateMarker")
+  // 例: 上 6pt(矢印の先)と左右 8pt(角)は伸ばさない
+  chartView.dateMarkerImageCapInsets = UIEdgeInsets(top: 6, left: 8, bottom: 0, right: 8)
+  chartView.yAxisMarkerImage = UIImage(named: "priceMarker")
+  ```
+
+  ```objc
+  StockChartView *chartView = landscapeViewController.chartViewController.chartView;
+  chartView.dateMarkerImage = [UIImage imageNamed:@"dateMarker"];
+  chartView.dateMarkerImageCapInsets = UIEdgeInsetsMake(6, 8, 0, 8);
+  chartView.yAxisMarkerImage = [UIImage imageNamed:@"priceMarker"];
+  ```
 
 #### `style` 以外で決まっている見た目
 
@@ -469,7 +489,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels`、`dateMarkerImage`、`dateMarkerImageCapInsets`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし) | ― |

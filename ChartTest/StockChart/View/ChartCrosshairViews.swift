@@ -209,6 +209,15 @@ final class CrosshairMarkerLabel: UILabel {
     var fillColor: UIColor = .darkGray {
         didSet { setNeedsDisplay() }
     }
+    /// 背景の画像。設定すると、形を fillColor で塗る代わりにこの画像を描く(nil なら形を塗る)。
+    /// 文字ありの場合は文字の大きさに合わせて伸ばすので、伸ばしたくない部分は
+    /// resizableImage(withCapInsets:resizingMode:) で指定した画像を渡す
+    var backgroundImage: UIImage? {
+        didSet {
+            invalidateIntrinsicContentSize()
+            setNeedsDisplay()
+        }
+    }
 
     /// 矢印の尖った部分の長さ
     private let tipLength: CGFloat = 6
@@ -250,17 +259,31 @@ final class CrosshairMarkerLabel: UILabel {
         var textSize = super.intrinsicContentSize
         let hasText = !(text ?? "").isEmpty
         if !hasText {
+            // 文字なしで画像あり: 画像の大きさそのまま
+            if let backgroundImage {
+                return backgroundImage.size
+            }
             // 文字なし(Y軸側の矢印など): 固定サイズ
             textSize = CGSize(width: 10, height: 16)
         }
-        return CGSize(width: textSize.width + padding.left + padding.right,
-                      height: textSize.height + padding.top + padding.bottom)
+        var size = CGSize(width: textSize.width + padding.left + padding.right,
+                          height: textSize.height + padding.top + padding.bottom)
+        // 画像ありなら、画像より小さくはしない(文字が短くても画像の形が崩れないように)
+        if let backgroundImage {
+            size.width = max(size.width, backgroundImage.size.width)
+            size.height = max(size.height, backgroundImage.size.height)
+        }
+        return size
     }
 
-    /// 形に沿って背景を塗り、その上に文字を描く
+    /// 背景(画像、または形に沿った塗り)を描き、その上に文字を描く
     override func draw(_ rect: CGRect) {
-        fillColor.setFill()
-        makeShapePath(in: bounds).fill()
+        if let backgroundImage {
+            backgroundImage.draw(in: bounds)
+        } else {
+            fillColor.setFill()
+            makeShapePath(in: bounds).fill()
+        }
         super.draw(rect)  // drawText(in:) が呼ばれる
     }
 

@@ -539,4 +539,22 @@ extension StockChartView {
         get { return style.legendTopInset }
         set { style.legendTopInset = newValue }
     }
+
+    /// 4本値の日付のマーカーの背景画像(nil なら赤い矢印の形を塗る。文字の幅に合わせて横に伸ばす)
+    @objc var dateMarkerImage: UIImage? {
+        get { return style.dateMarkerImage }
+        set { style.dateMarkerImage = newValue }
+    }
+
+    /// 日付のマーカーの画像で、伸ばさない部分(上下左右の端からの幅)
+    @objc var dateMarkerImageCapInsets: UIEdgeInsets {
+        get { return style.dateMarkerImageCapInsets }
+        set { style.dateMarkerImageCapInsets = newValue }
+    }
+
+    /// 4本値の価格のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
+    @objc var yAxisMarkerImage: UIImage? {
+        get { return style.yAxisMarkerImage }
+        set { style.yAxisMarkerImage = newValue }
+    }
 }

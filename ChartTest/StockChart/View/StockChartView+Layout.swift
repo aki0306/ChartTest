@@ -30,6 +30,10 @@ extension StockChartView {
         addCrosshairParts()
         addCrosshairGestures()
         addOverlays()
+        // 4本値の枠・マーカーは、最高値・最安値の文字や凡例より手前に表示する
+        for view in [ohlcInfoView, valueMarker, dateMarker, yAxisMarker] {
+            bringSubviewToFront(view)
+        }
         activateFixedConstraints()
         applyStyle()
     }
@@ -232,6 +236,14 @@ extension StockChartView {
         valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
         dateMarker.fillColor = style.increasingColor
         yAxisMarker.fillColor = style.increasingColor
+        // 画像が設定されていれば、形を塗る代わりに画像を描く(日付のマーカーは文字の幅に合わせて伸ばす)
+        if let image = style.dateMarkerImage {
+            dateMarker.backgroundImage = image.resizableImage(withCapInsets: style.dateMarkerImageCapInsets,
+                                                              resizingMode: .stretch)
+        } else {
+            dateMarker.backgroundImage = nil
+        }
+        yAxisMarker.backgroundImage = style.yAxisMarkerImage
         markerDateFormatter.dateFormat = style.dateFormat
 
         // データが0件のときのメッセージ(凡例と同じ文字の大きさ・色)

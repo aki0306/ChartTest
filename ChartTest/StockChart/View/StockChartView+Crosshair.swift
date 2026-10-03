@@ -8,9 +8,9 @@
 //
 //   ┌──────────────────────────────┐
 //   │移動平均 短期… 長期…            │
-//   │┌─────────┐          ┊         │
-//   ││ 4本値の枠 │          ┊         │ ← ohlcInfoView(十字線と反対側に置く)
-//   │└─────────┘          ┊         │
+//   │          ┊         ┌─────────┐│
+//   │          ┊         │ 4本値の枠 ││ ← ohlcInfoView(常に右上に置く)
+//   │          ┊         └─────────┘│
 //   │   ＜60,660.98＞┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈│◀ ← 横線・値のマーカー(valueMarker)・Y軸側の矢印(yAxisMarker)
 //   │                      ┊         │
 //   └──────────────────────────────┘
@@ -233,9 +233,8 @@ extension StockChartView {
         showYAxisMarker(atY: lineY)
         showDateMarker(atX: lineX, date: candle.date, frameRect: frameRect)
 
-        // 4本値の枠の左右は、縦線の位置(縦線がなければ指の位置)で決める
-        let crosshairX = lineX ?? point.x
-        showOHLCInfo(for: candle, crosshairX: crosshairX, frameRect: frameRect)
+        // 4本値の枠は、十字線の位置に関係なく常に右上に置く
+        showOHLCInfo(for: candle, frameRect: frameRect)
     }
 
     /// 十字線を表示できる状態か
@@ -357,38 +356,29 @@ extension StockChartView {
 
     // MARK: - 4本値の枠
 
-    /// 4本値の枠: 外枠の上部(凡例の下)に置く。十字線と重ならないよう、縦線が右半分なら左側、左半分なら右側に置く
+    /// 4本値の枠: 外枠の右上に置く。縦線を動かしても左右には移動しない
     ///
-    ///   縦線が右半分のとき               縦線が左半分のとき
-    ///   ┌────────────────────┐         ┌────────────────────┐
-    ///   │移動平均 短期… 長期… │         │移動平均 短期… 長期… │ ← 凡例(外枠の上端 + 6pt)
-    ///   │┌────┐        │   │         │   │        ┌────┐│
-    ///   ││4本値│        │   │         │   │        │4本値││ ← 外枠の上端 + 28pt
-    ///   │└────┘        │   │         │   │        └────┘│
-    ///   │──────────────┼───│         │───┼──────────────│
-    ///   │              │   │         │   │              │
-    ///   └────────────────────┘         └────────────────────┘
-    ///    ←8→                                                 ←8→
+    ///   ┌────────────────────┐
+    ///   │移動平均… │   ┌────┐│ ← 外枠の上端 + 4pt
+    ///   │   │        │4本値││
+    ///   │   │        └────┘│
+    ///   │───┼──────────────│
+    ///   │   │              │
+    ///   └────────────────────┘
+    ///                       ←8→
     ///
     /// ・大きさは中身(4本値のテキスト)から自動で決まる(systemLayoutSizeFitting)
-    /// ・上端 28pt は「凡例の上端 6pt + 凡例の高さ 約15pt + 隙間 約7pt」で、凡例と重ならない位置
-    /// ・左右は外枠の端から 8pt(凡例の左端と揃う)
-    private func showOHLCInfo(for candle: StockCandle, crosshairX: CGFloat, frameRect: CGRect) {
+    /// ・上端は外枠の上端から 4pt(凡例は左上にあるので、右上に置けば重ならない)
+    /// ・右端は外枠の右端から 8pt
+    private func showOHLCInfo(for candle: StockCandle, frameRect: CGRect) {
         ohlcInfoView.update(with: candle)
         ohlcInfoView.isHidden = false
 
         let size = ohlcInfoView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
         let margin: CGFloat = 8
-        let top = frameRect.minY + 28
-
-        let left: CGFloat
-        if crosshairX > frameRect.midX {
-            // 縦線が右半分 → 枠は左側
-            left = frameRect.minX + margin
-        } else {
-            // 縦線が左半分 → 枠は右側
-            left = frameRect.maxX - margin - size.width
-        }
+        let top = frameRect.minY + 4
+        // 常に外枠の右上(縦線を動かしても左右に移動しない)
+        let left = frameRect.maxX - margin - size.width
         ohlcInfoView.frame = CGRect(x: left, y: top, width: size.width, height: size.height)
     }
 }

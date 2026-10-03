@@ -96,6 +96,16 @@ struct StockChartStyle {
     var showsHighLowLabels = false
     /// 最高値・最安値の文字のフォント
     var highLowLabelFont = UIFont.systemFont(ofSize: 14)
+    /// 4本値の日付のマーカー(下の日付ラベルの欄の、日付が入った赤い矢印)の背景画像。
+    /// nil なら、increasingColor で上向き矢印の形を塗る。
+    /// 画像は日付の文字の幅に合わせて横に伸ばす(dateMarkerImageCapInsets の内側だけを伸ばす)
+    var dateMarkerImage: UIImage?
+    /// 日付のマーカーの画像で、伸ばさない部分(上下左右の端からの幅)。
+    /// 例: 左右 8pt の角・上 6pt の矢印の先を崩したくない場合は UIEdgeInsets(top: 6, left: 8, bottom: 0, right: 8)
+    var dateMarkerImageCapInsets = UIEdgeInsets.zero
+    /// 4本値の価格のマーカー(右の価格ラベルの欄の、横線の位置を指す赤い矢印)の画像。
+    /// nil なら、increasingColor で左向き矢印の形を塗る。画像はそのままの大きさで表示する
+    var yAxisMarkerImage: UIImage?
     /// 凡例の背景色(白にすると、凡例の文字の後ろのグリッド線が隠れる)
     var legendBackgroundColor = UIColor.clear
     /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
