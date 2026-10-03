@@ -263,8 +263,14 @@ final class CrosshairMarkerLabel: UILabel {
             if let backgroundImage {
                 return backgroundImage.size
             }
-            // 文字なし(Y軸側の矢印など): 固定サイズ
-            textSize = CGSize(width: 10, height: 16)
+            // 文字なし: 形ごとの固定サイズ
+            switch shape {
+            case .arrowUp:
+                // 日付の欄の矢印: 余白を含めて 24 x 20(日付ラベルの欄の高さに合わせる)
+                textSize = CGSize(width: 12, height: 12)
+            case .hexagon, .arrowLeft:
+                textSize = CGSize(width: 10, height: 16)
+            }
         }
         var size = CGSize(width: textSize.width + padding.left + padding.right,
                           height: textSize.height + padding.top + padding.bottom)

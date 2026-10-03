@@ -147,16 +147,10 @@ final class StockChartView: UIView {
     let ohlcInfoView = OHLCInfoView()
     /// 十字線の横線の位置の値を表示するマーカー(外枠の左端寄り・グレーの六角形)
     let valueMarker = CrosshairMarkerLabel(shape: .hexagon)
-    /// 十字線の縦線の位置の日付を表示するマーカー(X軸・赤い上向き矢印)
+    /// 十字線の縦線の位置を示すマーカー(X軸・赤い上向き矢印。文字なし)
     let dateMarker = CrosshairMarkerLabel(shape: .arrowUp)
     /// 十字線の横線の位置を示すマーカー(Y軸側の右端・赤い左向き矢印)
     let yAxisMarker = CrosshairMarkerLabel(shape: .arrowLeft)
-    /// 日付マーカー用の日付の書式(style.dateFormat に合わせる)
-    let markerDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter
-    }()
     /// 十字線を動かすジェスチャー(タップ・1本指ドラッグ)。メイン・サブそれぞれに付ける
     var crosshairRecognizers: [UIGestureRecognizer] = []
     /// 十字線の位置(このViewの座標)。指の位置に合わせて動く。
@@ -164,6 +158,8 @@ final class StockChartView: UIView {
     var crosshairPoint: CGPoint?
     /// ドラッグ中に動かす十字線の線(なぞり始めた場所で決める。nil = ドラッグしていない・動かさない)
     var crosshairDragTarget: CrosshairMoveTarget?
+    /// 4本値を薄く表示する予約(一定時間動かさなかったら実行する。動かすと取り消して予約し直す)
+    var crosshairFadeWorkItem: DispatchWorkItem?
 
     // MARK: - レイアウトの制約(スタイル・サブチャートの有無によって変わるもの)
 
@@ -540,16 +536,22 @@ extension StockChartView {
         set { style.legendTopInset = newValue }
     }
 
-    /// 4本値の日付のマーカーの背景画像(nil なら赤い矢印の形を塗る。文字の幅に合わせて横に伸ばす)
+    /// 4本値の日付のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
     @objc var dateMarkerImage: UIImage? {
         get { return style.dateMarkerImage }
         set { style.dateMarkerImage = newValue }
     }
 
-    /// 日付のマーカーの画像で、伸ばさない部分(上下左右の端からの幅)
-    @objc var dateMarkerImageCapInsets: UIEdgeInsets {
-        get { return style.dateMarkerImageCapInsets }
-        set { style.dateMarkerImageCapInsets = newValue }
+    /// 4本値を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
+    @objc var crosshairFadeDelay: TimeInterval {
+        get { return style.crosshairFadeDelay }
+        set { style.crosshairFadeDelay = newValue }
+    }
+
+    /// 4本値を薄く表示するときの不透明度(0 〜 1)
+    @objc var crosshairFadedAlpha: CGFloat {
+        get { return style.crosshairFadedAlpha }
+        set { style.crosshairFadedAlpha = newValue }
     }
 
     /// 4本値の価格のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)

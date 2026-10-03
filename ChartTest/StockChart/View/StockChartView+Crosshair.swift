@@ -14,8 +14,8 @@
 //   │   ＜60,660.98＞┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈│◀ ← 横線・値のマーカー(valueMarker)・Y軸側の矢印(yAxisMarker)
 //   │                      ┊         │
 //   └──────────────────────────────┘
-//                         /\           ← 日付のマーカー(dateMarker)
-//                        |8/19|
+//                         /\           ← 日付のマーカー(dateMarker。文字なしの矢印)
+//                        |  |
 //
 //  ・横線は指の高さ、縦線は指に一番近い足の中心に引く(線は黒い実線)
 //  ・動かす線は、触った場所で決める(CrosshairArea / CrosshairMoveTarget)
@@ -47,6 +47,8 @@ extension StockChartView {
 
         // オン/オフが切り替わったら、十字線は次回表示時に最新の足の位置から始める
         crosshairPoint = nil
+        // オンにしたときは元の濃さで表示し、一定時間後に薄くする
+        wakeCrosshair()
 
         // Y軸固定: Y軸範囲を計算し直す(固定の場合は全期間、固定しない場合は表示範囲で計算される)
         if priceChart.data != nil {
@@ -104,6 +106,8 @@ extension StockChartView {
             if wasMovingVerticalLine {
                 snapCrosshairToCandleCenter()
             }
+            // 指を離したところから、薄くするまでの時間を数え始める
+            wakeCrosshair()
         }
     }
 
@@ -192,6 +196,47 @@ extension StockChartView {
         }
         crosshairPoint = newPoint
         updateCrosshair()
+        // 動かしたら元の濃さに戻す(ドラッグ中は薄くしない)
+        wakeCrosshair()
+    }
+
+    // MARK: - 一定時間で薄くする
+
+    /// 薄くする部品(十字線・値のマーカー・日付のマーカー・Y軸側のマーカー・4本値の枠)
+    private var crosshairFadingViews: [UIView] {
+        return [crosshairView, ohlcInfoView, valueMarker, dateMarker, yAxisMarker]
+    }
+
+    /// 4本値を元の濃さに戻し、一定時間後に薄くする予約をし直す。
+    /// ドラッグ中(crosshairDragTarget あり)は予約しない(指を離したときに予約する)
+    func wakeCrosshair() {
+        crosshairFadeWorkItem?.cancel()
+        crosshairFadeWorkItem = nil
+        for view in crosshairFadingViews {
+            view.layer.removeAllAnimations()
+            view.alpha = 1
+        }
+
+        guard displayOptions.showsOHLC else { return }
+        guard crosshairDragTarget == nil else { return }
+        guard style.crosshairFadeDelay > 0 else { return }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fadeCrosshair()
+        }
+        crosshairFadeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + style.crosshairFadeDelay, execute: workItem)
+    }
+
+    /// 4本値を薄く表示する(アニメーションで少しずつ薄くする)
+    private func fadeCrosshair() {
+        crosshairFadeWorkItem = nil
+        let alpha = style.crosshairFadedAlpha
+        UIView.animate(withDuration: 0.3) {
+            for view in self.crosshairFadingViews {
+                view.alpha = alpha
+            }
+        }
     }
 
     // MARK: - 十字線の配置
@@ -231,7 +276,7 @@ extension StockChartView {
                            y: lineY, horizontalRange: frameRect.minX...bounds.maxX)
         showValueMarker(atY: lineY, frameRect: frameRect)
         showYAxisMarker(atY: lineY)
-        showDateMarker(atX: lineX, date: candle.date, frameRect: frameRect)
+        showDateMarker(atX: lineX, frameRect: frameRect)
 
         // 4本値の枠は、十字線の位置に関係なく常に右上に置く
         showOHLCInfo(for: candle, frameRect: frameRect)
@@ -309,9 +354,9 @@ extension StockChartView {
         yAxisMarker.show(nil, anchor: anchor, within: bounds, alignRight: true)
     }
 
-    /// X軸の赤い矢印: 外枠のすぐ下(X軸ラベルの位置)に、縦線を指す上向きの矢印と日付を置く。
+    /// X軸の赤い矢印: 外枠のすぐ下(X軸ラベルの位置)に、縦線を指す上向きの矢印を置く(日付の文字は出さない)。
     /// 縦線がない(x = nil)場合は隠す
-    private func showDateMarker(atX x: CGFloat?, date: Date, frameRect: CGRect) {
+    private func showDateMarker(atX x: CGFloat?, frameRect: CGRect) {
         guard let x else {
             dateMarker.isHidden = true
             return
@@ -321,7 +366,7 @@ extension StockChartView {
         let labelArea = CGRect(x: bounds.minX, y: frameRect.maxY,
                                width: bounds.width, height: style.xAxisLabelHeight + 8)
         let anchor = CGPoint(x: x, y: frameRect.maxY)  // 矢印の先端を外枠の下端に合わせる
-        dateMarker.show(markerDateFormatter.string(from: date), anchor: anchor, within: labelArea)
+        dateMarker.show(nil, anchor: anchor, within: labelArea)
     }
 
     /// 横線の高さ(このViewの座標)にあたる軸の値を、表示用の文字列にする。
