@@ -450,6 +450,8 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 凡例とチャートの線の間隔 | `legendBottomSpacing` | 4pt |
 | 右側の価格ラベル欄の幅 | `rightAxisWidth` | 90pt |
 | 下側の日付ラベル欄の高さ | `xAxisLabelHeight` | 20pt |
+| 日付ラベルの数 | `xAxisLabelCount`(おおよその個数。足種ごとの値は `ChartPeriod.xAxisLabelCount`) | 7(週足・月足は 5) |
+| 日付ラベル同士の間隔 | `xAxisLabelSpacing`(0 より大きいと `xAxisLabelCount` は使わず、この間隔を空けて横幅に入るだけ日付を並べる。Objective-C は `chartView.xAxisLabelSpacing`) | 0(横画面では 12pt) |
 | メインとサブの高さの比 | `priceHeightRatio`(メイン : サブ = この値 : 1) | 2.0 |
 
 - 凡例の文字の色は、線の色と同じになります(凡例だけの色はありません)。線の色を変えると、凡例の文字の色も変わります
@@ -488,7 +490,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし) | ― |

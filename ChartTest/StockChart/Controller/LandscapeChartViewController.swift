@@ -64,6 +64,8 @@ final class LandscapeChartViewController: UIViewController {
 
         // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する
         chartViewController.chartView.showsHighLowLabels = true
+        // 日付ラベルは、12pt ずつ間隔を空けて、横幅に入るだけ並べる(縦画面より多く表示する)
+        chartViewController.chartView.xAxisLabelSpacing = 12
 
         // 必要に応じて設定を変更できる(例)
         // chartViewController.mainIndicator = .bollingerBands     // メインチャートの指標

@@ -320,6 +320,9 @@ extension StockChartView {
         axis.granularity = 1                       // ラベルは1本単位(足と足の間には置かない)
         axis.granularityEnabled = true
         axis.labelCount = style.xAxisLabelCount    // X軸ラベルの個数(約7個。足種によって変える)
+        // ラベル同士の間隔(0 より大きいと、幅に入るだけ並べる。LatestAlignedXAxisRenderer)
+        priceXAxisRenderer.labelSpacing = style.xAxisLabelSpacing
+        subXAxisRenderer.labelSpacing = style.xAxisLabelSpacing
         // 両端のラベルをずらす DGCharts の機能は使わない(ずらすと足の位置と合わず、隣のラベルと重なることがある)。
         // はみ出すラベルは LatestAlignedXAxisRenderer が表示しないようにしている
         axis.avoidFirstLastClippingEnabled = false

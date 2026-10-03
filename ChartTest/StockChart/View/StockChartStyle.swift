@@ -121,6 +121,10 @@ struct StockChartStyle {
     var dateFormat = "M/d"
     /// X軸ラベルのおおよその個数(文字が長い書式のときは少なくして、ラベル同士が重ならないようにする)
     var xAxisLabelCount = 7
+    /// X軸ラベル同士の最小の間隔(pt)。0 より大きいと、xAxisLabelCount は使わず、
+    /// この間隔を空けて画面の幅に入るだけラベルを並べる(横画面など、幅が広いときに日付を増やせる)。
+    /// 0 なら xAxisLabelCount の個数くらいで並べる
+    var xAxisLabelSpacing: CGFloat = 0
 
     // MARK: - 文言
 

@@ -530,6 +530,12 @@ extension StockChartView {
         set { style.showsHighLowLabels = newValue }
     }
 
+    /// X軸ラベル(日付)同士の最小の間隔。0 より大きいと、この間隔を空けて幅に入るだけ日付を並べる(0 なら約7個)
+    @objc var xAxisLabelSpacing: CGFloat {
+        get { return style.xAxisLabelSpacing }
+        set { style.xAxisLabelSpacing = newValue }
+    }
+
     /// メインチャートの凡例の上端の位置(外枠の上端からの距離)
     @objc var legendTopInset: CGFloat {
         get { return style.legendTopInset }
