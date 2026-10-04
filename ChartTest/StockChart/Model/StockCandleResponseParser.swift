@@ -67,7 +67,7 @@ final class StockCandleResponseParser: NSObject {
     static func candles(from response: [[String: Any]]) -> [StockCandle] {
         var candles: [StockCandle] = []
         for item in response {
-            guard let candle = candle(from: item) else { continue }  // 読めない件は飛ばす
+            guard let candle = self.candle(from: item) else { continue }  // 読めない件は飛ばす
             candles.append(candle)
         }
         // チャートは日付の古い順に並べる必要があるので、レスポンスの並び順に関係なく並べ替える
@@ -77,15 +77,15 @@ final class StockCandleResponseParser: NSObject {
     /// レスポンスの1件をローソク足に変換する
     /// - Returns: 日付・始値・高値・安値・終値のどれかが読めない場合は nil
     static func candle(from item: [String: Any]) -> StockCandle? {
-        guard let date = date(item[Key.date]) else { return nil }
-        guard let open = number(item[Key.open]) else { return nil }
-        guard let high = number(item[Key.high]) else { return nil }
-        guard let low = number(item[Key.low]) else { return nil }
-        guard let close = number(item[Key.close]) else { return nil }
+        guard let date = self.date(item[Key.date]) else { return nil }
+        guard let open = self.number(item[Key.open]) else { return nil }
+        guard let high = self.number(item[Key.high]) else { return nil }
+        guard let low = self.number(item[Key.low]) else { return nil }
+        guard let close = self.number(item[Key.close]) else { return nil }
 
         // 出来高は配信されない場合(指数の1分足・日中足など)があるので、読めなければ 0 にする
         var volume = 0.0
-        if let value = number(item[Key.volume]) {
+        if let value = self.number(item[Key.volume]) {
             volume = value
         }
         return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume)
@@ -110,7 +110,7 @@ final class StockCandleResponseParser: NSObject {
             return date
         }
         guard let text = value as? String else { return nil }
-        for formatter in dateFormatters {
+        for formatter in self.dateFormatters {
             if let date = formatter.date(from: text) {
                 return date
             }

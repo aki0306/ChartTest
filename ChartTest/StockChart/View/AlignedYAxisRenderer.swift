@@ -42,7 +42,7 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
     override func drawYLabels(context: CGContext, fixedPosition: CGFloat, positions: [CGPoint],
                               offset: CGFloat, textAlign: TextAlignment) {
         // どちらの調整もしない場合は、DGCharts 標準の描き方にする
-        let needsAdjustment = centersLabels || keepsLabelsInside
+        let needsAdjustment = self.centersLabels || self.keepsLabelsInside
         if !needsAdjustment {
             super.drawYLabels(context: context, fixedPosition: fixedPosition, positions: positions,
                               offset: offset, textAlign: textAlign)
@@ -50,40 +50,40 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
         }
 
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: axis.labelFont,
-            .foregroundColor: axis.labelTextColor,
+            .font: self.axis.labelFont,
+            .foregroundColor: self.axis.labelTextColor,
         ]
 
         // 描くラベルの範囲(DGCharts 標準と同じく、一番下・一番上のラベルを描かない設定に従う)
         var firstEntry = 0
-        if !axis.isDrawBottomYLabelEntryEnabled {
+        if !self.axis.isDrawBottomYLabelEntryEnabled {
             firstEntry = 1
         }
-        var endEntry = axis.entryCount  // この番号の手前まで描く
-        if !axis.isDrawTopYLabelEntryEnabled {
-            endEntry = axis.entryCount - 1
+        var endEntry = self.axis.entryCount  // この番号の手前まで描く
+        if !self.axis.isDrawTopYLabelEntryEnabled {
+            endEntry = self.axis.entryCount - 1
         }
         guard firstEntry < endEntry else { return }
         let entries = Array(firstEntry..<endEntry)
 
         // 各ラベルの文字と幅(中央揃えでは、一番長いラベルの幅を基準にする)
-        let texts = entries.map { entry in axis.getFormattedLabel(entry) }
+        let texts = entries.map { entry in self.axis.getFormattedLabel(entry) }
         let widths = texts.map { text in (text as NSString).size(withAttributes: attributes).width }
         let maxWidth = widths.max() ?? 0
-        let lineHeight = axis.labelFont.lineHeight
+        let lineHeight = self.axis.labelFont.lineHeight
 
         for (labelNumber, entry) in entries.enumerated() {
             // 横位置: 中央揃えなら、一番長いラベルの幅の中で中央に置く
-            var x = fixedPosition + axis.labelXOffset
-            if centersLabels {
+            var x = fixedPosition + self.axis.labelXOffset
+            if self.centersLabels {
                 x += (maxWidth - widths[labelNumber]) / 2
             }
 
             // 縦位置: 文字の上端。枠内に収める場合は、上端・下端からはみ出さないようにずらす
             var y = positions[entry].y + offset
-            if keepsLabelsInside {
-                y = min(y, viewPortHandler.contentBottom - lineHeight)  // 下端からはみ出さない
-                y = max(y, viewPortHandler.contentTop)                  // 上端からはみ出さない
+            if self.keepsLabelsInside {
+                y = min(y, self.viewPortHandler.contentBottom - lineHeight)  // 下端からはみ出さない
+                y = max(y, self.viewPortHandler.contentTop)                  // 上端からはみ出さない
             }
 
             context.drawText(texts[labelNumber], at: CGPoint(x: x, y: y), align: .left, attributes: attributes)

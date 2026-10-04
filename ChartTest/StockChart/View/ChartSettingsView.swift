@@ -79,42 +79,42 @@ final class ChartSettingsView: UIView {
     /// 左側リストの内容
     var sections: [Section] = [] {
         didSet {
-            tableView.reloadData()
-            updateListSelection()
+            self.tableView.reloadData()
+            self.updateListSelection()
         }
     }
 
     /// 左側リストで選択中の項目
     var selectedIndexPath: IndexPath? {
-        didSet { updateListSelection() }
+        didSet { self.updateListSelection() }
     }
 
     /// 右側に並べる行
     var rows: [Row] = [] {
-        didSet { rebuildRows() }
+        didSet { self.rebuildRows() }
     }
 
     /// 足種のタブと下のボタンを表示するか(指標のパラメータのとき true、オプションのとき false)
     var showsPeriodControls = true {
-        didSet { updatePeriodControlsVisibility() }
+        didSet { self.updatePeriodControlsVisibility() }
     }
 
     /// タブに並べる足種
     var periods: [ChartPeriod] {
-        get { contentView.periodTabView.periods }
-        set { contentView.periodTabView.periods = newValue }
+        get { self.contentView.periodTabView.periods }
+        set { self.contentView.periodTabView.periods = newValue }
     }
 
     /// 選べない足種(グレーにして押せなくする)
     var disabledPeriods: Set<ChartPeriod> {
-        get { contentView.periodTabView.disabledPeriods }
-        set { contentView.periodTabView.disabledPeriods = newValue }
+        get { self.contentView.periodTabView.disabledPeriods }
+        set { self.contentView.periodTabView.disabledPeriods = newValue }
     }
 
     /// 選択中の足種
     var selectedPeriod: ChartPeriod? {
-        get { contentView.periodTabView.selectedPeriod }
-        set { contentView.periodTabView.selectedPeriod = newValue }
+        get { self.contentView.periodTabView.selectedPeriod }
+        set { self.contentView.periodTabView.selectedPeriod = newValue }
     }
 
     // MARK: - 見た目(左リスト)
@@ -132,55 +132,55 @@ final class ChartSettingsView: UIView {
     /// XIB の Content View(画面全体。このViewいっぱいに貼り付ける)
     private let contentView = loadFromNib(ChartSettingsContentView.self)
     /// 左側のリスト
-    private var tableView: UITableView { contentView.tableView }
+    private var tableView: UITableView { self.contentView.tableView }
     /// 右側の白いパネルの中で、行を縦に並べるスタック
-    private var rowsStack: UIStackView { contentView.rowsStack }
+    private var rowsStack: UIStackView { self.contentView.rowsStack }
     /// オプションのときに、行をパネル(スクロールビューの表示範囲)の縦の中央に置く制約
     private lazy var rowsCenterYConstraint = rowsStack.centerYAnchor.constraint(
-        equalTo: contentView.rowsScrollView.frameLayoutGuide.centerYAnchor)
+        equalTo: self.contentView.rowsScrollView.frameLayoutGuide.centerYAnchor)
 
     // MARK: - 初期化
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setup()
+        self.setup()
     }
 
     /// Storyboard / XIB から生成された場合
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setup()
+        self.setup()
     }
 
     // MARK: - 組み立て
 
     /// XIB の Content View を、このViewいっぱいに貼り付け、操作を受け取れるようにする
     private func setup() {
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(contentView)
+        self.contentView.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(self.contentView)
         NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            contentView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            self.contentView.topAnchor.constraint(equalTo: self.topAnchor),
+            self.contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            self.contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            self.contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
         ])
 
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        self.tableView.dataSource = self
+        self.tableView.delegate = self
+        self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
         // 見出しの上に iOS 15 以降で自動で付く余白をなくす(Interface Builder では設定できないのでコードで指定)
-        tableView.sectionHeaderTopPadding = 0
+        self.tableView.sectionHeaderTopPadding = 0
 
         // 足種のタブ
-        contentView.periodTabView.onSelect = { [weak self] period in
+        self.contentView.periodTabView.onSelect = { [weak self] period in
             guard let self else { return }
             self.delegate?.settingsView(self, didSelectPeriod: period)
         }
 
         // 下のボタン
-        contentView.applyToAllButton.addTarget(self, action: #selector(applyToAllTapped), for: .touchUpInside)
-        contentView.resetButton.addTarget(self, action: #selector(resetTapped), for: .touchUpInside)
-        contentView.confirmButton.addTarget(self, action: #selector(confirmTapped), for: .touchUpInside)
+        self.contentView.applyToAllButton.addTarget(self, action: #selector(self.applyToAllTapped), for: .touchUpInside)
+        self.contentView.resetButton.addTarget(self, action: #selector(self.resetTapped), for: .touchUpInside)
+        self.contentView.confirmButton.addTarget(self, action: #selector(self.confirmTapped), for: .touchUpInside)
     }
 
     // MARK: - 右側の行
@@ -188,15 +188,15 @@ final class ChartSettingsView: UIView {
     /// rows の内容で右側の行を作り直す
     private func rebuildRows() {
         // 前の行を取り除く
-        for oldRow in rowsStack.arrangedSubviews {
+        for oldRow in self.rowsStack.arrangedSubviews {
             oldRow.removeFromSuperview()
         }
 
         // 行を作って並べる
         var titleLabels: [UILabel] = []
-        for (index, row) in rows.enumerated() {
-            let (rowView, titleLabel) = makeRowView(row, index: index)
-            rowsStack.addArrangedSubview(rowView)
+        for (index, row) in self.rows.enumerated() {
+            let (rowView, titleLabel) = self.makeRowView(row, index: index)
+            self.rowsStack.addArrangedSubview(rowView)
             titleLabels.append(titleLabel)
         }
         // 名称ラベルの幅を全行で「一番長い名称の幅」に揃え、操作部品の左端を縦に揃える
@@ -232,23 +232,23 @@ final class ChartSettingsView: UIView {
     /// オプション(トグル)のときはタブとボタンを隠し、行をパネルの中央(上下左右)に並べる。
     /// 指標のパラメータのときは、行をパネルの幅いっぱいに、上から並べる
     private func updatePeriodControlsVisibility() {
-        contentView.periodHeader.isHidden = !showsPeriodControls
-        contentView.buttonBar.isHidden = !showsPeriodControls
-        if showsPeriodControls {
-            rowsStack.alignment = .fill
-            rowsCenterYConstraint.isActive = false
-            contentView.rowsTopConstraint.isActive = true
+        self.contentView.periodHeader.isHidden = !self.showsPeriodControls
+        self.contentView.buttonBar.isHidden = !self.showsPeriodControls
+        if self.showsPeriodControls {
+            self.rowsStack.alignment = .fill
+            self.rowsCenterYConstraint.isActive = false
+            self.contentView.rowsTopConstraint.isActive = true
         } else {
-            rowsStack.alignment = .center
-            contentView.rowsTopConstraint.isActive = false
-            rowsCenterYConstraint.isActive = true
+            self.rowsStack.alignment = .center
+            self.contentView.rowsTopConstraint.isActive = false
+            self.rowsCenterYConstraint.isActive = true
         }
     }
 
     /// XIB を読み込んで、指定した種類の View(Content View・行の見本)を新しく1つ作る
     /// (XIB を読み込むと中の3つがすべて新しく作られるので、その中から欲しい種類だけを取り出して使う)
     private static func loadFromNib<PartView: UIView>(_ type: PartView.Type) -> PartView {
-        let objects = nib.instantiate(withOwner: nil)
+        let objects = self.nib.instantiate(withOwner: nil)
         let views = objects.compactMap { object in object as? PartView }
         guard let view = views.first else {
             // XIB にその種類の View がない(Custom Class の設定ミス)。すぐ気付けるよう落とす
@@ -261,27 +261,27 @@ final class ChartSettingsView: UIView {
 
     /// 「すべての足に反映」
     @objc private func applyToAllTapped() {
-        delegate?.settingsViewDidTapApplyToAllPeriods(self)
+        self.delegate?.settingsViewDidTapApplyToAllPeriods(self)
     }
 
     /// 「初期値に戻す」
     @objc private func resetTapped() {
-        delegate?.settingsViewDidTapReset(self)
+        self.delegate?.settingsViewDidTapReset(self)
     }
 
     /// 「決定」
     @objc private func confirmTapped() {
-        delegate?.settingsViewDidTapConfirm(self)
+        self.delegate?.settingsViewDidTapConfirm(self)
     }
 
     // MARK: - 左側のリスト
 
     /// 選択中の項目の見た目を更新する
     private func updateListSelection() {
-        for cell in tableView.visibleCells {
-            guard let indexPath = tableView.indexPath(for: cell) else { continue }
-            applyCellStyle(cell, isSelected: indexPath == selectedIndexPath,
-                           text: sections[indexPath.section].items[indexPath.row])
+        for cell in self.tableView.visibleCells {
+            guard let indexPath = self.tableView.indexPath(for: cell) else { continue }
+            self.applyCellStyle(cell, isSelected: indexPath == self.selectedIndexPath,
+                           text: self.sections[indexPath.section].items[indexPath.row])
         }
     }
 
@@ -303,7 +303,7 @@ final class ChartSettingsView: UIView {
         content.textProperties.minimumScaleFactor = 0.6
         cell.contentConfiguration = content
         if isSelected {
-            cell.backgroundColor = selectedRowColor
+            cell.backgroundColor = self.selectedRowColor
         } else {
             cell.backgroundColor = .white
         }
@@ -315,34 +315,34 @@ final class ChartSettingsView: UIView {
 extension ChartSettingsView: UITableViewDataSource, UITableViewDelegate {
 
     func numberOfSections(in tableView: UITableView) -> Int {
-        sections.count
+        self.sections.count
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        sections[section].items.count
+        self.sections[section].items.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         cell.selectionStyle = .none  // 選択の見た目は applyCellStyle で付ける
-        applyCellStyle(cell, isSelected: indexPath == selectedIndexPath,
-                       text: sections[indexPath.section].items[indexPath.row])
+        self.applyCellStyle(cell, isSelected: indexPath == self.selectedIndexPath,
+                       text: self.sections[indexPath.section].items[indexPath.row])
         return cell
     }
 
     /// 見出し(赤背景・白文字・中央寄せ)
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         let label = UILabel()
-        label.text = sections[section].title
+        label.text = self.sections[section].title
         label.textAlignment = .center
         label.textColor = .white
         label.font = .boldSystemFont(ofSize: 15)
-        label.backgroundColor = headerColor
+        label.backgroundColor = self.headerColor
         return label
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        delegate?.settingsView(self, didSelectItemAt: indexPath)
+        self.delegate?.settingsView(self, didSelectItemAt: indexPath)
     }
 }
 
@@ -376,11 +376,11 @@ final class ChartSettingsContentView: UIView {
     override func awakeFromNib() {
         super.awakeFromNib()
         // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
-        for button in [applyToAllButton, resetButton] {
+        for button in [self.applyToAllButton, self.resetButton] {
             button?.layer.borderColor = UIColor.systemGray3.cgColor
         }
         // 画面が狭いときは、文字を「…」で省略せずに縮小して収める
-        for button in [applyToAllButton, resetButton, confirmButton] {
+        for button in [self.applyToAllButton, self.resetButton, self.confirmButton] {
             button?.titleLabel?.adjustsFontSizeToFitWidth = true
             button?.titleLabel?.minimumScaleFactor = 0.6
             button?.titleLabel?.lineBreakMode = .byClipping
@@ -403,14 +403,14 @@ final class ChartSettingsToggleRow: UIView {
 
     /// 名称・状態と、切り替えられたときの処理を設定する
     func configure(title: String, isOn: Bool, onChange: @escaping (Bool) -> Void) {
-        titleLabel.text = title
-        toggle.isOn = isOn
+        self.titleLabel.text = title
+        self.toggle.isOn = isOn
         self.onChange = onChange
     }
 
     /// トグルが切り替えられたとき(XIB で Value Changed に接続)
     @IBAction private func toggleChanged(_ sender: UISwitch) {
-        onChange?(sender.isOn)
+        self.onChange?(sender.isOn)
     }
 }
 
@@ -444,7 +444,7 @@ final class ChartSettingsStepperRow: UIView {
     override func awakeFromNib() {
         super.awakeFromNib()
         // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
-        for button in [minusButton, plusButton] {
+        for button in [self.minusButton, self.plusButton] {
             button?.layer.borderColor = UIColor.systemGray3.cgColor
         }
     }
@@ -452,55 +452,55 @@ final class ChartSettingsStepperRow: UIView {
     /// 名称・値・範囲と、値が変わったときの処理を設定する
     func configure(title: String, value: Double, range: ClosedRange<Double>, step: Double,
                    fractionDigits: Int, onChange: @escaping (Double) -> Void) {
-        titleLabel.text = title
+        self.titleLabel.text = title
         self.value = value
         self.range = range
         self.step = step
         self.fractionDigits = fractionDigits
         self.onChange = onChange
-        slider.minimumValue = Float(range.lowerBound)
-        slider.maximumValue = Float(range.upperBound)
-        updateDisplay()
+        self.slider.minimumValue = Float(range.lowerBound)
+        self.slider.maximumValue = Float(range.upperBound)
+        self.updateDisplay()
     }
 
     /// − ボタン(XIB で Touch Up Inside に接続)
     @IBAction private func minusTapped(_ sender: UIButton) {
-        setValue(value - step)
+        self.setValue(self.value - self.step)
     }
 
     /// + ボタン(XIB で Touch Up Inside に接続)
     @IBAction private func plusTapped(_ sender: UIButton) {
-        setValue(value + step)
+        self.setValue(self.value + self.step)
     }
 
     /// スライダーが動かされたとき(XIB で Value Changed に接続)。刻み(step)に合わせて値を丸める
     ///   例) 範囲 1〜200・刻み 1 で、つまみが 25.4 の位置 → 下限から 24.4 刻み → 24 刻みに丸めて 25
     @IBAction private func sliderChanged(_ sender: UISlider) {
-        let stepCount = ((Double(sender.value) - range.lowerBound) / step).rounded()  // 下限から何刻み目か
-        setValue(range.lowerBound + stepCount * step)
+        let stepCount = ((Double(sender.value) - self.range.lowerBound) / self.step).rounded()  // 下限から何刻み目か
+        self.setValue(self.range.lowerBound + stepCount * self.step)
     }
 
     /// 値を変え(範囲内に丸める)、表示を更新して通知する
     private func setValue(_ newValue: Double) {
         // 小数の誤差(0.1 + 0.2 など)が溜まらないよう、刻みの桁で丸める
-        let scale = pow(10, Double(fractionDigits))
+        let scale = pow(10, Double(self.fractionDigits))
         let rounded = (newValue * scale).rounded() / scale
-        let clamped = min(max(rounded, range.lowerBound), range.upperBound)
-        guard clamped != value else {
+        let clamped = min(max(rounded, self.range.lowerBound), self.range.upperBound)
+        guard clamped != self.value else {
             // 値は変わらないが、スライダーのつまみは刻みの位置に戻す
-            updateDisplay()
+            self.updateDisplay()
             return
         }
-        value = clamped
-        updateDisplay()
-        onChange?(value)
+        self.value = clamped
+        self.updateDisplay()
+        self.onChange?(self.value)
     }
 
     /// 値ラベル・スライダーの位置と、範囲の端でのボタンの有効/無効を更新する
     private func updateDisplay() {
-        valueLabel.text = String(format: "%.\(fractionDigits)f", value)
-        slider.value = Float(value)
-        minusButton.isEnabled = value > range.lowerBound
-        plusButton.isEnabled = value < range.upperBound
+        self.valueLabel.text = String(format: "%.\(self.fractionDigits)f", self.value)
+        self.slider.value = Float(self.value)
+        self.minusButton.isEnabled = self.value > self.range.lowerBound
+        self.plusButton.isEnabled = self.value < self.range.upperBound
     }
 }

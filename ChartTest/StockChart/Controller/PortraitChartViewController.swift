@@ -55,8 +55,8 @@ final class PortraitChartViewController: UIViewController {
     /// (海外指数: 日足・週足・月足だけ。ローソク足 + 移動平均線で、サブチャートなし)
     @objc var market: IndexMarket = .domestic {
         didSet {
-            guard isViewLoaded else { return }  // viewDidLoad でタブを作るときに反映される
-            configureTabs()
+            guard self.isViewLoaded else { return }  // viewDidLoad でタブを作るときに反映される
+            self.configureTabs()
         }
     }
 
@@ -76,11 +76,11 @@ final class PortraitChartViewController: UIViewController {
         super.viewDidLoad()
 
         // タブが押されたら、その足種で描き直す
-        periodTabView.onSelect = { [weak self] period in
+        self.periodTabView.onSelect = { [weak self] period in
             self?.selectPeriod(period)
         }
-        configureTabs()
-        applyChartStyle()
+        self.configureTabs()
+        self.applyChartStyle()
     }
 
     // MARK: - 見た目
@@ -101,7 +101,7 @@ final class PortraitChartViewController: UIViewController {
     /// ・高さ 208pt = 上の余白 8pt + 外枠 180pt(メイン 120 : サブ 60)+ 日付ラベル 20pt
     private func applyChartStyle() {
         // style は代入するたびに描き直されるので、まとめて変更してから1回で代入する
-        var style = chartView.style
+        var style = self.chartView.style
         style.rightAxisWidth = 70
         style.yAxisFont = UIFont(name: "TimesNewRomanPSMT", size: 8) ?? .systemFont(ofSize: 8)
         style.yAxisLabelOffset = 9
@@ -112,14 +112,14 @@ final class PortraitChartViewController: UIViewController {
         style.legendTopInset = 5
         style.subLegendTopInset = 5
         style.legendBackgroundColor = .white
-        chartView.style = style
+        self.chartView.style = style
     }
 
     // MARK: - 外から呼ぶ
 
     /// 選択中の足種のデータを読み込み直して描画する
     @objc func reloadChart() {
-        loadViewIfNeeded()
+        self.loadViewIfNeeded()
 
         // データを読み込み、足種・指数の種類に合った設定で描画する
         // (X軸の書式・初期表示本数・移動平均の期間・出来高の凡例名が足種ごとに変わる。
@@ -127,28 +127,28 @@ final class PortraitChartViewController: UIViewController {
         // データが0件の場合は「現在、指定の条件で表示できる情報はありません。」と表示される
         var candles: [StockCandle] = []
         if let candleLoader {
-            candles = candleLoader(selectedPeriod)
+            candles = candleLoader(self.selectedPeriod)
         }
-        chartView.setCandles(candles, period: selectedPeriod, market: market)
+        self.chartView.setCandles(candles, period: self.selectedPeriod, market: self.market)
     }
 
     // MARK: - タブ
 
     /// 指数の種類に合わせてタブを並べる
     private func configureTabs() {
-        periodTabView.periods = market.periods
+        self.periodTabView.periods = self.market.periods
 
         // 選択中の足種がこの指数では選べない場合(海外指数の1分足など)は、日足にする
-        if !market.periods.contains(selectedPeriod) {
-            selectedPeriod = .daily
+        if !self.market.periods.contains(self.selectedPeriod) {
+            self.selectedPeriod = .daily
         }
-        periodTabView.selectedPeriod = selectedPeriod
+        self.periodTabView.selectedPeriod = self.selectedPeriod
     }
 
     /// 足種を選んで描き直す
     private func selectPeriod(_ period: ChartPeriod) {
-        selectedPeriod = period
-        periodTabView.selectedPeriod = period
-        reloadChart()
+        self.selectedPeriod = period
+        self.periodTabView.selectedPeriod = period
+        self.reloadChart()
     }
 }

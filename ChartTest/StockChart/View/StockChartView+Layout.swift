@@ -28,53 +28,53 @@ extension StockChartView {
 
     /// 部品の追加と、スタイルに依存しない制約の設定を行う(初期化時に1回だけ呼ばれる)
     func setup() {
-        addCharts()
-        addCrosshairParts()
-        addCrosshairGestures()
-        addOverlays()
-        arrangeSubviewOrder()
-        activateFixedConstraints()
-        applyStyle()
+        self.addCharts()
+        self.addCrosshairParts()
+        self.addCrosshairGestures()
+        self.addOverlays()
+        self.arrangeSubviewOrder()
+        self.activateFixedConstraints()
+        self.applyStyle()
     }
 
     /// 部品の重なり順を整える(追加した順に手前に重なるので、追加後に一部だけ入れ替える)
     private func arrangeSubviewOrder() {
         // 4本値の枠・マーカーは、最高値・最安値の文字や凡例より手前に表示する
-        for view in [ohlcInfoView, valueMarker, yAxisMarker] {
-            bringSubviewToFront(view)
+        for view in [self.ohlcInfoView, self.valueMarker, self.yAxisMarker] {
+            self.bringSubviewToFront(view)
         }
         // 日付のマーカー(矢印)は、チャートより奥に置く。
         // チャートの背景は透明なので、矢印の上にチャートが描く日付ラベルの文字が重なって見える
-        sendSubviewToBack(dateMarker)
+        self.sendSubviewToBack(self.dateMarker)
     }
 
     /// チャート本体(メイン・サブ)を追加する
     private func addCharts() {
-        for chart in [priceChart, subChart] {
+        for chart in [self.priceChart, self.subChart] {
             chart.translatesAutoresizingMaskIntoConstraints = false
             chart.delegate = self   // スクロール/ズームを受け取り、もう一方のチャートに同期する(AxisRange)
             chart.noDataText = ""   // データなしのときの文言は表示しない
-            addSubview(chart)
+            self.addSubview(chart)
         }
         // 雲を描けるレンダラーに差し替える(drawOrder などの設定より前に行う)
-        priceChart.renderer = priceRenderer
+        self.priceChart.renderer = self.priceRenderer
         // X軸ラベルを最新の足を基準に並べる描画処理に差し替える(LatestAlignedXAxisRenderer)
-        priceChart.xAxisRenderer = priceXAxisRenderer
-        subChart.xAxisRenderer = subXAxisRenderer
+        self.priceChart.xAxisRenderer = self.priceXAxisRenderer
+        self.subChart.xAxisRenderer = self.subXAxisRenderer
         // Y軸ラベルを中央揃え・枠内に収めて描けるよう、描画処理を差し替える(AlignedYAxisRenderer)
-        priceChart.rightYAxisRenderer = priceYAxisRenderer
-        subChart.rightYAxisRenderer = subYAxisRenderer
+        self.priceChart.rightYAxisRenderer = self.priceYAxisRenderer
+        self.subChart.rightYAxisRenderer = self.subYAxisRenderer
     }
 
     /// 4本値表示用の十字線・マーカー・枠を追加する(チャートの上に重ねる)。
     /// 位置は Auto Layout ではなく updateCrosshair で frame を直接設定する
     private func addCrosshairParts() {
-        for view in [crosshairView, ohlcInfoView, valueMarker, dateMarker, yAxisMarker] {
-            addSubview(view)
+        for view in [self.crosshairView, self.ohlcInfoView, self.valueMarker, self.dateMarker, self.yAxisMarker] {
+            self.addSubview(view)
         }
         // マーカーと4本値の枠は、4本値がオンになるまで隠しておく
         // (十字線は線を描かないことで隠れるので、isHidden にはしない)
-        for view in [ohlcInfoView, valueMarker, dateMarker, yAxisMarker] {
+        for view in [self.ohlcInfoView, self.valueMarker, self.dateMarker, self.yAxisMarker] {
             view.isHidden = true
         }
     }
@@ -86,16 +86,16 @@ extension StockChartView {
     /// 枠の内側は、4本値がオンでもチャートのスクロール(1本指)・拡大(ピンチ)に使う。
     /// ラベルの欄からなぞったときは、十字線だけを動かしてスクロールはしない(canBeginScroll)
     private func addCrosshairGestures() {
-        for chart in [priceChart, subChart] {
+        for chart in [self.priceChart, self.subChart] {
             // ラベルの欄(十字線を動かす欄)からなぞり始めたときは、チャートをスクロールしない
             chart.canBeginScroll = { [weak self, weak chart] pointInChart in
                 guard let self, let chart else { return true }
                 return !self.isCrosshairDragStart(at: chart.convert(pointInChart, to: self))
             }
 
-            let tap = UITapGestureRecognizer(target: self, action: #selector(chartTapped(_:)))
+            let tap = UITapGestureRecognizer(target: self, action: #selector(self.chartTapped(_:)))
             tap.isEnabled = false  // 4本値オンのときだけ有効にする(applyDisplayOptions)
-            let pan = UIPanGestureRecognizer(target: self, action: #selector(chartPanned(_:)))
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(self.chartPanned(_:)))
             pan.maximumNumberOfTouches = 1
             // 4本値オンで、ラベルの欄からなぞり始めたときだけ開始する(gestureRecognizerShouldBegin)。
             // 下でチャートのスクロールがこのパンの失敗を待つようにするので、常に有効にしておく
@@ -104,7 +104,7 @@ extension StockChartView {
 
             for recognizer in [tap, pan] {
                 chart.addGestureRecognizer(recognizer)
-                crosshairRecognizers.append(recognizer)
+                self.crosshairRecognizers.append(recognizer)
             }
 
             // チャートのスクロール(DGCharts のパン)は、十字線のドラッグが始まらないと分かってから始める。
@@ -121,28 +121,28 @@ extension StockChartView {
     /// 外枠・区切り線・凡例を追加する(チャートの上に重ねる)
     private func addOverlays() {
         // 最高値・最安値の文字: 位置は表示範囲に合わせて frame を直接設定する(StockChartView+HighLowLabels)
-        for label in [highPriceLabel, lowPriceLabel] {
+        for label in [self.highPriceLabel, self.lowPriceLabel] {
             label.isUserInteractionEnabled = false
             label.isHidden = true
-            addSubview(label)
+            self.addSubview(label)
         }
 
-        for view in [frameView, dividerView, priceLegendLabel, subLegendLabel, noDataLabel] {
+        for view in [self.frameView, self.dividerView, self.priceLegendLabel, self.subLegendLabel, self.noDataLabel] {
             view.translatesAutoresizingMaskIntoConstraints = false
             view.isUserInteractionEnabled = false  // タッチは下のチャートに届ける
-            addSubview(view)
+            self.addSubview(view)
         }
-        frameView.backgroundColor = .clear  // 外枠は線(layer.border)だけを描く
+        self.frameView.backgroundColor = .clear  // 外枠は線(layer.border)だけを描く
 
         // データが0件のときのメッセージ。表示するのは空のデータを渡されたときだけ(render で切り替える)
-        noDataLabel.numberOfLines = 0  // 幅が足りないときは折り返す
-        noDataLabel.isHidden = true
+        self.noDataLabel.numberOfLines = 0  // 幅が足りないときは折り返す
+        self.noDataLabel.isHidden = true
 
         // 凡例は1行で表示する(UILabel の numberOfLines は既定の 1 のまま)。
         // 長い場合(一目均衡表の「一目均衡表 転換線 基準線 先行1 先行2 遅行」など)は、
         // 右端の制約(外枠の右端 - 8pt)に収まるよう、元の 60% の大きさまで文字を縮小する。
         // 60% まで縮めても収まらない場合は末尾が「…」で省略される
-        for label in [priceLegendLabel, subLegendLabel] {
+        for label in [self.priceLegendLabel, self.subLegendLabel] {
             label.adjustsFontSizeToFitWidth = true
             label.minimumScaleFactor = 0.6
         }
@@ -152,24 +152,24 @@ extension StockChartView {
     private func activateFixedConstraints() {
         NSLayoutConstraint.activate([
             // メインチャート: 上端と左右をこのViewに合わせる(下端/高さは applyLayoutConstraints で設定)
-            priceChart.topAnchor.constraint(equalTo: topAnchor),
-            priceChart.leadingAnchor.constraint(equalTo: leadingAnchor),
-            priceChart.trailingAnchor.constraint(equalTo: trailingAnchor),
+            self.priceChart.topAnchor.constraint(equalTo: self.topAnchor),
+            self.priceChart.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            self.priceChart.trailingAnchor.constraint(equalTo: self.trailingAnchor),
 
             // サブチャート: 左右と下端をこのViewに合わせる(上端は applyLayoutConstraints で設定)
-            subChart.leadingAnchor.constraint(equalTo: leadingAnchor),
-            subChart.trailingAnchor.constraint(equalTo: trailingAnchor),
-            subChart.bottomAnchor.constraint(equalTo: bottomAnchor),
+            self.subChart.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            self.subChart.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            self.subChart.bottomAnchor.constraint(equalTo: self.bottomAnchor),
 
             // 外枠: 上端 = メインチャート描画領域の上端、左端 = このViewの左端
             //       (右端・下端は applyLayoutConstraints で設定)
-            frameView.topAnchor.constraint(equalTo: priceChart.topAnchor, constant: labelOverflowInset),
-            frameView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            self.frameView.topAnchor.constraint(equalTo: self.priceChart.topAnchor, constant: self.labelOverflowInset),
+            self.frameView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
 
             // 区切り線: メインチャート描画領域の下端に、外枠と同じ幅で配置する
-            dividerView.centerYAnchor.constraint(equalTo: priceChart.bottomAnchor, constant: -labelOverflowInset),
-            dividerView.leadingAnchor.constraint(equalTo: frameView.leadingAnchor),
-            dividerView.trailingAnchor.constraint(equalTo: frameView.trailingAnchor),
+            self.dividerView.centerYAnchor.constraint(equalTo: self.priceChart.bottomAnchor, constant: -self.labelOverflowInset),
+            self.dividerView.leadingAnchor.constraint(equalTo: self.frameView.leadingAnchor),
+            self.dividerView.trailingAnchor.constraint(equalTo: self.frameView.trailingAnchor),
 
             // 凡例: 各チャート描画領域の左上(枠の内側)に表示する
             //
@@ -190,73 +190,73 @@ extension StockChartView {
             // ・高さ: 指定しない(フォントの大きさから自動で決まる。legendFont 12pt で約 15pt)
             // 凡例はチャートの描画領域の上に重なっているだけなので、チャートの線と重ならないよう
             // Y軸の上側に、凡例の高さぶんの余白を取っている(updateAxisRanges)
-            priceLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
-            subLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
+            self.priceLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: self.frameView.trailingAnchor, constant: -8),
+            self.subLegendLabel.trailingAnchor.constraint(lessThanOrEqualTo: self.frameView.trailingAnchor, constant: -8),
 
             // データが0件のときのメッセージ: メインチャートの凡例のすぐ下(4pt 下)、凡例と同じ左端に表示する
-            noDataLabel.topAnchor.constraint(equalTo: priceLegendLabel.bottomAnchor, constant: 4),
-            noDataLabel.trailingAnchor.constraint(lessThanOrEqualTo: frameView.trailingAnchor, constant: -8),
+            self.noDataLabel.topAnchor.constraint(equalTo: self.priceLegendLabel.bottomAnchor, constant: 4),
+            self.noDataLabel.trailingAnchor.constraint(lessThanOrEqualTo: self.frameView.trailingAnchor, constant: -8),
         ])
 
         // 凡例の上端・左端(値は style で変えられるので、applyLayoutConstraints で反映する)
-        let priceLegendTop = priceLegendLabel.topAnchor.constraint(equalTo: frameView.topAnchor)
-        let subLegendTop = subLegendLabel.topAnchor.constraint(equalTo: dividerView.bottomAnchor)
-        let legendLeadings = [priceLegendLabel, subLegendLabel, noDataLabel].map { label in
-            label.leadingAnchor.constraint(equalTo: frameView.leadingAnchor)
+        let priceLegendTop = self.priceLegendLabel.topAnchor.constraint(equalTo: self.frameView.topAnchor)
+        let subLegendTop = self.subLegendLabel.topAnchor.constraint(equalTo: self.dividerView.bottomAnchor)
+        let legendLeadings = [self.priceLegendLabel, self.subLegendLabel, self.noDataLabel].map { label in
+            label.leadingAnchor.constraint(equalTo: self.frameView.leadingAnchor)
         }
         NSLayoutConstraint.activate([priceLegendTop, subLegendTop] + legendLeadings)
-        priceLegendTopConstraint = priceLegendTop
-        subLegendTopConstraint = subLegendTop
-        legendLeadingConstraints = legendLeadings
+        self.priceLegendTopConstraint = priceLegendTop
+        self.subLegendTopConstraint = subLegendTop
+        self.legendLeadingConstraints = legendLeadings
     }
 
     // MARK: - スタイルの反映
 
     /// スタイルに依存する見た目・制約・軸の設定を適用する
     func applyStyle() {
-        applyLayoutConstraints()
-        applyColors()
-        for chart in [priceChart, subChart] {
-            configureChartBasics(chart)
-            configureRightAxis(chart.rightAxis)
-            configureXAxis(chart.xAxis)
+        self.applyLayoutConstraints()
+        self.applyColors()
+        for chart in [self.priceChart, self.subChart] {
+            self.configureChartBasics(chart)
+            self.configureRightAxis(chart.rightAxis)
+            self.configureXAxis(chart.xAxis)
         }
-        for renderer in [priceYAxisRenderer, subYAxisRenderer] {
-            renderer.centersLabels = style.centersYAxisLabels
-            renderer.keepsLabelsInside = style.keepsYAxisLabelsInside
+        for renderer in [self.priceYAxisRenderer, self.subYAxisRenderer] {
+            renderer.centersLabels = self.style.centersYAxisLabels
+            renderer.keepsLabelsInside = self.style.keepsYAxisLabelsInside
         }
 
         // メインチャートのY軸: 区切り線付近のラベルがサブチャートの最上段ラベルと重ならないよう、
         // 下端付近(値幅の下から 6% 以内)のラベルは表示しない
-        priceChart.rightAxis.valueFormatter = ChartAxisValueFormatter(
+        self.priceChart.rightAxis.valueFormatter = ChartAxisValueFormatter(
             formatter: ChartNumberFormatter.make(fractionDigits: 0),
             hiddenBottomRatio: 0.06,
             hiddenAbove: nil)
 
         // サブチャートの Y軸(ラベル間隔・書式・基準線)はサブ指標ごとに変わるので、描画時に設定する(configureSubAxis)
 
-        updateSubChartVisibility()
+        self.updateSubChartVisibility()
     }
 
     /// 外枠・区切り線・十字線・マーカーの色と線幅を設定する
     private func applyColors() {
-        frameView.layer.borderColor = style.borderColor.cgColor
-        frameView.layer.borderWidth = style.borderWidth
-        dividerView.backgroundColor = style.dividerColor
-        priceLegendLabel.backgroundColor = style.legendBackgroundColor
-        subLegendLabel.backgroundColor = style.legendBackgroundColor
-        crosshairView.lineColor = style.textColor
-        valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
-        dateMarker.fillColor = style.increasingColor
-        yAxisMarker.fillColor = style.increasingColor
+        self.frameView.layer.borderColor = self.style.borderColor.cgColor
+        self.frameView.layer.borderWidth = self.style.borderWidth
+        self.dividerView.backgroundColor = self.style.dividerColor
+        self.priceLegendLabel.backgroundColor = self.style.legendBackgroundColor
+        self.subLegendLabel.backgroundColor = self.style.legendBackgroundColor
+        self.crosshairView.lineColor = self.style.textColor
+        self.valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
+        self.dateMarker.fillColor = self.style.increasingColor
+        self.yAxisMarker.fillColor = self.style.increasingColor
         // 画像が設定されていれば、形を塗る代わりに画像を描く
-        dateMarker.backgroundImage = style.dateMarkerImage
-        yAxisMarker.backgroundImage = style.yAxisMarkerImage
+        self.dateMarker.backgroundImage = self.style.dateMarkerImage
+        self.yAxisMarker.backgroundImage = self.style.yAxisMarkerImage
 
         // データが0件のときのメッセージ(凡例と同じ文字の大きさ・色)
-        noDataLabel.text = style.noDataMessage
-        noDataLabel.font = style.legendFont
-        noDataLabel.textColor = style.textColor
+        self.noDataLabel.text = self.style.noDataMessage
+        self.noDataLabel.font = self.style.legendFont
+        self.noDataLabel.textColor = self.style.textColor
     }
 
     /// チャート全体の基本設定(メイン/サブ共通)
@@ -307,12 +307,12 @@ extension StockChartView {
     /// ・縦位置は各グリッド線の高さに、文字の中心を合わせて描かれる
     ///   (描画領域の上下端のラベルは半分はみ出すので、labelOverflowInset で余白を取っている)
     private func configureRightAxis(_ axis: YAxis) {
-        axis.labelFont = style.yAxisFont
-        axis.labelTextColor = style.textColor
-        axis.gridColor = style.gridColor
+        axis.labelFont = self.style.yAxisFont
+        axis.labelTextColor = self.style.textColor
+        axis.gridColor = self.style.gridColor
         axis.drawAxisLineEnabled = false
         axis.labelPosition = .outsideChart
-        axis.xOffset = style.yAxisLabelOffset
+        axis.xOffset = self.style.yAxisLabelOffset
         axis.drawLimitLinesBehindDataEnabled = true  // 基準線(RSI の 30/70 など)は指標の線より下に描く
     }
 
@@ -325,14 +325,14 @@ extension StockChartView {
         axis.labelPosition = .bottom
         axis.drawGridLinesEnabled = false
         axis.drawAxisLineEnabled = false
-        axis.labelFont = style.xAxisFont
-        axis.labelTextColor = style.textColor
+        axis.labelFont = self.style.xAxisFont
+        axis.labelTextColor = self.style.textColor
         axis.granularity = 1                       // ラベルは1本単位(足と足の間には置かない)
         axis.granularityEnabled = true
-        axis.labelCount = style.xAxisLabelCount    // X軸ラベルの個数(約7個。足種によって変える)
+        axis.labelCount = self.style.xAxisLabelCount    // X軸ラベルの個数(約7個。足種によって変える)
         // ラベル同士の間隔(0 より大きいと、幅に入るだけ並べる。LatestAlignedXAxisRenderer)
-        priceXAxisRenderer.labelSpacing = style.xAxisLabelSpacing
-        subXAxisRenderer.labelSpacing = style.xAxisLabelSpacing
+        self.priceXAxisRenderer.labelSpacing = self.style.xAxisLabelSpacing
+        self.subXAxisRenderer.labelSpacing = self.style.xAxisLabelSpacing
         // 両端のラベルをずらす DGCharts の機能は使わない(ずらすと足の位置と合わず、隣のラベルと重なることがある)。
         // はみ出すラベルは LatestAlignedXAxisRenderer が表示しないようにしている
         axis.avoidFirstLastClippingEnabled = false
@@ -342,13 +342,13 @@ extension StockChartView {
 
     /// スタイルに依存するレイアウト制約を作り直す
     private func applyLayoutConstraints() {
-        let inset = labelOverflowInset
+        let inset = self.labelOverflowInset
 
         // 既存の制約を無効化してから作り直す
         let oldConstraints = [
-            subTopConstraint, frameTrailingConstraint, dividerHeightConstraint,
-            priceHeightConstraint, frameBottomWithSubConstraint,
-            priceBottomConstraint, frameBottomWithoutSubConstraint,
+            self.subTopConstraint, self.frameTrailingConstraint, self.dividerHeightConstraint,
+            self.priceHeightConstraint, self.frameBottomWithSubConstraint,
+            self.priceBottomConstraint, self.frameBottomWithoutSubConstraint,
         ]
         for constraint in oldConstraints {
             constraint?.isActive = false
@@ -356,59 +356,59 @@ extension StockChartView {
 
         // サブチャートの上端: メインチャートの描画領域下端(= 区切り線)から、さらに inset 分上に重ねる。
         // こうするとサブチャートの描画領域上端(View上端 + inset)が区切り線とちょうど一致する
-        subTopConstraint = subChart.topAnchor.constraint(equalTo: priceChart.bottomAnchor, constant: -inset * 2)
+        self.subTopConstraint = self.subChart.topAnchor.constraint(equalTo: self.priceChart.bottomAnchor, constant: -inset * 2)
 
         // 外枠の右端 = Y軸ラベル領域の左端
-        frameTrailingConstraint = frameView.trailingAnchor.constraint(
-            equalTo: trailingAnchor, constant: -style.rightAxisWidth)
+        self.frameTrailingConstraint = self.frameView.trailingAnchor.constraint(
+            equalTo: self.trailingAnchor, constant: -self.style.rightAxisWidth)
 
         // 凡例の位置(上端・左端)
-        priceLegendTopConstraint?.constant = style.legendTopInset
-        subLegendTopConstraint?.constant = style.subLegendTopInset
-        for constraint in legendLeadingConstraints {
-            constraint.constant = style.legendLeadingInset
+        self.priceLegendTopConstraint?.constant = self.style.legendTopInset
+        self.subLegendTopConstraint?.constant = self.style.subLegendTopInset
+        for constraint in self.legendLeadingConstraints {
+            constraint.constant = self.style.legendLeadingInset
         }
 
         // 区切り線の太さは外枠と同じ
-        dividerHeightConstraint = dividerView.heightAnchor.constraint(equalToConstant: style.borderWidth)
+        self.dividerHeightConstraint = self.dividerView.heightAnchor.constraint(equalToConstant: self.style.borderWidth)
 
         // [サブあり] メイン/サブの「描画領域」の高さ比を ratio : 1 にする。
         //   メイン描画領域の高さ P' = P - inset * 2           (上下に inset)
         //   サブ描画領域の高さ   V' = V - inset - xLabelHeight (上に inset、下にX軸ラベル)
         //   P' = ratio * V'  を P について解くと
         //   P = ratio * V + (inset * 2 - ratio * (inset + xLabelHeight))
-        let ratio = style.priceHeightRatio
-        priceHeightConstraint = priceChart.heightAnchor.constraint(
-            equalTo: subChart.heightAnchor,
+        let ratio = self.style.priceHeightRatio
+        self.priceHeightConstraint = self.priceChart.heightAnchor.constraint(
+            equalTo: self.subChart.heightAnchor,
             multiplier: ratio,
-            constant: inset * 2 - ratio * (inset + style.xAxisLabelHeight))
+            constant: inset * 2 - ratio * (inset + self.style.xAxisLabelHeight))
 
         // [サブあり] 外枠の下端 = サブチャートのX軸ラベル領域の上端
-        frameBottomWithSubConstraint = frameView.bottomAnchor.constraint(
-            equalTo: subChart.bottomAnchor, constant: -style.xAxisLabelHeight)
+        self.frameBottomWithSubConstraint = self.frameView.bottomAnchor.constraint(
+            equalTo: self.subChart.bottomAnchor, constant: -self.style.xAxisLabelHeight)
 
         // [サブなし] メインチャートをこのViewの下端まで伸ばし、外枠の下端 = メインのX軸ラベル領域の上端
-        priceBottomConstraint = priceChart.bottomAnchor.constraint(equalTo: bottomAnchor)
-        frameBottomWithoutSubConstraint = frameView.bottomAnchor.constraint(
-            equalTo: priceChart.bottomAnchor, constant: -style.xAxisLabelHeight)
+        self.priceBottomConstraint = self.priceChart.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        self.frameBottomWithoutSubConstraint = self.frameView.bottomAnchor.constraint(
+            equalTo: self.priceChart.bottomAnchor, constant: -self.style.xAxisLabelHeight)
 
         // サブあり/なしに関係なく使う制約だけ、ここで有効にする。
         // サブあり/なしで切り替わる制約は updateSubChartVisibility で有効にする
-        subTopConstraint?.isActive = true
-        frameTrailingConstraint?.isActive = true
-        dividerHeightConstraint?.isActive = true
+        self.subTopConstraint?.isActive = true
+        self.frameTrailingConstraint?.isActive = true
+        self.dividerHeightConstraint?.isActive = true
     }
 
     // MARK: - サブチャートの表示/非表示
 
     /// サブチャートの表示/非表示に合わせて、制約・描画領域・X軸ラベルの表示先を切り替える
     func updateSubChartVisibility() {
-        let inset = labelOverflowInset
-        let showsSub = hasSubChart
+        let inset = self.labelOverflowInset
+        let showsSub = self.hasSubChart
 
         // 制約の切り替え。先に無効化してから有効化する(同時に有効になると制約が衝突するため)
-        let constraintsWithSub = [priceHeightConstraint, frameBottomWithSubConstraint]
-        let constraintsWithoutSub = [priceBottomConstraint, frameBottomWithoutSubConstraint]
+        let constraintsWithSub = [self.priceHeightConstraint, self.frameBottomWithSubConstraint]
+        let constraintsWithoutSub = [self.priceBottomConstraint, self.frameBottomWithoutSubConstraint]
         var constraintsToDeactivate = constraintsWithSub
         var constraintsToActivate = constraintsWithoutSub
         if showsSub {
@@ -422,12 +422,12 @@ extension StockChartView {
             constraint?.isActive = true
         }
 
-        subChart.isHidden = !showsSub
-        subLegendLabel.isHidden = !showsSub
-        dividerView.isHidden = !showsSub
+        self.subChart.isHidden = !showsSub
+        self.subLegendLabel.isHidden = !showsSub
+        self.dividerView.isHidden = !showsSub
 
         // X軸ラベル(日付)は一番下のチャートにだけ表示する
-        priceChart.xAxis.drawLabelsEnabled = !showsSub
+        self.priceChart.xAxis.drawLabelsEnabled = !showsSub
 
         // 描画領域(viewport)の余白を固定値で指定する。
         // setViewPortOffsets を使うと、DGCharts がラベルの大きさから余白を自動計算しなくなり、
@@ -439,11 +439,11 @@ extension StockChartView {
         if showsSub {
             priceBottomOffset = inset
         } else {
-            priceBottomOffset = style.xAxisLabelHeight
+            priceBottomOffset = self.style.xAxisLabelHeight
         }
-        priceChart.setViewPortOffsets(left: 0, top: inset, right: style.rightAxisWidth,
+        self.priceChart.setViewPortOffsets(left: 0, top: inset, right: self.style.rightAxisWidth,
                                       bottom: priceBottomOffset)
-        subChart.setViewPortOffsets(left: 0, top: inset, right: style.rightAxisWidth,
-                                    bottom: style.xAxisLabelHeight)
+        self.subChart.setViewPortOffsets(left: 0, top: inset, right: self.style.rightAxisWidth,
+                                    bottom: self.style.xAxisLabelHeight)
     }
 }

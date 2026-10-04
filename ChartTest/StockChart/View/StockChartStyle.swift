@@ -153,22 +153,22 @@ struct StockChartStyle {
         switch role {
         case .line(let index):
             // 色が1つも設定されていなければ文字色で代用する
-            guard !lineColors.isEmpty else { return textColor }
-            return lineColors[index % lineColors.count]
-        case .increasing: return increasingColor
-        case .decreasing: return decreasingColor
-        case .volume: return volumeColor
-        case .volumeAverage: return volumeAverageColor
-        case .ichimokuTenkan: return ichimokuTenkanColor
-        case .ichimokuKijun: return ichimokuKijunColor
-        case .ichimokuSpanA: return ichimokuSpanAColor
-        case .ichimokuSpanB: return ichimokuSpanBColor
-        case .ichimokuChikou: return ichimokuChikouColor
-        case .histogramPositive: return increasingColor.withAlphaComponent(histogramAlpha)
-        case .histogramNegative: return decreasingColor.withAlphaComponent(histogramAlpha)
-        case .vwap: return vwapColor
-        case .newPrice: return newPriceColor
-        case .closeLine: return lineChartColor
+            guard !self.lineColors.isEmpty else { return self.textColor }
+            return self.lineColors[index % self.lineColors.count]
+        case .increasing: return self.increasingColor
+        case .decreasing: return self.decreasingColor
+        case .volume: return self.volumeColor
+        case .volumeAverage: return self.volumeAverageColor
+        case .ichimokuTenkan: return self.ichimokuTenkanColor
+        case .ichimokuKijun: return self.ichimokuKijunColor
+        case .ichimokuSpanA: return self.ichimokuSpanAColor
+        case .ichimokuSpanB: return self.ichimokuSpanBColor
+        case .ichimokuChikou: return self.ichimokuChikouColor
+        case .histogramPositive: return self.increasingColor.withAlphaComponent(self.histogramAlpha)
+        case .histogramNegative: return self.decreasingColor.withAlphaComponent(self.histogramAlpha)
+        case .vwap: return self.vwapColor
+        case .newPrice: return self.newPriceColor
+        case .closeLine: return self.lineChartColor
         }
     }
 }

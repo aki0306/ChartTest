@@ -31,7 +31,7 @@ final class SafePinchCombinedChartView: CombinedChartView {
         // スクロール: 始めてよい位置かを確かめる。
         // このメソッドは、このチャートに付いているすべてのジェスチャーで呼ばれる(十字線のドラッグも含む)ので、
         // DGCharts のスクロール(delegate がこのチャートのパン)だけを対象にする
-        if isScrollGesture(gestureRecognizer), let canBeginScroll {
+        if self.isScrollGesture(gestureRecognizer), let canBeginScroll {
             if !canBeginScroll(gestureRecognizer.location(in: self)) {
                 return false
             }

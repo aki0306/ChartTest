@@ -33,17 +33,17 @@ struct IndicatorParameters {
     /// 多重移動平均線で表示する期間の一覧(本数)。
     /// 例: 最短 5・最長 75・本数 15 なら 5, 10, 15, …, 75(5 刻み)。本数 3 なら 5, 40, 75
     var multipleMAPeriods: [Int] {
-        let shortest = min(multipleMAShortestPeriod, multipleMALongestPeriod)
-        let longest = max(multipleMAShortestPeriod, multipleMALongestPeriod)
+        let shortest = min(self.multipleMAShortestPeriod, self.multipleMALongestPeriod)
+        let longest = max(self.multipleMAShortestPeriod, self.multipleMALongestPeriod)
         // 1本だけの場合は、最短の1本だけ
-        guard multipleMACount > 1 else { return [shortest] }
+        guard self.multipleMACount > 1 else { return [shortest] }
         // 最短と最長が同じ場合も、最短の1本だけ
         guard shortest < longest else { return [shortest] }
 
         // 隣の線との期間の差(例: 5〜75 を3本なら (75 - 5) ÷ 2 = 35 → 5, 40, 75)
-        let interval = Double(longest - shortest) / Double(multipleMACount - 1)
+        let interval = Double(longest - shortest) / Double(self.multipleMACount - 1)
         var periods: [Int] = []
-        for lineNumber in 0..<multipleMACount {
+        for lineNumber in 0..<self.multipleMACount {
             let period = Int((Double(shortest) + interval * Double(lineNumber)).rounded())
             // 間隔が1本未満で同じ期間が続く場合は、重ねて引かない
             if periods.last != period {
@@ -62,7 +62,7 @@ struct IndicatorParameters {
 
     /// ボリンジャーバンドで表示する σ の倍率の一覧(例: [1, 2] なら ±1σ と ±2σ)
     var bollingerSigmas: [Double] {
-        let count = max(bollingerSigmaCount, 1)
+        let count = max(self.bollingerSigmaCount, 1)
         return (1...count).map { sigma in Double(sigma) }
     }
 

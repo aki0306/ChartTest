@@ -90,24 +90,29 @@
 
 ```swift
 // Swift
-landscape.onPeriodSelect = { period in
+landscape.onPeriodSelect = { [weak landscape] period in
     // その足種のデータを API から取得して渡す(ChartResponseLoader で渡してもよい)
-    landscape.setCandles(candles, period: period)
+    landscape?.setCandles(candles, period: period)
 }
-landscape.onReload = { /* 表示中の足種のデータを取得し直して setCandles(_:period:)・updatePriceInfo を呼ぶ */ }
-landscape.onRotate = { /* 縦画面に戻す */ }
+landscape.onReload = { [weak self] in /* 表示中の足種のデータを取得し直して setCandles(_:period:)・updatePriceInfo を呼ぶ */ }
+landscape.onRotate = { [weak self] in /* 縦画面に戻す */ }
 landscape.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
 ```
 
 ```objc
 // Objective-C
+__weak LandscapeChartViewController *weakLandscape = landscape;
 landscape.onPeriodSelect = ^(ChartPeriod period) {
-    [ChartResponseLoader setResponse:responseArray period:period to:landscape];
+    [ChartResponseLoader setResponse:responseArray period:period to:weakLandscape];
 };
 landscape.onReload = ^{ /* 取得し直す */ };
 landscape.onRotate = ^{ /* 縦画面に戻す */ };
 [landscape updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
 ```
+
+> **メモリリークに注意**: `onPeriodSelect` などのクロージャ(ブロック)は `LandscapeChartViewController` が持ち続けます。
+> 中で `landscape` 自身や、`landscape` を持っている画面(`self`)を使う場合は、Swift は `[weak landscape]` / `[weak self]`、
+> Objective-C は `__weak` を付けた変数を使ってください(そのまま使うと、お互いを持ち合って解放されなくなります)。
 
 このアプリの `ViewController.swift`(`setupLandscapeFooter`)では、SampleData のデータで動かしています。
 縦画面の左下にある「国内指数/海外指数」の切り替えボタンはサンプル用で、横画面では帯と重なるので表示しません。
@@ -814,3 +819,7 @@ MainChartContent / SubChartContent(何を描くか)
 
 - 三項演算子(`a ? b : c`)や、`&&` を何行もつなげた条件式は使わない。`if` / `guard` / `switch` で1条件ずつ書く
 - 1〜2文字の変数名は使わず、意味のわかる名前にする(ループの `i` / `j` を除く)
+- 自分のプロパティ・メソッドには `self.` を付ける(UIKit から引き継いだ `view` / `bounds` / `addSubview` なども含む)。
+  ローカル変数・引数と区別しやすくするため。`if let x {` のような省略形は、そのまま使ってよい。
+  まとめて付ける場合は SwiftFormat を使う: `swiftformat ChartTest --rules redundantSelf --self insert --swiftversion 5.0`
+  (SwiftFormat は、別ファイル・別の extension で宣言したメンバーや、`if let` / `guard let` の右側には付けないので、残りは手で付ける)

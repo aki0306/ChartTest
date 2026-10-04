@@ -68,15 +68,15 @@ final class SampleData: NSObject {
     static func candles(for period: ChartPeriod) -> [StockCandle] {
         switch period {
         case .oneMinute:
-            return intradayCandles(intervalMinutes: 1)
+            return self.intradayCandles(intervalMinutes: 1)
         case .intraday:
-            return intradayCandles(intervalMinutes: 5)
+            return self.intradayCandles(intervalMinutes: 5)
         case .daily:
-            return nikkeiLike()
+            return self.nikkeiLike()
         case .weekly:
-            return weeklyCandles()
+            return self.weeklyCandles()
         case .monthly:
-            return monthlyCandles()
+            return self.monthlyCandles()
         }
     }
 
@@ -103,7 +103,7 @@ final class SampleData: NSObject {
 
         // 1本の値動きの大きさは、足の長さに合わせて変える
         let scale = Double(intervalMinutes).squareRoot()
-        return trendCandles(dates: dates, startPrice: 65_560, endPrice: 65_480,
+        return self.trendCandles(dates: dates, startPrice: 65_560, endPrice: 65_480,
                             bodySize: 12 * scale, wickSize: 8 * scale,
                             volumeRange: nil, seed: UInt64(20260929 + intervalMinutes))
     }
@@ -117,7 +117,7 @@ final class SampleData: NSObject {
         for weeksAgo in (0..<130).reversed() {
             dates.append(calendar.date(byAdding: .weekOfYear, value: -weeksAgo, to: lastFriday)!)
         }
-        return trendCandles(dates: dates, startPrice: 38_000, endPrice: 65_500,
+        return self.trendCandles(dates: dates, startPrice: 38_000, endPrice: 65_500,
                             bodySize: 1_300, wickSize: 700,
                             volumeRange: 1.6e9...3.0e9, seed: 202609)
     }
@@ -131,7 +131,7 @@ final class SampleData: NSObject {
         for monthsAgo in (0..<48).reversed() {
             dates.append(calendar.date(byAdding: .month, value: -monthsAgo, to: lastMonth)!)
         }
-        return trendCandles(dates: dates, startPrice: 32_000, endPrice: 65_500,
+        return self.trendCandles(dates: dates, startPrice: 32_000, endPrice: 65_500,
                             bodySize: 2_500, wickSize: 1_200,
                             volumeRange: 1.2e9...2.8e9, seed: 20269)
     }
@@ -187,10 +187,10 @@ final class SampleData: NSObject {
     /// SystemRandomNumberGenerator はシードを指定できないため、再現性のあるデータ生成用に用意している
     private struct SeededGenerator: RandomNumberGenerator {
         private var state: UInt64
-        init(seed: UInt64) { state = seed }
+        init(seed: UInt64) { self.state = seed }
         mutating func next() -> UInt64 {
-            state &+= 0x9E3779B97F4A7C15
-            var z = state
+            self.state &+= 0x9E3779B97F4A7C15
+            var z = self.state
             z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
             z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
             return z ^ (z >> 31)

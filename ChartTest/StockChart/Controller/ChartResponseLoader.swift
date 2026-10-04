@@ -52,27 +52,27 @@ final class ChartResponseLoader: NSObject {
 
     /// 1分足のレスポンスを渡して描画する(Objective-C: setOneMinuteResponse:to:)
     @objc static func setOneMinuteResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
-        setResponse(response, period: .oneMinute, to: target)
+        self.setResponse(response, period: .oneMinute, to: target)
     }
 
     /// 日中足のレスポンスを渡して描画する(Objective-C: setIntradayResponse:to:)
     @objc static func setIntradayResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
-        setResponse(response, period: .intraday, to: target)
+        self.setResponse(response, period: .intraday, to: target)
     }
 
     /// 日足のレスポンスを渡して描画する(Objective-C: setDailyResponse:to:)
     @objc static func setDailyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
-        setResponse(response, period: .daily, to: target)
+        self.setResponse(response, period: .daily, to: target)
     }
 
     /// 週足のレスポンスを渡して描画する(Objective-C: setWeeklyResponse:to:)
     @objc static func setWeeklyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
-        setResponse(response, period: .weekly, to: target)
+        self.setResponse(response, period: .weekly, to: target)
     }
 
     /// 月足のレスポンスを渡して描画する(Objective-C: setMonthlyResponse:to:)
     @objc static func setMonthlyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
-        setResponse(response, period: .monthly, to: target)
+        self.setResponse(response, period: .monthly, to: target)
     }
 
     /// 足種を指定してレスポンスを渡し、描画する(Objective-C: setResponse:period:to:)。

@@ -59,7 +59,7 @@ enum TechnicalIndicators {
 
     /// 移動平均乖離率(%) = (終値 − 移動平均) ÷ 移動平均 × 100
     static func movingAverageDeviation(closes: [Double], period: Int) -> [Double?] {
-        let averages = sma(closes, period: period)
+        let averages = self.sma(closes, period: period)
         return zip(closes, averages).map { close, average in
             guard let average, average != 0 else { return nil }
             return (close - average) / average * 100
@@ -74,7 +74,7 @@ enum TechnicalIndicators {
     static func bollingerBands(closes: [Double], period: Int, sigmas: [Double])
         -> (middle: [Double?], bands: [(sigma: Double, upper: [Double?], lower: [Double?])]) {
 
-        let middle = sma(closes, period: period)
+        let middle = self.sma(closes, period: period)
 
         // 各位置の標準偏差
         var deviations = [Double?](repeating: nil, count: closes.count)
@@ -133,9 +133,9 @@ enum TechnicalIndicators {
         let count = closes.count
         let offset = max(shift - 1, 0)
 
-        let tenkan = highLowMidpoint(highs: highs, lows: lows, period: tenkanPeriod)
-        let kijun = highLowMidpoint(highs: highs, lows: lows, period: kijunPeriod)
-        let spanBBase = highLowMidpoint(highs: highs, lows: lows, period: spanBPeriod)
+        let tenkan = self.highLowMidpoint(highs: highs, lows: lows, period: tenkanPeriod)
+        let kijun = self.highLowMidpoint(highs: highs, lows: lows, period: kijunPeriod)
+        let spanBBase = self.highLowMidpoint(highs: highs, lows: lows, period: spanBPeriod)
 
         // 先行スパンは offset 本先に描くので、配列の長さを offset 本ぶん延ばす
         var spanA = [Double?](repeating: nil, count: count + offset)
@@ -343,8 +343,8 @@ enum TechnicalIndicators {
 
         // ema は nil を含む配列を受け取るので、[Double] を [Double?] に変換して渡す
         let optionalCloses: [Double?] = closes.map { close in close }
-        let shortEMA = ema(optionalCloses, period: shortPeriod)
-        let longEMA = ema(optionalCloses, period: longPeriod)
+        let shortEMA = self.ema(optionalCloses, period: shortPeriod)
+        let longEMA = self.ema(optionalCloses, period: longPeriod)
 
         // MACD = 短期EMA − 長期EMA(どちらかが計算できていない位置は nil)
         var macd = [Double?](repeating: nil, count: closes.count)
@@ -354,7 +354,7 @@ enum TechnicalIndicators {
         }
 
         // シグナル = MACD の EMA
-        let signal = ema(macd, period: signalPeriod)
+        let signal = self.ema(macd, period: signalPeriod)
 
         // ヒストグラム = MACD − シグナル
         var histogram = [Double?](repeating: nil, count: closes.count)
@@ -494,11 +494,11 @@ enum TechnicalIndicators {
         let end: Double
 
         /// 上昇の線(陽線)か
-        var isUp: Bool { end > start }
+        var isUp: Bool { self.end > self.start }
         /// 線の高いほうの値
-        var high: Double { max(start, end) }
+        var high: Double { max(self.start, self.end) }
         /// 線の低いほうの値
-        var low: Double { min(start, end) }
+        var low: Double { min(self.start, self.end) }
     }
 
     /// 新値足(N本新値)。終値だけを使い、値が更新されたときだけ線を足す(時間の経過では線は増えない)。

@@ -22,17 +22,17 @@ final class ChartPeriodTabView: UIView {
 
     /// 並べる足種(左から順に)。変更するとタブを作り直す
     var periods: [ChartPeriod] = [] {
-        didSet { rebuildButtons() }
+        didSet { self.rebuildButtons() }
     }
 
     /// 選択中の足種。変更するとタブの見た目を更新する(onSelect は呼ばれない)
     var selectedPeriod: ChartPeriod? {
-        didSet { updateButtonStyles() }
+        didSet { self.updateButtonStyles() }
     }
 
     /// 選べない足種。薄いグレーにして、押せなくする
     var disabledPeriods: Set<ChartPeriod> = [] {
-        didSet { updateButtonStyles() }
+        didSet { self.updateButtonStyles() }
     }
 
     /// タブが押されたときに呼ばれる処理(押された足種が渡される)
@@ -61,30 +61,30 @@ final class ChartPeriodTabView: UIView {
     /// コードから生成された場合
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setup()
+        self.setup()
     }
 
     /// Storyboard / XIB から生成された場合
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setup()
+        self.setup()
     }
 
     /// タブを並べるスタックを、このViewいっぱいに配置する
     private func setup() {
-        backgroundColor = .clear
+        self.backgroundColor = .clear
 
-        stackView.axis = .horizontal
-        stackView.distribution = .fillEqually  // タブはすべて同じ幅にする
-        stackView.spacing = spacing
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stackView)
+        self.stackView.axis = .horizontal
+        self.stackView.distribution = .fillEqually  // タブはすべて同じ幅にする
+        self.stackView.spacing = self.spacing
+        self.stackView.translatesAutoresizingMaskIntoConstraints = false
+        self.addSubview(self.stackView)
 
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            self.stackView.topAnchor.constraint(equalTo: self.topAnchor),
+            self.stackView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            self.stackView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            self.stackView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
         ])
     }
 
@@ -93,50 +93,50 @@ final class ChartPeriodTabView: UIView {
     /// periods に合わせてタブ(ボタン)を作り直す
     private func rebuildButtons() {
         // 古いタブを取り除く
-        for button in buttons {
+        for button in self.buttons {
             button.removeFromSuperview()
         }
-        buttons = []
+        self.buttons = []
 
         // 足種ごとにタブを作って並べる
-        for period in periods {
+        for period in self.periods {
             let button = UIButton(type: .custom)
             button.setTitle(period.title, for: .normal)
             button.titleLabel?.adjustsFontSizeToFitWidth = true  // 幅が狭いときは文字を縮小する
             button.titleLabel?.minimumScaleFactor = 0.7
             button.layer.cornerRadius = 6
             button.layer.borderWidth = 1
-            button.addTarget(self, action: #selector(buttonTapped(_:)), for: .touchUpInside)
-            stackView.addArrangedSubview(button)
-            buttons.append(button)
+            button.addTarget(self, action: #selector(self.buttonTapped(_:)), for: .touchUpInside)
+            self.stackView.addArrangedSubview(button)
+            self.buttons.append(button)
         }
-        updateButtonStyles()
+        self.updateButtonStyles()
     }
 
     /// 選択中かどうかに合わせて、各タブの見た目を設定する
     private func updateButtonStyles() {
-        for (index, button) in buttons.enumerated() {
-            let isSelected = periods[index] == selectedPeriod
-            let isDisabled = disabledPeriods.contains(periods[index])
+        for (index, button) in self.buttons.enumerated() {
+            let isSelected = self.periods[index] == self.selectedPeriod
+            let isDisabled = self.disabledPeriods.contains(self.periods[index])
             button.isEnabled = !isDisabled
             if isDisabled {
                 // 選べない: 白地に薄い灰色の枠線と文字
                 button.backgroundColor = .white
-                button.layer.borderColor = disabledColor.cgColor
-                button.setTitleColor(disabledColor, for: .normal)
-                button.setTitleColor(disabledColor, for: .disabled)
+                button.layer.borderColor = self.disabledColor.cgColor
+                button.setTitleColor(self.disabledColor, for: .normal)
+                button.setTitleColor(self.disabledColor, for: .disabled)
                 button.titleLabel?.font = .systemFont(ofSize: 15)
             } else if isSelected {
                 // 選択中: 青で塗りつぶし、白の太字
-                button.backgroundColor = selectedColor
-                button.layer.borderColor = selectedColor.cgColor
+                button.backgroundColor = self.selectedColor
+                button.layer.borderColor = self.selectedColor.cgColor
                 button.setTitleColor(.white, for: .normal)
                 button.titleLabel?.font = .boldSystemFont(ofSize: 15)
             } else {
                 // 選択していない: 白地に灰色の枠線と文字
                 button.backgroundColor = .white
-                button.layer.borderColor = normalColor.cgColor
-                button.setTitleColor(normalColor, for: .normal)
+                button.layer.borderColor = self.normalColor.cgColor
+                button.setTitleColor(self.normalColor, for: .normal)
                 button.titleLabel?.font = .systemFont(ofSize: 15)
             }
         }
@@ -146,13 +146,13 @@ final class ChartPeriodTabView: UIView {
 
     /// タブが押されたら、その足種を選択中にして onSelect を呼ぶ
     @objc private func buttonTapped(_ button: UIButton) {
-        guard let index = buttons.firstIndex(of: button) else { return }
-        let period = periods[index]
+        guard let index = self.buttons.firstIndex(of: button) else { return }
+        let period = self.periods[index]
 
         // すでに選択中のタブを押した場合は何もしない
-        guard period != selectedPeriod else { return }
+        guard period != self.selectedPeriod else { return }
 
-        selectedPeriod = period
-        onSelect?(period)
+        self.selectedPeriod = period
+        self.onSelect?(period)
     }
 }

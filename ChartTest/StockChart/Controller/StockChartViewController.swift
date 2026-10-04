@@ -58,8 +58,8 @@ final class StockChartViewController: UIViewController {
     /// 移動平均線・サブなし・ローソク足 に切り替える
     @objc var market: IndexMarket = .domestic {
         didSet {
-            guard market != oldValue else { return }
-            applyMarket(previousMarket: oldValue)
+            guard self.market != oldValue else { return }
+            self.applyMarket(previousMarket: oldValue)
         }
     }
 
@@ -69,20 +69,20 @@ final class StockChartViewController: UIViewController {
 
     /// 表示中の足種の指標パラメータ。変更すると再描画する
     var parameters: IndicatorParameters {
-        get { parameters(for: period) }
+        get { self.parameters(for: self.period) }
         set {
-            parametersByPeriod[period] = newValue
-            reloadChart(keepsViewport: true)
+            self.parametersByPeriod[self.period] = newValue
+            self.reloadChart(keepsViewport: true)
         }
     }
 
     /// 表示オプション(Y軸固定・4本値)。変更すると即座にチャートへ反映する
     var displayOptions = ChartDisplayOptions() {
         didSet {
-            applyDisplayOptionsToChart()
+            self.applyDisplayOptionsToChart()
             // 設定画面でオプションを表示中なら、トグルの状態を合わせる
-            if selectedSettingsItem == .displayOptions {
-                reloadSettingsRows()
+            if self.selectedSettingsItem == .displayOptions {
+                self.reloadSettingsRows()
             }
         }
     }
@@ -92,11 +92,11 @@ final class StockChartViewController: UIViewController {
     /// 4本値は、オンにしていてもローソク足のときだけ表示する
     @objc var chartType: ChartType = .candlestick {
         didSet {
-            guard chartType != oldValue else { return }
-            menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
-            applyDisplayOptionsToChart()
-            reloadChart(keepsViewport: true)
-            onChartTypeChange?(chartType)
+            guard self.chartType != oldValue else { return }
+            self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
+            self.applyDisplayOptionsToChart()
+            self.reloadChart(keepsViewport: true)
+            self.onChartTypeChange?(self.chartType)
         }
     }
 
@@ -113,18 +113,18 @@ final class StockChartViewController: UIViewController {
     /// メインチャートに表示する指標。変更すると表示位置を保ったまま再描画する
     @objc var mainIndicator: MainChartIndicator = .movingAverage {
         didSet {
-            guard mainIndicator != oldValue else { return }
-            menuView.selectedMainIndicator = mainIndicator
-            reloadChart(keepsViewport: true)
+            guard self.mainIndicator != oldValue else { return }
+            self.menuView.selectedMainIndicator = self.mainIndicator
+            self.reloadChart(keepsViewport: true)
         }
     }
 
     /// サブチャートに表示する指標。.hidden にするとサブチャートを隠す
     @objc var subIndicator: SubChartIndicator = .volume {
         didSet {
-            guard subIndicator != oldValue else { return }
-            menuView.selectedSubIndicator = subIndicator
-            reloadChart(keepsViewport: true)
+            guard self.subIndicator != oldValue else { return }
+            self.menuView.selectedSubIndicator = self.subIndicator
+            self.reloadChart(keepsViewport: true)
         }
     }
 
@@ -132,15 +132,15 @@ final class StockChartViewController: UIViewController {
     /// テクニカル/設定のパネルと背景のグレーは、この余白に関係なく、この View の上端〜下端いっぱいに表示する。
     /// (例: この View を画面いっぱいに置き、下にボタンを並べる場合は bottom にボタンの分の余白を取る)
     @objc var chartInsets: UIEdgeInsets = .zero {
-        didSet { applyChartInsets() }
+        didSet { self.applyChartInsets() }
     }
 
     /// テクニカル/設定のパネルの下端を、セーフエリアの下端からどれだけ上で止めるか(既定は 0 = セーフエリアの下端まで)。
     /// パネルの上端は、この View の上端(セーフエリアの外)から表示する
     @objc var panelBottomInset: CGFloat = 0 {
         didSet {
-            for constraint in [menuBottomConstraint, settingsBottomConstraint] {
-                constraint?.constant = -panelBottomInset
+            for constraint in [self.menuBottomConstraint, self.settingsBottomConstraint] {
+                constraint?.constant = -self.panelBottomInset
             }
         }
     }
@@ -149,8 +149,8 @@ final class StockChartViewController: UIViewController {
     /// false にするとタブとパネルを隠し、チャートを全幅で表示する(例: 横画面のときだけ true)
     @objc var isTechnicalMenuEnabled = false {
         didSet {
-            guard isTechnicalMenuEnabled != oldValue else { return }
-            updateMenuAvailability()
+            guard self.isTechnicalMenuEnabled != oldValue else { return }
+            self.updateMenuAvailability()
         }
     }
 
@@ -186,7 +186,7 @@ final class StockChartViewController: UIViewController {
 
     /// テクニカル/設定のパネルを開いているか
     var isPanelOpen: Bool {
-        return openPanel != nil
+        return self.openPanel != nil
     }
 
     /// 設定画面の左側リストで選択中の位置
@@ -194,12 +194,12 @@ final class StockChartViewController: UIViewController {
 
     /// 設定画面の左側リストに並べる見出しと項目(指数の種類で変わる)
     private var settingsSections: [ChartSettingsSection] {
-        ChartSettingsCatalog.sections(for: market)
+        ChartSettingsCatalog.sections(for: self.market)
     }
 
     /// 設定画面で選択中の項目
     private var selectedSettingsItem: ChartSettingsItem {
-        settingsSections[selectedSettingsIndexPath.section].items[selectedSettingsIndexPath.row]
+        self.settingsSections[self.selectedSettingsIndexPath.section].items[self.selectedSettingsIndexPath.row]
     }
 
     /// 設定画面で選択中の足種(タブ)
@@ -237,13 +237,13 @@ final class StockChartViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .clear
+        self.view.backgroundColor = .clear
 
-        setupChartView()
-        setupPanels()
-        setupTabs()
-        configureSettingsView()
-        updateMenuAvailability()
+        self.setupChartView()
+        self.setupPanels()
+        self.setupTabs()
+        self.configureSettingsView()
+        self.updateMenuAvailability()
     }
 
     // MARK: - 外から呼ぶ入口
@@ -253,7 +253,7 @@ final class StockChartViewController: UIViewController {
     /// - Parameter candles: 日付の古い順に並んだローソク足データ
     @objc func setCandles(_ candles: [StockCandle]) {
         self.candles = candles
-        reloadChart(keepsViewport: false)
+        self.reloadChart(keepsViewport: false)
     }
 
     /// 足種を指定してローソク足データを設定し、描画する。
@@ -266,13 +266,13 @@ final class StockChartViewController: UIViewController {
         self.period = period
 
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
-        var newStyle = chartView.style
+        var newStyle = self.chartView.style
         newStyle.dateFormat = period.dateFormat
         newStyle.xAxisLabelCount = period.xAxisLabelCount
         newStyle.visibleCount = period.visibleCount
-        chartView.style = newStyle
+        self.chartView.style = newStyle
 
-        setCandles(candles)
+        self.setCandles(candles)
     }
 
     /// すべての足種の指標パラメータを変更して、描き直す(Swift からも使える)。
@@ -280,22 +280,22 @@ final class StockChartViewController: UIViewController {
     /// 表示中の足種だけを変える場合は parameters を、足種を指定する場合は setParameters(_:for:) を使う
     func updateParametersForAllPeriods(_ change: (inout IndicatorParameters) -> Void) {
         for period in ChartPeriod.allCases {
-            var target = parameters(for: period)
+            var target = self.parameters(for: period)
             change(&target)
-            parametersByPeriod[period] = target
+            self.parametersByPeriod[period] = target
         }
-        reloadChart(keepsViewport: true)
+        self.reloadChart(keepsViewport: true)
     }
 
     /// 指定した足種の指標パラメータを変更して、描き直す
     func setParameters(_ parameters: IndicatorParameters, for period: ChartPeriod) {
-        parametersByPeriod[period] = parameters
-        reloadChart(keepsViewport: true)
+        self.parametersByPeriod[period] = parameters
+        self.reloadChart(keepsViewport: true)
     }
 
     /// 指定した足種の指標パラメータ
     func parameters(for period: ChartPeriod) -> IndicatorParameters {
-        if let parameters = parametersByPeriod[period] {
+        if let parameters = self.parametersByPeriod[period] {
             return parameters
         }
         return period.indicatorParameters
@@ -315,14 +315,14 @@ final class StockChartViewController: UIViewController {
     /// 現在の状態から Model で描画内容を組み立て、View に表示させる
     /// - Parameter keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する
     private func reloadChart(keepsViewport: Bool) {
-        guard !candles.isEmpty else {
-            chartView.clear()
+        guard !self.candles.isEmpty else {
+            self.chartView.clear()
             return
         }
-        let builder = ChartContentBuilder(candles: candles, parameters: parameters)
-        let content = builder.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator,
-                                      market: market)
-        chartView.display(candles: content.candles,
+        let builder = ChartContentBuilder(candles: self.candles, parameters: self.parameters)
+        let content = builder.content(for: self.chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
+                                      market: self.market)
+        self.chartView.display(candles: content.candles,
                           main: content.main,
                           sub: content.sub,
                           keepsViewport: keepsViewport)
@@ -332,137 +332,137 @@ final class StockChartViewController: UIViewController {
     /// 4本値(十字線)はローソク足の4本値を表示するためのものなので、ローソク足以外(VWAP・新値足・折線チャート)では
     /// 設定がオンでも表示しない(海外指数の折線チャートも同じ。設定の値はそのまま残し、ローソク足に戻すと表示される)
     private func applyDisplayOptionsToChart() {
-        var options = displayOptions
-        if chartType != .candlestick {
+        var options = self.displayOptions
+        if self.chartType != .candlestick {
             options.showsOHLC = false
         }
         // この指数で使えないオプション(海外指数の Y軸(サブ)固定)は、オンでも効かないようにする
         // (設定の値は残すので、国内指数に戻すと元の状態で表示される)
-        let availableOptions = ChartDisplayOption.options(for: market)
+        let availableOptions = ChartDisplayOption.options(for: self.market)
         for option in ChartDisplayOption.allCases where !availableOptions.contains(option) {
             options[keyPath: option.keyPath] = false
         }
-        chartView.displayOptions = options
+        self.chartView.displayOptions = options
     }
 
     // MARK: - 組み立て
 
     /// チャートを配置する(上下右はこのViewいっぱい、左端はタブの有無で変わる)
     private func setupChartView() {
-        chartView.translatesAutoresizingMaskIntoConstraints = false
-        applyDisplayOptionsToChart()
-        view.addSubview(chartView)
+        self.chartView.translatesAutoresizingMaskIntoConstraints = false
+        self.applyDisplayOptionsToChart()
+        self.view.addSubview(self.chartView)
 
         // チャートはセーフエリアの内側に、chartInsets の余白を空けて置く(余白の値は applyChartInsets で設定)
-        let safeArea = view.safeAreaLayoutGuide
-        let leading = chartView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor)
-        let top = chartView.topAnchor.constraint(equalTo: safeArea.topAnchor)
-        let bottom = chartView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
-        let trailing = chartView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor)
+        let safeArea = self.view.safeAreaLayoutGuide
+        let leading = self.chartView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor)
+        let top = self.chartView.topAnchor.constraint(equalTo: safeArea.topAnchor)
+        let bottom = self.chartView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor)
+        let trailing = self.chartView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor)
         NSLayoutConstraint.activate([leading, top, bottom, trailing])
-        chartLeadingConstraint = leading
-        chartTopConstraint = top
-        chartBottomConstraint = bottom
-        chartTrailingConstraint = trailing
-        applyChartInsets()
+        self.chartLeadingConstraint = leading
+        self.chartTopConstraint = top
+        self.chartBottomConstraint = bottom
+        self.chartTrailingConstraint = trailing
+        self.applyChartInsets()
     }
 
     /// chartInsets とタブの有無に合わせて、チャートの位置を決める
     private func applyChartInsets() {
-        guard isViewLoaded else { return }  // viewDidLoad で改めて呼ばれる
-        chartTopConstraint?.constant = chartInsets.top
-        chartBottomConstraint?.constant = -chartInsets.bottom
-        chartTrailingConstraint?.constant = -chartInsets.right
+        guard self.isViewLoaded else { return }  // viewDidLoad で改めて呼ばれる
+        self.chartTopConstraint?.constant = self.chartInsets.top
+        self.chartBottomConstraint?.constant = -self.chartInsets.bottom
+        self.chartTrailingConstraint?.constant = -self.chartInsets.right
 
         // 左端: タブがあるときはタブの右側から表示する
-        if isTechnicalMenuEnabled {
-            chartLeadingConstraint?.constant = chartInsets.left + tabWidth + tabSpacing
+        if self.isTechnicalMenuEnabled {
+            self.chartLeadingConstraint?.constant = self.chartInsets.left + self.tabWidth + self.tabSpacing
         } else {
-            chartLeadingConstraint?.constant = chartInsets.left
+            self.chartLeadingConstraint?.constant = self.chartInsets.left
         }
-        tabClosedConstraint?.constant = chartInsets.left
+        self.tabClosedConstraint?.constant = self.chartInsets.left
     }
 
     /// 指標の選択メニューと設定画面を配置する(どちらも初期状態は閉じている)
     private func setupPanels() {
         // 背景をグレーにする半透明の黒: チャートの上・パネルの下に、このViewいっぱいに重ねる(閉じているときは隠す)
-        dimmingView.translatesAutoresizingMaskIntoConstraints = false
-        dimmingView.backgroundColor = Self.dimmingColor
-        dimmingView.alpha = 0
-        dimmingView.isHidden = true
-        dimmingView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(dimmingViewTapped)))
-        view.addSubview(dimmingView)
+        self.dimmingView.translatesAutoresizingMaskIntoConstraints = false
+        self.dimmingView.backgroundColor = Self.dimmingColor
+        self.dimmingView.alpha = 0
+        self.dimmingView.isHidden = true
+        self.dimmingView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimmingViewTapped)))
+        self.view.addSubview(self.dimmingView)
         NSLayoutConstraint.activate([
-            dimmingView.topAnchor.constraint(equalTo: view.topAnchor),
-            dimmingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            dimmingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            dimmingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            self.dimmingView.topAnchor.constraint(equalTo: self.view.topAnchor),
+            self.dimmingView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            self.dimmingView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            self.dimmingView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
 
         // パネルは、この View の上端(セーフエリアの外)から、セーフエリアの下端までに表示する。
         // 左右はセーフエリアの内側(横画面のノッチを避ける)
-        let safeArea = view.safeAreaLayoutGuide
+        let safeArea = self.view.safeAreaLayoutGuide
 
         // パネルの下端はセーフエリアの下端(ホームインジケーターの上)で止め、さらに panelBottomInset の分だけあける
-        let menuBottom = menuView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -panelBottomInset)
-        let settingsBottom = settingsView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -panelBottomInset)
-        menuBottomConstraint = menuBottom
-        settingsBottomConstraint = settingsBottom
+        let menuBottom = self.menuView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -self.panelBottomInset)
+        let settingsBottom = self.settingsView.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -self.panelBottomInset)
+        self.menuBottomConstraint = menuBottom
+        self.settingsBottomConstraint = settingsBottom
 
         // 指標の選択メニュー: このViewの左側に幅 45% で表示
-        menuView.translatesAutoresizingMaskIntoConstraints = false
-        menuView.isHidden = true
-        menuView.delegate = self
-        menuView.selectedMainIndicator = mainIndicator
-        menuView.selectedSubIndicator = subIndicator
-        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
-        menuView.availableMainIndicators = MainChartIndicator.choices(for: market)
-        menuView.availableSubIndicators = SubChartIndicator.choices(for: market)
-        view.addSubview(menuView)
+        self.menuView.translatesAutoresizingMaskIntoConstraints = false
+        self.menuView.isHidden = true
+        self.menuView.delegate = self
+        self.menuView.selectedMainIndicator = self.mainIndicator
+        self.menuView.selectedSubIndicator = self.subIndicator
+        self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
+        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market)
+        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market)
+        self.view.addSubview(self.menuView)
 
         // 設定画面: このViewの左側に幅 75% で表示(左側リスト + 右側パネル)
-        settingsView.translatesAutoresizingMaskIntoConstraints = false
-        settingsView.isHidden = true
-        settingsView.delegate = self
-        view.addSubview(settingsView)
+        self.settingsView.translatesAutoresizingMaskIntoConstraints = false
+        self.settingsView.isHidden = true
+        self.settingsView.delegate = self
+        self.view.addSubview(self.settingsView)
 
         NSLayoutConstraint.activate([
-            menuView.topAnchor.constraint(equalTo: view.topAnchor),
+            self.menuView.topAnchor.constraint(equalTo: self.view.topAnchor),
             menuBottom,
-            menuView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
-            menuView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.45),
+            self.menuView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            self.menuView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.45),
 
-            settingsView.topAnchor.constraint(equalTo: view.topAnchor),
+            self.settingsView.topAnchor.constraint(equalTo: self.view.topAnchor),
             settingsBottom,
-            settingsView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
-            settingsView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.75),
+            self.settingsView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+            self.settingsView.widthAnchor.constraint(equalTo: safeArea.widthAnchor, multiplier: 0.75),
         ])
     }
 
     /// テクニカル/設定タブを縦に並べて配置する
     private func setupTabs() {
-        configureTabButton(technicalTabButton, title: "テクニカル", action: #selector(technicalTabTapped))
-        configureTabButton(settingsTabButton, title: "設定", action: #selector(settingsTabTapped))
+        self.configureTabButton(self.technicalTabButton, title: "テクニカル", action: #selector(self.technicalTabTapped))
+        self.configureTabButton(self.settingsTabButton, title: "設定", action: #selector(self.settingsTabTapped))
 
-        tabStack.addArrangedSubview(technicalTabButton)
-        tabStack.addArrangedSubview(settingsTabButton)
-        tabStack.axis = .vertical
-        tabStack.spacing = 4
-        tabStack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(tabStack)
+        self.tabStack.addArrangedSubview(self.technicalTabButton)
+        self.tabStack.addArrangedSubview(self.settingsTabButton)
+        self.tabStack.axis = .vertical
+        self.tabStack.spacing = 4
+        self.tabStack.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(self.tabStack)
 
         // タブの左端は、開いているパネルによって切り替える
-        tabClosedConstraint = tabStack.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor)
-        tabTechnicalOpenedConstraint = tabStack.leadingAnchor.constraint(equalTo: menuView.trailingAnchor)
-        tabSettingsOpenedConstraint = tabStack.leadingAnchor.constraint(equalTo: settingsView.trailingAnchor)
+        self.tabClosedConstraint = self.tabStack.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor)
+        self.tabTechnicalOpenedConstraint = self.tabStack.leadingAnchor.constraint(equalTo: self.menuView.trailingAnchor)
+        self.tabSettingsOpenedConstraint = self.tabStack.leadingAnchor.constraint(equalTo: self.settingsView.trailingAnchor)
 
         NSLayoutConstraint.activate([
-            tabStack.topAnchor.constraint(equalTo: chartView.topAnchor),  // チャートの上端に揃える
-            tabStack.widthAnchor.constraint(equalToConstant: tabWidth),
-            technicalTabButton.heightAnchor.constraint(equalToConstant: 120),
-            settingsTabButton.heightAnchor.constraint(equalToConstant: 72),
+            self.tabStack.topAnchor.constraint(equalTo: self.chartView.topAnchor),  // チャートの上端に揃える
+            self.tabStack.widthAnchor.constraint(equalToConstant: self.tabWidth),
+            self.technicalTabButton.heightAnchor.constraint(equalToConstant: 120),
+            self.settingsTabButton.heightAnchor.constraint(equalToConstant: 72),
         ])
-        tabClosedConstraint?.isActive = true
+        self.tabClosedConstraint?.isActive = true
     }
 
     /// タブの見た目を設定する(縦書き・赤背景・右側の角だけ丸める)
@@ -483,44 +483,44 @@ final class StockChartViewController: UIViewController {
 
     /// isTechnicalMenuEnabled に合わせて、タブの表示とチャートの左端位置を切り替える
     private func updateMenuAvailability() {
-        guard isViewLoaded else { return }  // viewDidLoad で改めて呼ばれる
+        guard self.isViewLoaded else { return }  // viewDidLoad で改めて呼ばれる
 
-        tabStack.isHidden = !isTechnicalMenuEnabled
+        self.tabStack.isHidden = !self.isTechnicalMenuEnabled
         // タブがあるときはタブの右側から、ないときは左端からチャートを表示する
-        applyChartInsets()
-        if !isTechnicalMenuEnabled {
+        self.applyChartInsets()
+        if !self.isTechnicalMenuEnabled {
             // タブがないときは、開いているパネルを閉じる
-            setOpenPanel(nil, animated: false)
+            self.setOpenPanel(nil, animated: false)
         }
     }
 
     /// 「テクニカル」タブがタップされたら、指標の選択メニューを開閉する
     @objc private func technicalTabTapped() {
-        togglePanel(.technical)
+        self.togglePanel(.technical)
     }
 
     /// 「設定」タブがタップされたら、設定画面を開閉する
     @objc private func settingsTabTapped() {
-        togglePanel(.settings)
+        self.togglePanel(.settings)
     }
 
     /// 背景のグレーの部分がタップされたら、開いているパネルを閉じる
     @objc private func dimmingViewTapped() {
-        closePanels()
+        self.closePanels()
     }
 
     /// 開いているパネル(テクニカル/設定)を閉じる。
     /// 設定画面で「決定」していない変更は捨てる
     @objc func closePanels() {
-        setOpenPanel(nil, animated: true)
+        self.setOpenPanel(nil, animated: true)
     }
 
     /// 指定したパネルが開いていれば閉じ、閉じていれば開く
     private func togglePanel(_ panel: Panel) {
-        if openPanel == panel {
-            setOpenPanel(nil, animated: true)
+        if self.openPanel == panel {
+            self.setOpenPanel(nil, animated: true)
         } else {
-            setOpenPanel(panel, animated: true)
+            self.setOpenPanel(panel, animated: true)
         }
     }
 
@@ -533,20 +533,20 @@ final class StockChartViewController: UIViewController {
     private func setOpenPanel(_ panel: Panel?, animated: Bool) {
         // 設定画面を新しく開くときは、今のパラメータから編集用のコピーを作り直す
         if panel == .settings {
-            if openPanel != .settings {
-                beginSettingsEditing()
+            if self.openPanel != .settings {
+                self.beginSettingsEditing()
             }
         }
 
         // パネルを開く/閉じるが切り替わるときは、外の画面にも知らせる(背景をグレーにするため)
-        let wasOpen = isPanelOpen
-        openPanel = panel
-        if wasOpen != isPanelOpen {
-            onPanelVisibilityChange?(isPanelOpen)
+        let wasOpen = self.isPanelOpen
+        self.openPanel = panel
+        if wasOpen != self.isPanelOpen {
+            self.onPanelVisibilityChange?(self.isPanelOpen)
         }
 
-        updateTabPosition()
-        showOpeningPanelTransparently()
+        self.updateTabPosition()
+        self.showOpeningPanelTransparently()
         if animated {
             UIView.animate(withDuration: 0.25, animations: {
                 self.applyPanelAlpha()
@@ -554,38 +554,38 @@ final class StockChartViewController: UIViewController {
                 self.hideClosedPanels()
             })
         } else {
-            applyPanelAlpha()
-            hideClosedPanels()
+            self.applyPanelAlpha()
+            self.hideClosedPanels()
         }
     }
 
     /// パネルの種類と、そのパネルの View の組
     private var panelViews: [(kind: Panel, view: UIView)] {
-        return [(kind: .technical, view: menuView), (kind: .settings, view: settingsView)]
+        return [(kind: .technical, view: self.menuView), (kind: .settings, view: self.settingsView)]
     }
 
     /// タブの位置を、開いているパネルに合わせる(先に全部無効にしてから、対応する制約だけを有効にする)
     private func updateTabPosition() {
-        for constraint in [tabClosedConstraint, tabTechnicalOpenedConstraint, tabSettingsOpenedConstraint] {
+        for constraint in [self.tabClosedConstraint, self.tabTechnicalOpenedConstraint, self.tabSettingsOpenedConstraint] {
             constraint?.isActive = false
         }
-        switch openPanel {
+        switch self.openPanel {
         case .technical:
-            tabTechnicalOpenedConstraint?.isActive = true
+            self.tabTechnicalOpenedConstraint?.isActive = true
         case .settings:
-            tabSettingsOpenedConstraint?.isActive = true
+            self.tabSettingsOpenedConstraint?.isActive = true
         case nil:
-            tabClosedConstraint?.isActive = true
+            self.tabClosedConstraint?.isActive = true
         }
     }
 
     /// 開くパネルと背景のグレーを、フェードインできるよう透明な状態で表示しておく
     private func showOpeningPanelTransparently() {
-        if isPanelOpen {
-            dimmingView.isHidden = false
+        if self.isPanelOpen {
+            self.dimmingView.isHidden = false
         }
-        for panel in panelViews {
-            guard panel.kind == openPanel else { continue }  // 開くパネルだけが対象
+        for panel in self.panelViews {
+            guard panel.kind == self.openPanel else { continue }  // 開くパネルだけが対象
             guard panel.view.isHidden else { continue }      // すでに表示中ならそのまま
             panel.view.isHidden = false
             panel.view.alpha = 0
@@ -595,28 +595,28 @@ final class StockChartViewController: UIViewController {
     /// フェードの最後の状態にする: 開いているパネルは不透明・それ以外は透明。
     /// 背景のグレーは、どちらかのパネルを開いているときだけ表示する
     private func applyPanelAlpha() {
-        for panel in panelViews {
-            if panel.kind == openPanel {
+        for panel in self.panelViews {
+            if panel.kind == self.openPanel {
                 panel.view.alpha = 1
             } else {
                 panel.view.alpha = 0
             }
         }
-        if isPanelOpen {
-            dimmingView.alpha = 1
+        if self.isPanelOpen {
+            self.dimmingView.alpha = 1
         } else {
-            dimmingView.alpha = 0
+            self.dimmingView.alpha = 0
         }
-        view.layoutIfNeeded()  // タブの移動もアニメーションさせる
+        self.view.layoutIfNeeded()  // タブの移動もアニメーションさせる
     }
 
     /// 閉じ終わったパネル(と、パネルを閉じたときは背景のグレー)を隠して、タッチを受けないようにする
     private func hideClosedPanels() {
-        for panel in panelViews where panel.kind != openPanel {
+        for panel in self.panelViews where panel.kind != self.openPanel {
             panel.view.isHidden = true
         }
-        if !isPanelOpen {
-            dimmingView.isHidden = true
+        if !self.isPanelOpen {
+            self.dimmingView.isHidden = true
         }
     }
 
@@ -626,35 +626,35 @@ final class StockChartViewController: UIViewController {
     /// - Parameter previousMarket: 変える前の指数の種類(設定画面で選んでいた項目を探すのに使う)
     private func applyMarket(previousMarket: IndexMarket) {
         // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
-        menuView.allowsOnlyNone = !chartType.usesTechnicalIndicators(in: market)
-        menuView.availableMainIndicators = MainChartIndicator.choices(for: market)
-        menuView.availableSubIndicators = SubChartIndicator.choices(for: market)
+        self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
+        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market)
+        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market)
 
         // 選べない指標・チャートの種類を選んでいた場合は、選べるものに切り替える
         // (それぞれの didSet でも描き直すが、最後にまとめて描き直す)
-        if !MainChartIndicator.choices(for: market).contains(mainIndicator) {
-            mainIndicator = .movingAverage
+        if !MainChartIndicator.choices(for: self.market).contains(self.mainIndicator) {
+            self.mainIndicator = .movingAverage
         }
-        if !SubChartIndicator.choices(for: market).contains(subIndicator) {
-            subIndicator = .hidden
+        if !SubChartIndicator.choices(for: self.market).contains(self.subIndicator) {
+            self.subIndicator = .hidden
         }
-        if !ChartType.choices(for: market).contains(chartType) {
-            chartType = .candlestick
+        if !ChartType.choices(for: self.market).contains(self.chartType) {
+            self.chartType = .candlestick
         }
 
-        applyDisplayOptionsToChart()
-        reloadChart(keepsViewport: true)
+        self.applyDisplayOptionsToChart()
+        self.reloadChart(keepsViewport: true)
 
         // 設定画面の左側リストを作り直す。編集中の内容(「決定」前の値)は残す。
         // 選んでいた項目が新しいリストにもあればその選択を残し、なければ先頭の「オプション」に戻す
-        guard isViewLoaded else { return }  // viewDidLoad で作られる
-        let previousItem = settingsItem(at: selectedSettingsIndexPath, in: previousMarket)
-        selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
-        if let previousItem, let indexPath = indexPathInSettingsList(of: previousItem) {
-            selectedSettingsIndexPath = indexPath
+        guard self.isViewLoaded else { return }  // viewDidLoad で作られる
+        let previousItem = self.settingsItem(at: self.selectedSettingsIndexPath, in: previousMarket)
+        self.selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
+        if let previousItem, let indexPath = self.indexPathInSettingsList(of: previousItem) {
+            self.selectedSettingsIndexPath = indexPath
         }
-        reloadSettingsList()
-        reloadSettingsRows()
+        self.reloadSettingsList()
+        self.reloadSettingsRows()
     }
 
     /// 指定した指数の種類のリストで、指定した位置にある項目(範囲外なら nil)
@@ -668,7 +668,7 @@ final class StockChartViewController: UIViewController {
 
     /// 今の指数の種類のリストで、指定した項目がある位置(なければ nil)
     private func indexPathInSettingsList(of item: ChartSettingsItem) -> IndexPath? {
-        for (sectionIndex, section) in settingsSections.enumerated() {
+        for (sectionIndex, section) in self.settingsSections.enumerated() {
             if let row = section.items.firstIndex(of: item) {
                 return IndexPath(row: row, section: sectionIndex)
             }
@@ -680,60 +680,60 @@ final class StockChartViewController: UIViewController {
 
     /// 設定画面を用意する(左側リストを作り、編集を始める)
     private func configureSettingsView() {
-        reloadSettingsList()
-        beginSettingsEditing()
+        self.reloadSettingsList()
+        self.beginSettingsEditing()
     }
 
     /// 設定画面の左側リストと足種のタブを、指数の種類に合わせて作る
     /// (海外指数は、左側リストの項目が少なく、足種のタブは 日足・週足・月足 だけ)
     private func reloadSettingsList() {
         // 足種のタブ: 指数の種類で使う足種だけを並べる(海外指数は 1分足・日中足のタブを出さない)
-        settingsView.periods = market.periods
+        self.settingsView.periods = self.market.periods
 
         // 見出しごとに、項目の名称(「移動平均線」など)を並べる
         var sections: [ChartSettingsView.Section] = []
-        for section in settingsSections {
+        for section in self.settingsSections {
             let itemTitles = section.items.map { item in item.title }
             sections.append(ChartSettingsView.Section(title: section.title, items: itemTitles))
         }
-        settingsView.sections = sections
-        settingsView.selectedIndexPath = selectedSettingsIndexPath
+        self.settingsView.sections = sections
+        self.settingsView.selectedIndexPath = self.selectedSettingsIndexPath
     }
 
     /// 設定画面での編集を始める(今のパラメータから編集用のコピーを作り、タブは表示中の足種にする)
     private func beginSettingsEditing() {
-        draftParametersByPeriod = parametersByPeriod
-        settingsPeriod = period
-        reloadSettingsRows()
+        self.draftParametersByPeriod = self.parametersByPeriod
+        self.settingsPeriod = self.period
+        self.reloadSettingsRows()
     }
 
     /// 選択中の項目・足種に合わせて、設定画面の足種のタブと右側の行を作る
     private func reloadSettingsRows() {
-        switch selectedSettingsItem {
+        switch self.selectedSettingsItem {
         case .displayOptions:
             // 表示オプション: トグル(足種ごとではないので、タブと下のボタンは隠す)
-            settingsView.showsPeriodControls = false
+            self.settingsView.showsPeriodControls = false
             // 並べるオプションは指数の種類で変わる(海外指数は Y軸(サブ)固定を除く)
-            settingsView.rows = ChartDisplayOption.options(for: market).map { option in
-                .toggle(title: option.title, isOn: displayOptions[keyPath: option.keyPath])
+            self.settingsView.rows = ChartDisplayOption.options(for: self.market).map { option in
+                .toggle(title: option.title, isOn: self.displayOptions[keyPath: option.keyPath])
             }
         case let item:
-            settingsView.showsPeriodControls = true
+            self.settingsView.showsPeriodControls = true
 
             // この項目を設定できない足種(移動平均線以外の1分足・日中足)はグレーにする。
             // 選択中の足種が設定できない足種なら、日足に切り替える
-            let availablePeriods = settingsPeriods(for: item)
-            if !availablePeriods.contains(settingsPeriod) {
-                settingsPeriod = .daily
+            let availablePeriods = self.settingsPeriods(for: item)
+            if !availablePeriods.contains(self.settingsPeriod) {
+                self.settingsPeriod = .daily
             }
-            settingsView.disabledPeriods = Set(ChartPeriod.allCases.filter { period in
+            self.settingsView.disabledPeriods = Set(ChartPeriod.allCases.filter { period in
                 !availablePeriods.contains(period)
             })
-            settingsView.selectedPeriod = settingsPeriod
+            self.settingsView.selectedPeriod = self.settingsPeriod
 
             // 指標: パラメータごとに 名称 + −/+ ボタン + スライダー(編集中の値を表示する)
-            let draft = draftParameters(for: settingsPeriod)
-            settingsView.rows = ChartSettingsCatalog.fields(for: item).map { field in
+            let draft = self.draftParameters(for: self.settingsPeriod)
+            self.settingsView.rows = ChartSettingsCatalog.fields(for: item).map { field in
                 .stepper(title: field.title, value: field.value(in: draft),
                          range: field.range, step: field.step, fractionDigits: field.fractionDigits)
             }
@@ -744,16 +744,16 @@ final class StockChartViewController: UIViewController {
     /// 海外指数では、どの項目も1分足・日中足は設定できない
     private func settingsPeriods(for item: ChartSettingsItem) -> [ChartPeriod] {
         return ChartSettingsCatalog.periods(for: item).filter { period in
-            market.periods.contains(period)
+            self.market.periods.contains(period)
         }
     }
 
     /// 編集中の、指定した足種のパラメータ
     private func draftParameters(for period: ChartPeriod) -> IndicatorParameters {
-        if let parameters = draftParametersByPeriod[period] {
+        if let parameters = self.draftParametersByPeriod[period] {
             return parameters
         }
-        return parameters(for: period)
+        return self.parameters(for: period)
     }
 
     /// 選択中の項目のパラメータの値を、指定した値で上書きする(編集中のパラメータに対して)
@@ -761,11 +761,11 @@ final class StockChartViewController: UIViewController {
     ///   - source: 値の取り出し元
     ///   - period: 上書きする足種
     private func copySelectedItemValues(from source: IndicatorParameters, to period: ChartPeriod) {
-        var target = draftParameters(for: period)
-        for field in ChartSettingsCatalog.fields(for: selectedSettingsItem) {
+        var target = self.draftParameters(for: period)
+        for field in ChartSettingsCatalog.fields(for: self.selectedSettingsItem) {
             field.setValue(field.value(in: source), in: &target)
         }
-        draftParametersByPeriod[period] = target
+        self.draftParametersByPeriod[period] = target
     }
 }
 
@@ -774,11 +774,11 @@ final class StockChartViewController: UIViewController {
 extension StockChartViewController: TechnicalMenuViewDelegate {
 
     func technicalMenuView(_ menuView: TechnicalMenuView, didSelectMainIndicator indicator: MainChartIndicator) {
-        mainIndicator = indicator
+        self.mainIndicator = indicator
     }
 
     func technicalMenuView(_ menuView: TechnicalMenuView, didSelectSubIndicator indicator: SubChartIndicator) {
-        subIndicator = indicator
+        self.subIndicator = indicator
     }
 }
 
@@ -788,53 +788,53 @@ extension StockChartViewController: ChartSettingsViewDelegate {
 
     /// 左側リストの項目が選ばれたら、右側をその項目の設定に切り替える
     func settingsView(_ settingsView: ChartSettingsView, didSelectItemAt indexPath: IndexPath) {
-        selectedSettingsIndexPath = indexPath
+        self.selectedSettingsIndexPath = indexPath
         settingsView.selectedIndexPath = indexPath
-        reloadSettingsRows()
+        self.reloadSettingsRows()
     }
 
     /// トグル(表示オプション)が切り替えられたら、対応するオプションを更新する
     func settingsView(_ settingsView: ChartSettingsView, didToggleRowAt index: Int, isOn: Bool) {
         // 行の並びは reloadSettingsRows の .displayOptions と同じ(指数の種類で使えるオプションの順)
-        let options = ChartDisplayOption.options(for: market)
+        let options = ChartDisplayOption.options(for: self.market)
         guard options.indices.contains(index) else { return }
-        displayOptions[keyPath: options[index].keyPath] = isOn
+        self.displayOptions[keyPath: options[index].keyPath] = isOn
     }
 
     /// 足種のタブが選ばれたら、その足種の設定に切り替える
     func settingsView(_ settingsView: ChartSettingsView, didSelectPeriod period: ChartPeriod) {
-        settingsPeriod = period
-        reloadSettingsRows()
+        self.settingsPeriod = period
+        self.reloadSettingsRows()
     }
 
     /// 数値(指標パラメータ)が変更されたら、編集中のパラメータを更新する(チャートへの反映は「決定」のとき)
     func settingsView(_ settingsView: ChartSettingsView, didChangeValueAt index: Int, value: Double) {
-        let fields = ChartSettingsCatalog.fields(for: selectedSettingsItem)
+        let fields = ChartSettingsCatalog.fields(for: self.selectedSettingsItem)
         guard fields.indices.contains(index) else { return }
-        var draft = draftParameters(for: settingsPeriod)
+        var draft = self.draftParameters(for: self.settingsPeriod)
         fields[index].setValue(value, in: &draft)
-        draftParametersByPeriod[settingsPeriod] = draft
+        self.draftParametersByPeriod[self.settingsPeriod] = draft
     }
 
     /// 「すべての足に反映」: 表示中の値を、この項目を設定できるすべての足種にコピーする(編集中のパラメータに対して)
     func settingsViewDidTapApplyToAllPeriods(_ settingsView: ChartSettingsView) {
-        let source = draftParameters(for: settingsPeriod)
-        for period in settingsPeriods(for: selectedSettingsItem) {
-            copySelectedItemValues(from: source, to: period)
+        let source = self.draftParameters(for: self.settingsPeriod)
+        for period in self.settingsPeriods(for: self.selectedSettingsItem) {
+            self.copySelectedItemValues(from: source, to: period)
         }
     }
 
     /// 「初期値に戻す」: 表示中の足種の、この項目の値を初期値に戻す(編集中のパラメータに対して)
     func settingsViewDidTapReset(_ settingsView: ChartSettingsView) {
-        copySelectedItemValues(from: settingsPeriod.indicatorParameters, to: settingsPeriod)
-        reloadSettingsRows()
+        self.copySelectedItemValues(from: self.settingsPeriod.indicatorParameters, to: self.settingsPeriod)
+        self.reloadSettingsRows()
     }
 
     /// 「決定」: 編集中のパラメータをチャートに反映し、設定画面を閉じる
     func settingsViewDidTapConfirm(_ settingsView: ChartSettingsView) {
-        parametersByPeriod = draftParametersByPeriod
-        reloadChart(keepsViewport: true)
-        setOpenPanel(nil, animated: true)
+        self.parametersByPeriod = self.draftParametersByPeriod
+        self.reloadChart(keepsViewport: true)
+        self.setOpenPanel(nil, animated: true)
     }
 }
 
@@ -848,37 +848,37 @@ extension StockChartViewController {
 
     /// 短期移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var shortMAPeriod: Int {
-        get { parameters.shortMAPeriod }
-        set { updateParametersForAllPeriods { parameters in parameters.shortMAPeriod = newValue } }
+        get { self.parameters.shortMAPeriod }
+        set { self.updateParametersForAllPeriods { parameters in parameters.shortMAPeriod = newValue } }
     }
 
     /// 長期移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var longMAPeriod: Int {
-        get { parameters.longMAPeriod }
-        set { updateParametersForAllPeriods { parameters in parameters.longMAPeriod = newValue } }
+        get { self.parameters.longMAPeriod }
+        set { self.updateParametersForAllPeriods { parameters in parameters.longMAPeriod = newValue } }
     }
 
     /// 出来高移動平均の期間(本数)。設定するとすべての足種に反映する
     @objc var volumeMAPeriod: Int {
-        get { parameters.volumeMAPeriod }
-        set { updateParametersForAllPeriods { parameters in parameters.volumeMAPeriod = newValue } }
+        get { self.parameters.volumeMAPeriod }
+        set { self.updateParametersForAllPeriods { parameters in parameters.volumeMAPeriod = newValue } }
     }
 
     /// Y軸(メイン)固定
     @objc var isMainYAxisFixed: Bool {
-        get { displayOptions.isMainYAxisFixed }
-        set { displayOptions.isMainYAxisFixed = newValue }
+        get { self.displayOptions.isMainYAxisFixed }
+        set { self.displayOptions.isMainYAxisFixed = newValue }
     }
 
     /// Y軸(サブ)固定
     @objc var isSubYAxisFixed: Bool {
-        get { displayOptions.isSubYAxisFixed }
-        set { displayOptions.isSubYAxisFixed = newValue }
+        get { self.displayOptions.isSubYAxisFixed }
+        set { self.displayOptions.isSubYAxisFixed = newValue }
     }
 
     /// 4本値(十字線と、その足の日付・始値・高値・安値・終値を表示する)
     @objc var showsOHLC: Bool {
-        get { displayOptions.showsOHLC }
-        set { displayOptions.showsOHLC = newValue }
+        get { self.displayOptions.showsOHLC }
+        set { self.displayOptions.showsOHLC = newValue }
     }
 }

@@ -31,33 +31,33 @@ final class CrosshairOverlayView: UIView {
 
     /// 線の色
     var lineColor: UIColor = .black {
-        didSet { applyLineStyle() }
+        didSet { self.applyLineStyle() }
     }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setup()
+        self.setup()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setup()
+        self.setup()
     }
 
     private func setup() {
-        isUserInteractionEnabled = false
-        backgroundColor = .clear
-        for line in [verticalLine, horizontalLine] {
-            layer.addSublayer(line)
+        self.isUserInteractionEnabled = false
+        self.backgroundColor = .clear
+        for line in [self.verticalLine, self.horizontalLine] {
+            self.layer.addSublayer(line)
         }
-        applyLineStyle()
-        hide()
+        self.applyLineStyle()
+        self.hide()
     }
 
     /// 線の色・太さを設定する(実線)
     private func applyLineStyle() {
-        for line in [verticalLine, horizontalLine] {
-            line.strokeColor = lineColor.cgColor
+        for line in [self.verticalLine, self.horizontalLine] {
+            line.strokeColor = self.lineColor.cgColor
             line.lineWidth = 1
             line.lineDashPattern = nil  // 破線にせず、実線で引く
             line.fillColor = nil
@@ -81,9 +81,9 @@ final class CrosshairOverlayView: UIView {
             let path = UIBezierPath()
             path.move(to: CGPoint(x: x, y: verticalRange.lowerBound))
             path.addLine(to: CGPoint(x: x, y: verticalRange.upperBound))
-            verticalLine.path = path.cgPath
+            self.verticalLine.path = path.cgPath
         } else {
-            verticalLine.path = nil
+            self.verticalLine.path = nil
         }
 
         // 横線: (左端, y) から (右端, y) まで
@@ -91,9 +91,9 @@ final class CrosshairOverlayView: UIView {
             let path = UIBezierPath()
             path.move(to: CGPoint(x: horizontalRange.lowerBound, y: y))
             path.addLine(to: CGPoint(x: horizontalRange.upperBound, y: y))
-            horizontalLine.path = path.cgPath
+            self.horizontalLine.path = path.cgPath
         } else {
-            horizontalLine.path = nil
+            self.horizontalLine.path = nil
         }
 
         CATransaction.commit()
@@ -103,8 +103,8 @@ final class CrosshairOverlayView: UIView {
     func hide() {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        verticalLine.path = nil
-        horizontalLine.path = nil
+        self.verticalLine.path = nil
+        self.horizontalLine.path = nil
         CATransaction.commit()
     }
 }
@@ -140,53 +140,53 @@ final class OHLCInfoView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        setup()
+        self.setup()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        setup()
+        self.setup()
     }
 
     /// 3行のラベルを縦に並べる
     private func setup() {
-        isUserInteractionEnabled = false
-        backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        layer.cornerRadius = 6
+        self.isUserInteractionEnabled = false
+        self.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        self.layer.cornerRadius = 6
 
-        dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        dateLabel.textAlignment = .center
-        for label in [upperLabel, lowerLabel] {
+        self.dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        self.dateLabel.textAlignment = .center
+        for label in [self.upperLabel, self.lowerLabel] {
             // 数字の幅をそろえる(値が変わっても文字の位置がずれないように)
             label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         }
-        for label in [dateLabel, upperLabel, lowerLabel] {
+        for label in [self.dateLabel, self.upperLabel, self.lowerLabel] {
             label.textColor = .white
         }
 
-        let stack = UIStackView(arrangedSubviews: [dateLabel, upperLabel, lowerLabel])
+        let stack = UIStackView(arrangedSubviews: [self.dateLabel, self.upperLabel, self.lowerLabel])
         stack.axis = .vertical
         stack.spacing = 2
         stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
+        self.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 6),
-            stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -10),
+            stack.topAnchor.constraint(equalTo: self.topAnchor, constant: 6),
+            stack.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -6),
+            stack.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 10),
+            stack.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -10),
         ])
     }
 
     /// 表示する足を設定する
     func update(with candle: StockCandle) {
-        dateLabel.text = dateFormatter.string(from: candle.date)
-        upperLabel.text = "始値：\(format(candle.open))  高値：\(format(candle.high))"
-        lowerLabel.text = "安値：\(format(candle.low))  終値：\(format(candle.close))"
+        self.dateLabel.text = self.dateFormatter.string(from: candle.date)
+        self.upperLabel.text = "始値：\(self.format(candle.open))  高値：\(self.format(candle.high))"
+        self.lowerLabel.text = "安値：\(self.format(candle.low))  終値：\(self.format(candle.close))"
     }
 
     /// 価格を文字列にする
     private func format(_ value: Double) -> String {
-        priceFormatter.string(from: NSNumber(value: value)) ?? ""
+        self.priceFormatter.string(from: NSNumber(value: value)) ?? ""
     }
 }
 
@@ -216,15 +216,15 @@ final class CrosshairMarkerLabel: UILabel {
     let shape: Shape
     /// 背景の塗り色
     var fillColor: UIColor = .darkGray {
-        didSet { setNeedsDisplay() }
+        didSet { self.setNeedsDisplay() }
     }
     /// 背景の画像。設定すると、形を fillColor で塗る代わりにこの画像を描く(nil なら形を塗る)。
     /// 文字ありの場合は文字の大きさに合わせて伸ばすので、伸ばしたくない部分は
     /// resizableImage(withCapInsets:resizingMode:) で指定した画像を渡す
     var backgroundImage: UIImage? {
         didSet {
-            invalidateIntrinsicContentSize()
-            setNeedsDisplay()
+            self.invalidateIntrinsicContentSize()
+            self.setNeedsDisplay()
         }
     }
 
@@ -233,21 +233,21 @@ final class CrosshairMarkerLabel: UILabel {
 
     /// 文字の周りの余白(形に合わせて尖った部分のぶんを空ける)
     private var padding: UIEdgeInsets {
-        switch shape {
+        switch self.shape {
         case .hexagon: return UIEdgeInsets(top: 3, left: 12, bottom: 3, right: 12)
-        case .arrowUp: return UIEdgeInsets(top: 1 + tipLength, left: 6, bottom: 1, right: 6)
-        case .arrowLeft: return UIEdgeInsets(top: 3, left: 4 + tipLength, bottom: 3, right: 4)
+        case .arrowUp: return UIEdgeInsets(top: 1 + self.tipLength, left: 6, bottom: 1, right: 6)
+        case .arrowLeft: return UIEdgeInsets(top: 3, left: 4 + self.tipLength, bottom: 3, right: 4)
         }
     }
 
     init(shape: Shape) {
         self.shape = shape
         super.init(frame: .zero)
-        isUserInteractionEnabled = false
-        backgroundColor = .clear  // 背景は draw で形に沿って塗る
-        textColor = .white
-        textAlignment = .center
-        font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+        self.isUserInteractionEnabled = false
+        self.backgroundColor = .clear  // 背景は draw で形に沿って塗る
+        self.textColor = .white
+        self.textAlignment = .center
+        self.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
     }
 
     required init?(coder: NSCoder) {
@@ -258,7 +258,7 @@ final class CrosshairMarkerLabel: UILabel {
     ///   ・文字なし・画像あり: 画像の大きさそのまま
     ///   ・それ以外: 中身(文字、または文字なしの固定サイズ)+ 余白。画像ありなら画像より小さくしない
     override var intrinsicContentSize: CGSize {
-        let hasText = !(text ?? "").isEmpty
+        let hasText = !(self.text ?? "").isEmpty
         if !hasText {
             if let backgroundImage {
                 return backgroundImage.size
@@ -268,10 +268,10 @@ final class CrosshairMarkerLabel: UILabel {
         // 中身の大きさ: 文字ありなら文字の大きさ、文字なしなら形ごとの固定サイズ
         var contentSize = super.intrinsicContentSize
         if !hasText {
-            contentSize = noTextContentSize
+            contentSize = self.noTextContentSize
         }
-        var size = CGSize(width: contentSize.width + padding.left + padding.right,
-                          height: contentSize.height + padding.top + padding.bottom)
+        var size = CGSize(width: contentSize.width + self.padding.left + self.padding.right,
+                          height: contentSize.height + self.padding.top + self.padding.bottom)
 
         // 画像ありなら、画像より小さくはしない(文字が短くても画像の形が崩れないように)
         if let backgroundImage {
@@ -283,7 +283,7 @@ final class CrosshairMarkerLabel: UILabel {
 
     /// 文字なしのときの中身の大きさ(余白を除く)
     private var noTextContentSize: CGSize {
-        switch shape {
+        switch self.shape {
         case .arrowUp:
             // 日付の欄の矢印: 余白を含めて 24 x 20(日付ラベルの欄の高さに合わせる)
             return CGSize(width: 12, height: 12)
@@ -295,23 +295,23 @@ final class CrosshairMarkerLabel: UILabel {
     /// 背景(画像、または形に沿った塗り)を描き、その上に文字を描く
     override func draw(_ rect: CGRect) {
         if let backgroundImage {
-            backgroundImage.draw(in: bounds)
+            backgroundImage.draw(in: self.bounds)
         } else {
-            fillColor.setFill()
-            makeShapePath(in: bounds).fill()
+            self.fillColor.setFill()
+            self.makeShapePath(in: self.bounds).fill()
         }
         super.draw(rect)  // drawText(in:) が呼ばれる
     }
 
     /// 余白の内側に文字を描く
     override func drawText(in rect: CGRect) {
-        super.drawText(in: rect.inset(by: padding))
+        super.drawText(in: rect.inset(by: self.padding))
     }
 
     /// マーカーの形のパスを作る
     private func makeShapePath(in rect: CGRect) -> UIBezierPath {
         let path = UIBezierPath()
-        switch shape {
+        switch self.shape {
         case .hexagon:
             let tip = rect.height / 2
             path.move(to: CGPoint(x: rect.minX, y: rect.midY))
@@ -322,16 +322,16 @@ final class CrosshairMarkerLabel: UILabel {
             path.addLine(to: CGPoint(x: rect.minX + tip, y: rect.maxY))
         case .arrowUp:
             path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + tipLength))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + self.tipLength))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + tipLength))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + self.tipLength))
         case .arrowLeft:
             path.move(to: CGPoint(x: rect.minX, y: rect.midY))
-            path.addLine(to: CGPoint(x: rect.minX + tipLength, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX + self.tipLength, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX + tipLength, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + self.tipLength, y: rect.maxY))
         }
         path.close()
         return path
@@ -345,7 +345,7 @@ final class CrosshairMarkerLabel: UILabel {
     ///   - alignRight: true の場合、anchor.x にマーカーの右端を合わせる(false なら中心を合わせる)
     func show(_ text: String?, anchor: CGPoint, within bounds: CGRect, alignRight: Bool = false) {
         self.text = text
-        let size = intrinsicContentSize
+        let size = self.intrinsicContentSize
         var origin = CGPoint.zero
 
         // 横位置: alignRight なら anchor.x に右端を、そうでなければ中心を合わせる
@@ -356,7 +356,7 @@ final class CrosshairMarkerLabel: UILabel {
         }
 
         // 縦位置: 上向き矢印は先端(上端)を anchor.y に、それ以外は縦方向の中心を合わせる
-        switch shape {
+        switch self.shape {
         case .arrowUp:
             origin.y = anchor.y
         case .hexagon, .arrowLeft:
@@ -366,8 +366,8 @@ final class CrosshairMarkerLabel: UILabel {
         // 範囲の端ではみ出さないよう内側に寄せる
         origin.x = min(max(origin.x, bounds.minX), bounds.maxX - size.width)
         origin.y = min(max(origin.y, bounds.minY), bounds.maxY - size.height)
-        frame = CGRect(origin: origin, size: size)
-        isHidden = false
-        setNeedsDisplay()
+        self.frame = CGRect(origin: origin, size: size)
+        self.isHidden = false
+        self.setNeedsDisplay()
     }
 }

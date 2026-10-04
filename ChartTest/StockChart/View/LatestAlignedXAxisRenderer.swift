@@ -63,16 +63,16 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
         }
 
         // 1. 何本おきに置くかを決める
-        guard let step = labelStep(visibleMin: visibleMin, visibleMax: visibleMax, latestIndex: latestIndex) else {
-            setLabelIndexes([])
+        guard let step = self.labelStep(visibleMin: visibleMin, visibleMax: visibleMax, latestIndex: latestIndex) else {
+            self.setLabelIndexes([])
             return
         }
 
         // 2. 最新の足から左へ step 本おきに、画面に表示できる足を選ぶ
-        let indexes = labelIndexes(from: latestIndex, step: step, visibleMin: visibleMin, visibleMax: visibleMax)
+        let indexes = self.labelIndexes(from: latestIndex, step: step, visibleMin: visibleMin, visibleMax: visibleMax)
 
         // 3. 選んだ足をラベルの位置として DGCharts に渡す
-        setLabelIndexes(indexes)
+        self.setLabelIndexes(indexes)
     }
 
     /// ラベルを置く足を、最新の足から左へ step 本おきに選ぶ
@@ -90,7 +90,7 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
                 continue
             }
             // 文字が画面からはみ出す足には置かない
-            if !labelFitsInChart(at: position) {
+            if !self.labelFitsInChart(at: position) {
                 continue
             }
             indexes.append(position)
@@ -101,20 +101,20 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
 
     /// ラベルの位置を DGCharts に渡す(ラベルの大きさの計算もし直す)
     private func setLabelIndexes(_ indexes: [Double]) {
-        axis.entries = indexes
-        axis.centeredEntries = []
-        axis.decimals = 0
-        computeSize()
+        self.axis.entries = indexes
+        self.axis.centeredEntries = []
+        self.axis.decimals = 0
+        self.computeSize()
     }
 
     // MARK: - 何本おきに置くか
 
     /// ラベルを何本おきに置くか(1本おき以上)。ラベルを置けない場合は nil
     private func labelStep(visibleMin: Double, visibleMax: Double, latestIndex: Int) -> Int? {
-        if labelSpacing > 0 {
-            return labelStepBySpacing(visibleMin: visibleMin, latestIndex: latestIndex)
+        if self.labelSpacing > 0 {
+            return self.labelStepBySpacing(visibleMin: visibleMin, latestIndex: latestIndex)
         }
-        return labelStepByCount(visibleMin: visibleMin, visibleMax: visibleMax)
+        return self.labelStepByCount(visibleMin: visibleMin, visibleMax: visibleMax)
     }
 
     /// 間隔を指定しない場合: 画面に axis.labelCount 個くらい並ぶ本数おき
@@ -123,7 +123,7 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
         let visibleCandleCount = visibleMax - visibleMin  // 画面に表示されている本数
         guard visibleCandleCount > 0 else { return nil }
 
-        let labelCount = axis.labelCount
+        let labelCount = self.axis.labelCount
         guard labelCount >= 2 else { return nil }
 
         // ラベルが labelCount 個なら、ラベルとラベルの間は (labelCount - 1) か所
@@ -134,11 +134,11 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     /// 間隔を指定した場合: 「日付の文字の幅 + 間隔」が空く、一番少ない本数おき
     /// 例) 足1本の幅 = 18pt、日付の幅 = 26pt、間隔 = 12pt → (26 + 12) ÷ 18 = 2.1… → 3本おき
     private func labelStepBySpacing(visibleMin: Double, latestIndex: Int) -> Int? {
-        let candleWidth = candleWidthInPoints()
+        let candleWidth = self.candleWidthInPoints()
         guard candleWidth > 0 else { return nil }
 
         // 隣のラベルとの間に必要な幅 = 日付の文字の幅 + 間隔
-        let requiredWidth = widestLabelWidth(visibleMin: visibleMin, latestIndex: latestIndex) + labelSpacing
+        let requiredWidth = self.widestLabelWidth(visibleMin: visibleMin, latestIndex: latestIndex) + self.labelSpacing
 
         // 必要な幅を空けるには、足が何本分あればよいか(切り上げ)
         let step = (requiredWidth / candleWidth).rounded(.up)
@@ -157,8 +157,8 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     /// 日付によって文字の幅が変わる(「9/1」と「10/31」など)ので、画面の左端の足と最新の足を比べて広い方を使う
     private func widestLabelWidth(visibleMin: Double, latestIndex: Int) -> CGFloat {
         let leftmostIndex = max(visibleMin.rounded(.up), 0)
-        let leftmostWidth = labelWidth(at: leftmostIndex)
-        let latestWidth = labelWidth(at: Double(latestIndex))
+        let leftmostWidth = self.labelWidth(at: leftmostIndex)
+        let latestWidth = self.labelWidth(at: Double(latestIndex))
         return max(leftmostWidth, latestWidth)
     }
 
@@ -166,14 +166,14 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
 
     /// 指定した足のラベルの文字の幅(pt)
     private func labelWidth(at index: Double) -> CGFloat {
-        let text = labelText(at: index)
-        return (text as NSString).size(withAttributes: [.font: axis.labelFont]).width
+        let text = self.labelText(at: index)
+        return (text as NSString).size(withAttributes: [.font: self.axis.labelFont]).width
     }
 
     /// 指定した足のラベルの文字(日付)
     private func labelText(at index: Double) -> String {
-        guard let formatter = axis.valueFormatter else { return "" }
-        return formatter.stringForValue(index, axis: axis)
+        guard let formatter = self.axis.valueFormatter else { return "" }
+        return formatter.stringForValue(index, axis: self.axis)
     }
 
     /// 指定した足の中心にラベルを描いたとき、チャートの範囲に収まるか。
@@ -181,15 +181,15 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     private func labelFitsInChart(at index: Double) -> Bool {
         guard let transformer else { return false }
 
-        let halfWidth = labelWidth(at: index) / 2
+        let halfWidth = self.labelWidth(at: index) / 2
         let centerX = transformer.pixelForValues(x: index, y: 0).x  // 足の中心
 
         let labelLeft = centerX - halfWidth
         let labelRight = centerX + halfWidth
-        if labelLeft < viewPortHandler.contentLeft {
+        if labelLeft < self.viewPortHandler.contentLeft {
             return false
         }
-        if labelRight > viewPortHandler.chartWidth {
+        if labelRight > self.viewPortHandler.chartWidth {
             return false
         }
         return true

@@ -32,8 +32,8 @@ final class DateAxisValueFormatter: AxisValueFormatter {
     func stringForValue(_ value: Double, axis: AxisBase?) -> String {
         let index = Int(value.rounded())
         // 範囲外(前後の余白部分・一目均衡表の先行スパンの先)は空文字
-        guard dates.indices.contains(index) else { return "" }
-        return formatter.string(from: dates[index])
+        guard self.dates.indices.contains(index) else { return "" }
+        return self.formatter.string(from: self.dates[index])
     }
 }
 
@@ -58,13 +58,13 @@ final class ChartAxisValueFormatter: AxisValueFormatter {
     }
 
     func stringForValue(_ value: Double, axis: AxisBase?) -> String {
-        if isNearBottom(value, axis: axis) {
+        if self.isNearBottom(value, axis: axis) {
             return ""
         }
-        if isAboveHiddenLimit(value) {
+        if self.isAboveHiddenLimit(value) {
             return ""
         }
-        return formatter.string(from: NSNumber(value: value)) ?? ""
+        return self.formatter.string(from: NSNumber(value: value)) ?? ""
     }
 
     /// 軸の下端付近(下から hiddenBottomRatio の割合以内)の値か
@@ -73,7 +73,7 @@ final class ChartAxisValueFormatter: AxisValueFormatter {
         guard axis.axisRange > 0 else { return false }
         // 軸の下端を 0、上端を 1 としたときの位置
         let positionFromBottom = (value - axis.axisMinimum) / axis.axisRange
-        return positionFromBottom < hiddenBottomRatio
+        return positionFromBottom < self.hiddenBottomRatio
     }
 
     /// hiddenAbove より大きい値か。

@@ -41,32 +41,32 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        self.view.backgroundColor = .white
 
         // データを渡す前に埋め込んでおく(チャートが正しいサイズで初期表示位置を計算できるように)
-        embed(portraitViewController)
-        embed(landscapeViewController)
-        applyLayout(isLandscape: view.bounds.width > view.bounds.height)
+        self.embed(self.portraitViewController)
+        self.embed(self.landscapeViewController)
+        self.applyLayout(isLandscape: self.view.bounds.width > self.view.bounds.height)
 
         // 縦画面: 足種のタブで切り替えるたびに、その足種のデータを読み込む
-        portraitViewController.candleLoader = { period in
+        self.portraitViewController.candleLoader = { period in
             return SampleData.candles(for: period)
         }
 
         // 横画面: 下の帯のボタンが押されたときの処理
-        setupLandscapeFooter()
+        self.setupLandscapeFooter()
 
         // 国内指数/海外指数の切り替えボタン(最初は国内指数)
-        setupMarketControl()
-        showCharts(for: .domestic)
+        self.setupMarketControl()
+        self.showCharts(for: .domestic)
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         // 画面の縦横が変わったら表示を切り替える
-        let isLandscape = view.bounds.width > view.bounds.height
-        if isLandscape != isLandscapeLayout {
-            applyLayout(isLandscape: isLandscape)
+        let isLandscape = self.view.bounds.width > self.view.bounds.height
+        if isLandscape != self.isLandscapeLayout {
+            self.applyLayout(isLandscape: isLandscape)
         }
     }
 
@@ -74,15 +74,15 @@ class ViewController: UIViewController {
 
     /// 子 ViewController を画面いっぱいに埋め込む
     private func embed(_ child: UIViewController) {
-        addChild(child)
+        self.addChild(child)
         let childView = child.view!
         childView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(childView)
+        self.view.addSubview(childView)
         NSLayoutConstraint.activate([
-            childView.topAnchor.constraint(equalTo: view.topAnchor),
-            childView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            childView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            childView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            childView.topAnchor.constraint(equalTo: self.view.topAnchor),
+            childView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            childView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            childView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
         child.didMove(toParent: self)
     }
@@ -91,22 +91,22 @@ class ViewController: UIViewController {
 
     /// 切り替えボタンを左下に置く(チャート画面より手前)
     private func setupMarketControl() {
-        marketControl.selectedSegmentIndex = 0
-        marketControl.addTarget(self, action: #selector(marketControlChanged), for: .valueChanged)
-        marketControl.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(marketControl)
+        self.marketControl.selectedSegmentIndex = 0
+        self.marketControl.addTarget(self, action: #selector(self.marketControlChanged), for: .valueChanged)
+        self.marketControl.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(self.marketControl)
         NSLayoutConstraint.activate([
-            marketControl.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            marketControl.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
-            marketControl.heightAnchor.constraint(equalToConstant: 36),
+            self.marketControl.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            self.marketControl.bottomAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            self.marketControl.heightAnchor.constraint(equalToConstant: 36),
         ])
     }
 
     /// 切り替えボタンが押されたら、選ばれた指数の種類で表示し直す
     @objc private func marketControlChanged() {
-        let index = marketControl.selectedSegmentIndex
-        guard marketChoices.indices.contains(index) else { return }
-        showCharts(for: marketChoices[index])
+        let index = self.marketControl.selectedSegmentIndex
+        guard self.marketChoices.indices.contains(index) else { return }
+        self.showCharts(for: self.marketChoices[index])
     }
 
     /// 縦画面・横画面のチャートを、指定した指数の種類で表示し直す。
@@ -117,13 +117,13 @@ class ViewController: UIViewController {
     /// (サンプルなので、海外指数でも同じダミーデータを使う)
     private func showCharts(for market: IndexMarket) {
         // 縦画面: タブに並ぶ足種が変わり、選択中の足種で描き直す
-        portraitViewController.market = market
-        portraitViewController.reloadChart()
+        self.portraitViewController.market = market
+        self.portraitViewController.reloadChart()
 
         // 横画面: 日足のデータを渡すと描画される。下の帯の指数名・現在値も変える
-        landscapeViewController.chartViewController.market = market
-        landscapeViewController.setCandles(SampleData.candles(for: .daily), period: .daily)
-        updateLandscapePriceInfo()
+        self.landscapeViewController.chartViewController.market = market
+        self.landscapeViewController.setCandles(SampleData.candles(for: .daily), period: .daily)
+        self.updateLandscapePriceInfo()
     }
 
     // MARK: - 横画面の下の帯
@@ -132,18 +132,18 @@ class ViewController: UIViewController {
     /// (サンプルなので SampleData から読み込む。実際のアプリでは API から取得して setCandles(_:period:) で渡す)
     private func setupLandscapeFooter() {
         // 足種が選ばれたら、その足種のデータを渡す(足種のボタンの表示も切り替わる)
-        landscapeViewController.onPeriodSelect = { [weak self] period in
+        self.landscapeViewController.onPeriodSelect = { [weak self] period in
             self?.landscapeViewController.setCandles(SampleData.candles(for: period), period: period)
         }
         // 更新: 表示中の足種のデータを読み込み直し、現在値も更新する
-        landscapeViewController.onReload = { [weak self] in
+        self.landscapeViewController.onReload = { [weak self] in
             guard let self else { return }
             let period = self.landscapeViewController.chartViewController.period
             self.landscapeViewController.setCandles(SampleData.candles(for: period), period: period)
             self.updateLandscapePriceInfo()
         }
         // 縦画面に戻す
-        landscapeViewController.onRotate = { [weak self] in
+        self.landscapeViewController.onRotate = { [weak self] in
             self?.view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
         }
     }
@@ -153,20 +153,20 @@ class ViewController: UIViewController {
     private func updateLandscapePriceInfo() {
         guard let latest = SampleData.candles(for: .oneMinute).last else { return }
         var name = "日経平均"
-        if landscapeViewController.chartViewController.market == .overseas {
+        if self.landscapeViewController.chartViewController.market == .overseas {
             name = "NYダウ"
         }
-        landscapeViewController.updatePriceInfo(name: name, price: latest.close, date: latest.date)
+        self.landscapeViewController.updatePriceInfo(name: name, price: latest.close, date: latest.date)
     }
 
     // MARK: - Layout switching
 
     /// 縦画面/横画面のチャートを切り替える
     private func applyLayout(isLandscape: Bool) {
-        isLandscapeLayout = isLandscape
-        portraitViewController.view.isHidden = isLandscape
-        landscapeViewController.view.isHidden = !isLandscape
+        self.isLandscapeLayout = isLandscape
+        self.portraitViewController.view.isHidden = isLandscape
+        self.landscapeViewController.view.isHidden = !isLandscape
         // 切り替えボタンは縦画面だけ(横画面では下の帯の文字と重なるため)
-        marketControl.isHidden = isLandscape
+        self.marketControl.isHidden = isLandscape
     }
 }

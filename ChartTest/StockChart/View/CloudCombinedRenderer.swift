@@ -39,7 +39,7 @@ nonisolated final class CloudCombinedRenderer: CombinedChartRenderer {
         if let cloud {
             if let chart {
                 MainActor.assumeIsolated {
-                    drawCloud(cloud, chart: chart, context: context)
+                    self.drawCloud(cloud, chart: chart, context: context)
                 }
             }
         }
@@ -61,7 +61,7 @@ nonisolated final class CloudCombinedRenderer: CombinedChartRenderer {
         context.saveGState()
         defer { context.restoreGState() }
         // 描画領域の外(軸ラベル部分など)にはみ出さないようにクリップする
-        context.clip(to: viewPortHandler.contentRect)
+        context.clip(to: self.viewPortHandler.contentRect)
 
         /// チャート座標の点列を画面座標に変換して塗りつぶす
         func fill(_ points: [(x: Double, y: Double)], color: UIColor) {
