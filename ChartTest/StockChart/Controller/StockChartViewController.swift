@@ -252,6 +252,9 @@ final class StockChartViewController: UIViewController {
     /// Objective-C からは `[chartViewController setCandles:candles]` で呼び出せる。
     /// - Parameter candles: 日付の古い順に並んだローソク足データ
     @objc func setCandles(_ candles: [StockCandle]) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles) }) else { return }
+
         self.candles = candles
         self.reloadChart(keepsViewport: false)
     }
@@ -263,6 +266,9 @@ final class StockChartViewController: UIViewController {
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
     ///   - period: 足種
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period) }) else { return }
+
         self.period = period
 
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)

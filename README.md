@@ -527,30 +527,44 @@ NSArray<StockCandle *> *candles = [SampleData candlesForPeriod:ChartPeriodDaily]
 
 ### 2. 足種のタブ付きの縦画面(PortraitChartViewController)
 
-指数の種類と、「足種を指定してデータを読み込む処理」を渡します。タブが押されるたびにその処理が呼ばれ、足種に合った設定で描き直されます。
+タブが押されたら「選ばれた足種」が知らされるので、その足種のデータを取得して渡します(横画面の下の帯と同じ形)。
+データは届いたときに渡せばよく、**どのスレッドから渡してもかまいません**(通信の完了処理から直接渡せます)。
 
 ```swift
 // Swift
 let viewController = PortraitChartViewController.instantiate()   // Portrait.storyboard から生成
 viewController.market = .domestic                                // 国内指数(海外指数なら .overseas)
-viewController.candleLoader = { period in
-    return SampleData.candles(for: period)                       // 実際のアプリでは API から取得する
+viewController.onPeriodSelect = { [weak viewController] period in
+    // 既存アプリの通信処理で、その足種のデータを取得する(例)
+    api.fetchCandles(period) { candles in
+        viewController?.setCandles(candles, period: period)      // 届いたら渡す
+    }
 }
-viewController.reloadChart()                                     // 選択中の足種(最初は日足)を表示
+viewController.reloadChart()                                     // 選択中の足種(最初は日足)を読み込む
 ```
 
 ```objc
 // Objective-C
 PortraitChartViewController *viewController = [PortraitChartViewController instantiate];
 viewController.market = IndexMarketDomestic;                     // 国内指数(海外指数なら IndexMarketOverseas)
-viewController.candleLoader = ^NSArray<StockCandle *> *(ChartPeriod period) {
-    return [SampleData candlesForPeriod:period];                 // 実際のアプリでは API から取得する
+__weak PortraitChartViewController *weakViewController = viewController;
+viewController.onPeriodSelect = ^(ChartPeriod period) {
+    // 既存アプリの通信処理で、その足種のレスポンス(辞書の配列)を取得する(例)
+    [api fetchCandlesWithPeriod:period completion:^(NSArray *responseArray) {
+        [ChartResponseLoader setResponse:responseArray period:period to:weakViewController];   // 届いたら渡す
+    }];
 };
-[viewController reloadChart];                                    // 選択中の足種(最初は日足)を表示
+[viewController reloadChart];                                    // 選択中の足種(最初は日足)を読み込む
 ```
 
+- `onPeriodSelect` の中で画面や `self` を使うときは、`[weak …]` / `__weak` で受けてください(使わないと、画面が解放されなくなります)
+- データをその場で用意できる場合(サンプルの `SampleData` など)は、代わりに `candleLoader` に「足種を受け取って配列を返す処理」を設定することもできます(両方を設定した場合は `candleLoader` を使います)
+
+  ```swift
+  viewController.candleLoader = { period in SampleData.candles(for: period) }
+  ```
+
 作った `viewController` は、子 ViewController として画面に埋め込むか、そのまま表示します。
-`candleLoader` は今はデータをその場で返す(同期)形です。API から非同期で取得する場合は、形を変える必要があります。
 
 ### 3. チャートだけを置く(StockChartView)
 
@@ -812,7 +826,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
-| `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
+| `PortraitChartViewController` | `instantiate`、`market`、`onPeriodSelect`、`setCandles(_:period:)`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし)、`updatePriceInfo`、`onPeriodSelect`、`onReload`、`onRotate` | `onPanelVisibilityChange` |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
@@ -863,7 +877,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 ### API のレスポンス(足種ごと)を渡す
 
 既存アプリで足種ごとに取得したレスポンス(辞書の配列)は、[`ChartResponseLoader`](ChartTest/StockChart/Controller/ChartResponseLoader.swift) のメソッドでチャートに渡せます。
-縦画面・横画面に関係なく、どこからでも呼べます。引数は Swift では `[[String: Any]]`、Objective-C では `NSArray<NSDictionary *> *` なので、`NSMutableArray` のまま渡せます(並び順は問いません。日付の古い順に並べ替えて描きます)。
+縦画面・横画面に関係なく、どこからでも呼べます。**どのスレッドから呼んでもかまいません**(通信の完了処理から直接呼べます。描画は自動でメインスレッドに切り替えて行います)。引数は Swift では `[[String: Any]]`、Objective-C では `NSArray<NSDictionary *> *` なので、`NSMutableArray` のまま渡せます(並び順は問いません。日付の古い順に並べ替えて描きます)。
 
 | 足種 | Objective-C | Swift |
 |---|---|---|
@@ -881,6 +895,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 | `StockChartView` | 既存アプリの縦画面などに、チャートだけを置く場合 |
 | `StockChartViewController` | テクニカル・設定画面付きのチャートを埋め込む場合 |
 | `LandscapeChartViewController` | このアプリの横画面をそのまま使う場合 |
+| `PortraitChartViewController` | このアプリの縦画面(足種のタブ付き)をそのまま使う場合 |
 
 ```objc
 // Objective-C: レスポンスの辞書を配列に入れて、そのまま渡す
@@ -1035,11 +1050,14 @@ ChartTest/
    │       ├─ ChartPeriodTabView.swift          足種のタブ(縦画面の上・設定画面の上)
    │       └─ ChartFooterView.swift / .xib      横画面の下の帯
    │
-   └─ Controller/                       状態を持ち、Model と View をつなぐ
-       ├─ StockChartViewController.swift    ★ テクニカル・設定画面付きのチャート
-       ├─ PortraitChartViewController.swift 縦画面(+ Portrait.storyboard)
-       ├─ LandscapeChartViewController.swift 横画面(+ Landscape.storyboard)
-       └─ ChartResponseLoader.swift         API のレスポンスをチャートに渡す
+   ├─ Controller/                       状態を持ち、Model と View をつなぐ
+   │   ├─ StockChartViewController.swift    ★ テクニカル・設定画面付きのチャート
+   │   ├─ PortraitChartViewController.swift 縦画面(+ Portrait.storyboard)
+   │   ├─ LandscapeChartViewController.swift 横画面(+ Landscape.storyboard)
+   │   └─ ChartResponseLoader.swift         API のレスポンスをチャートに渡す
+   │
+   └─ Common/                           Model・View・Controller の共通部品
+       └─ MainThread.swift                  データを受け取る入口を、必ずメインスレッドで動かす
 
 docs/images/                            README の画像
 ```

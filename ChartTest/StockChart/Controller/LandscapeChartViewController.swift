@@ -268,6 +268,9 @@ final class LandscapeChartViewController: UIViewController {
     ///   - date: 現在値の日時。「MM/dd HH:mm」で表示する
     @objc(updatePriceInfoWithName:price:date:)
     func updatePriceInfo(name: String, price: Double, date: Date) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.updatePriceInfo(name: name, price: price, date: date) }) else { return }
+
         self.loadViewIfNeeded()
         self.footerView.updatePriceInfo(name: name, price: price, date: date)
     }
@@ -276,12 +279,18 @@ final class LandscapeChartViewController: UIViewController {
 
     /// ローソク足データを設定して描画する
     @objc func setCandles(_ candles: [StockCandle]) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles) }) else { return }
+
         self.chartViewController.setCandles(candles)
     }
 
     /// 足種を指定してローソク足データを設定し、描画する(足種ごとの指標パラメータ・日付の書式で表示する)。
     /// 足種のボタンの表示も、この足種に合わせる
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period) }) else { return }
+
         self.chartViewController.setCandles(candles, period: period)
         self.updatePeriodMenu()
     }

@@ -48,9 +48,10 @@ class ViewController: UIViewController {
         self.embed(self.landscapeViewController)
         self.applyLayout(isLandscape: self.view.bounds.width > self.view.bounds.height)
 
-        // 縦画面: 足種のタブで切り替えるたびに、その足種のデータを読み込む
-        self.portraitViewController.candleLoader = { period in
-            return SampleData.candles(for: period)
+        // 縦画面: 足種のタブが押されたら、その足種のデータを渡す。
+        // 実際のアプリでは、ここで API から取得し、届いたら setCandles(_:period:) で渡す(どのスレッドから渡してもよい)
+        self.portraitViewController.onPeriodSelect = { [weak self] period in
+            self?.portraitViewController.setCandles(SampleData.candles(for: period), period: period)
         }
 
         // 横画面: 下の帯のボタンが押されたときの処理

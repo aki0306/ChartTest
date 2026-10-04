@@ -265,6 +265,11 @@ final class StockChartView: UIView {
     ///   - sub: サブチャートの内容。nil の場合はサブチャートを隠し、メインチャートを全高で表示する
     ///   - keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する(指標の切り替え時など)
     func display(candles: [StockCandle], main: MainChartContent, sub: SubChartContent?, keepsViewport: Bool = false) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: {
+            self.display(candles: candles, main: main, sub: sub, keepsViewport: keepsViewport)
+        }) else { return }
+
         // 維持する表示位置・拡大率(nil = 初期表示位置に戻す)。内容を差し替える前に取得しておく
         var keptMatrix: CGAffineTransform?
         if keepsViewport {
@@ -295,6 +300,8 @@ final class StockChartView: UIView {
 
     /// 表示内容をすべて消す(Objective-C からは [chartView clear])
     @objc func clear() {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.clear() }) else { return }
         self.candles = []
         self.mainContent = MainChartContent()
         self.subContent = nil
@@ -434,6 +441,9 @@ extension StockChartView {
     ///   - period: 足種
     ///   - market: 指数の種類
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod, market: IndexMarket) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period, market: market) }) else { return }
+
         self.market = market
 
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)

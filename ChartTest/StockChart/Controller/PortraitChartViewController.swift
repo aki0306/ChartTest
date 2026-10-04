@@ -13,24 +13,41 @@
 //   │                            │
 //   └────────────────────────────┘
 //
-//  ・タブで足種を選ぶと、その足種のデータを読み込み(candleLoader)、足種に合った設定で描き直す
+//  ・タブで足種を選ぶと、その足種のデータを読み込み、足種に合った設定で描き直す。データの渡し方は2通り
+//      A. onPeriodSelect(おすすめ。API から非同期で取得する場合)
+//         タブが押されると onPeriodSelect が呼ばれる → データを取得 → 届いたら setCandles(_:period:) で渡す
+//         (ChartResponseLoader の描画先にもできる。どのスレッドから渡してもよい)
+//      B. candleLoader(データをその場で返せる場合。サンプルの SampleData など)
+//         タブが押されると candleLoader が呼ばれ、返した配列をすぐに描く
+//      両方を設定した場合は candleLoader を使う
 //  ・選べる足種は指数の種類で変わる(国内: 5種類、海外: 日足・週足・月足)
 //  ・チャートの View(StockChartView)は storyboard に直接配置してあり、StockChartViewController は経由しない
 //  ・チャートの大きさは storyboard(左端から 5pt・右端まで・高さ 208pt)、見た目は applyChartStyle で決めている
 //
-//  使い方(Swift):
+//  使い方(Swift。A: 非同期):
 //      let viewController = PortraitChartViewController.instantiate()
 //      viewController.market = .domestic                                   // 国内指数(海外指数なら .overseas)
-//      viewController.candleLoader = { period in SampleData.candles(for: period) }
-//      viewController.reloadChart()                                        // 選択中の足種(最初は日足)を表示
+//      viewController.onPeriodSelect = { [weak viewController] period in
+//          api.fetchCandles(period) { candles in                           // 既存アプリの通信処理(どのスレッドで終わってもよい)
+//              viewController?.setCandles(candles, period: period)
+//          }
+//      }
+//      viewController.reloadChart()                                        // 選択中の足種(最初は日足)を読み込む
 //
-//  使い方(Objective-C):
+//  使い方(Objective-C。A: 非同期):
 //      PortraitChartViewController *viewController = [PortraitChartViewController instantiate];
 //      viewController.market = IndexMarketDomestic;
-//      viewController.candleLoader = ^NSArray<StockCandle *> *(ChartPeriod period) {
-//          return [SampleData candlesForPeriod:period];
+//      __weak PortraitChartViewController *weakViewController = viewController;
+//      viewController.onPeriodSelect = ^(ChartPeriod period) {
+//          [api fetchCandlesWithPeriod:period completion:^(NSArray *responseArray) {
+//              [ChartResponseLoader setResponse:responseArray period:period to:weakViewController];
+//          }];
 //      };
 //      [viewController reloadChart];
+//
+//  使い方(B: その場で返す):
+//      viewController.candleLoader = { period in SampleData.candles(for: period) }
+//      viewController.reloadChart()
 //
 
 import UIKit
@@ -60,8 +77,13 @@ final class PortraitChartViewController: UIViewController {
         }
     }
 
-    /// 足種を指定してローソク足データを読み込む処理。タブが押されるたびに呼ばれる。
-    /// (サンプルでは SampleData から返している。実際のアプリでは API から取得する処理に差し替える)
+    /// 足種が選ばれたとき(タブが押されたとき・reloadChart)に呼ばれる処理(非同期でデータを取得する場合に使う)。
+    /// その足種のデータを取得して、届いたら setCandles(_:period:) で渡す(どのスレッドから渡してもよい)。
+    /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
+    @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
+
+    /// 足種を指定してローソク足データをその場で返す処理(データをすぐに用意できる場合に使う)。
+    /// タブが押されるたびに呼ばれ、返した配列をすぐに描く。API から非同期で取得する場合は onPeriodSelect を使う。
     /// Objective-C ではブロック `NSArray<StockCandle *> *(^)(ChartPeriod period)` として設定する
     @objc var candleLoader: ((ChartPeriod) -> [StockCandle])?
 
@@ -118,18 +140,42 @@ final class PortraitChartViewController: UIViewController {
     // MARK: - 外から呼ぶ
 
     /// 選択中の足種のデータを読み込み直して描画する
+    ///   ・candleLoader がある: その場でデータを受け取って描く
+    ///   ・onPeriodSelect がある: onPeriodSelect を呼ぶ(データは、届いたら setCandles(_:period:) で渡してもらう)
+    ///   ・どちらもない: データなし(「現在、指定の条件で表示できる情報はありません。」)で描く
     @objc func reloadChart() {
-        self.loadViewIfNeeded()
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.reloadChart() }) else { return }
 
-        // データを読み込み、足種・指数の種類に合った設定で描画する
-        // (X軸の書式・初期表示本数・移動平均の期間・出来高の凡例名が足種ごとに変わる。
-        //  海外指数は、ローソク足 + 移動平均線で、サブチャート(出来高)なし)。
-        // データが0件の場合は「現在、指定の条件で表示できる情報はありません。」と表示される
-        var candles: [StockCandle] = []
+        self.loadViewIfNeeded()
+        let period = self.selectedPeriod
+
         if let candleLoader {
-            candles = candleLoader(self.selectedPeriod)
+            self.setCandles(candleLoader(period), period: period)
+            return
         }
-        self.chartView.setCandles(candles, period: self.selectedPeriod, market: self.market)
+        if let onPeriodSelect {
+            onPeriodSelect(period)
+            return
+        }
+        self.setCandles([], period: period)
+    }
+
+    /// 足種を指定してローソク足データを渡し、描画する(onPeriodSelect で取得したデータを渡すのに使う)。
+    /// 足種・指数の種類に合った設定で描く(X軸の書式・初期表示本数・移動平均の期間・出来高の凡例名が足種ごとに変わる。
+    /// 海外指数は、ローソク足 + 移動平均線で、サブチャート(出来高)なし)。タブの選択もこの足種に合わせる。
+    /// どのスレッドから呼んでもよい。データが0件の場合は「現在、指定の条件で表示できる情報はありません。」と表示される
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
+    @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period) }) else { return }
+
+        self.loadViewIfNeeded()
+        self.selectedPeriod = period
+        self.periodTabView.selectedPeriod = period
+        self.chartView.setCandles(candles, period: period, market: self.market)
     }
 
     // MARK: - タブ
@@ -152,3 +198,8 @@ final class PortraitChartViewController: UIViewController {
         self.reloadChart()
     }
 }
+
+// MARK: - API のレスポンスの描画先にする
+
+/// ChartResponseLoader の描画先にできるようにする(setCandles(_:period:) は上で定義済み)
+extension PortraitChartViewController: StockCandleReceiving {}
