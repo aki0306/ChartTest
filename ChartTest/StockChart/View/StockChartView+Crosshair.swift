@@ -377,8 +377,7 @@ extension StockChartView {
         let priceArea = self.priceChart.convert(self.priceChart.viewPortHandler.contentRect, to: self)
         if (priceArea.minY...priceArea.maxY).contains(y) {
             let value = self.axisValue(of: self.priceChart, atY: y, area: priceArea)
-            let formatter = ChartNumberFormatter.make(fractionDigits: 2, minimumFractionDigits: 2)
-            return formatter.string(from: NSNumber(value: value))
+            return ChartNumberFormatter.price(value)
         }
 
         // サブチャートの描画領域にあるか
@@ -386,8 +385,7 @@ extension StockChartView {
             let subArea = self.subChart.convert(self.subChart.viewPortHandler.contentRect, to: self)
             if (subArea.minY...subArea.maxY).contains(y) {
                 let value = self.axisValue(of: self.subChart, atY: y, area: subArea)
-                let formatter = ChartNumberFormatter.make(fractionDigits: sub.fractionDigits, suffix: sub.suffix)
-                return formatter.string(from: NSNumber(value: value))
+                return ChartNumberFormatter.string(value, fractionDigits: sub.fractionDigits, suffix: sub.suffix)
             }
         }
         return nil

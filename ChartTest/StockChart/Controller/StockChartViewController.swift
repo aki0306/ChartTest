@@ -266,11 +266,7 @@ final class StockChartViewController: UIViewController {
         self.period = period
 
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
-        var newStyle = self.chartView.style
-        newStyle.dateFormat = period.dateFormat
-        newStyle.xAxisLabelCount = period.xAxisLabelCount
-        newStyle.visibleCount = period.visibleCount
-        self.chartView.style = newStyle
+        self.chartView.style = self.chartView.style.applying(period)
 
         self.setCandles(candles)
     }
@@ -329,20 +325,9 @@ final class StockChartViewController: UIViewController {
     }
 
     /// 表示オプションをチャートに反映する。
-    /// 4本値(十字線)はローソク足の4本値を表示するためのものなので、ローソク足以外(VWAP・新値足・折線チャート)では
-    /// 設定がオンでも表示しない(海外指数の折線チャートも同じ。設定の値はそのまま残し、ローソク足に戻すと表示される)
+    /// どのオプションが効くか(ローソク足以外では4本値を出さない など)は Model の ChartDisplayOptions.effective が決める
     private func applyDisplayOptionsToChart() {
-        var options = self.displayOptions
-        if self.chartType != .candlestick {
-            options.showsOHLC = false
-        }
-        // この指数で使えないオプション(海外指数の Y軸(サブ)固定)は、オンでも効かないようにする
-        // (設定の値は残すので、国内指数に戻すと元の状態で表示される)
-        let availableOptions = ChartDisplayOption.options(for: self.market)
-        for option in ChartDisplayOption.allCases where !availableOptions.contains(option) {
-            options[keyPath: option.keyPath] = false
-        }
-        self.chartView.displayOptions = options
+        self.chartView.displayOptions = self.displayOptions.effective(for: self.chartType, market: self.market)
     }
 
     // MARK: - 組み立て

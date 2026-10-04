@@ -47,8 +47,8 @@ extension StockChartView {
 
         let high = self.candles[highIndex].high
         let low = self.candles[lowIndex].low
-        self.placeLabel(self.highPriceLabel, text: self.formatPrice(high), index: highIndex, value: high, isAbove: true)
-        self.placeLabel(self.lowPriceLabel, text: self.formatPrice(low), index: lowIndex, value: low, isAbove: false)
+        self.placeLabel(self.highPriceLabel, text: ChartNumberFormatter.shortPrice(high), index: highIndex, value: high, isAbove: true)
+        self.placeLabel(self.lowPriceLabel, text: ChartNumberFormatter.shortPrice(low), index: lowIndex, value: low, isAbove: false)
     }
 
     /// 指定した範囲で、高値が一番高い足と、安値が一番安い足のインデックス。表示しない場合は nil
@@ -101,11 +101,5 @@ extension StockChartView {
         }
         label.frame = CGRect(x: x, y: y, width: size.width, height: size.height)
         label.isHidden = false
-    }
-
-    /// 価格を「3桁区切り・小数は最大2桁(末尾の 0 は省く)」の文字にする
-    private func formatPrice(_ value: Double) -> String {
-        let formatter = ChartNumberFormatter.make(fractionDigits: 2)
-        return formatter.string(from: NSNumber(value: value)) ?? ""
     }
 }

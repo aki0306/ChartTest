@@ -129,15 +129,6 @@ final class OHLCInfoView: UIView {
         return formatter
     }()
 
-    /// 価格の書式(3桁カンマ区切り・小数2桁)
-    private let priceFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 2
-        formatter.maximumFractionDigits = 2
-        return formatter
-    }()
-
     override init(frame: CGRect) {
         super.init(frame: frame)
         self.setup()
@@ -177,16 +168,15 @@ final class OHLCInfoView: UIView {
         ])
     }
 
-    /// 表示する足を設定する
+    /// 表示する足を設定する(価格は3桁区切り・小数2桁。ChartNumberFormatter.price)
     func update(with candle: StockCandle) {
         self.dateLabel.text = self.dateFormatter.string(from: candle.date)
-        self.upperLabel.text = "始値：\(self.format(candle.open))  高値：\(self.format(candle.high))"
-        self.lowerLabel.text = "安値：\(self.format(candle.low))  終値：\(self.format(candle.close))"
-    }
-
-    /// 価格を文字列にする
-    private func format(_ value: Double) -> String {
-        self.priceFormatter.string(from: NSNumber(value: value)) ?? ""
+        let open = ChartNumberFormatter.price(candle.open)
+        let high = ChartNumberFormatter.price(candle.high)
+        let low = ChartNumberFormatter.price(candle.low)
+        let close = ChartNumberFormatter.price(candle.close)
+        self.upperLabel.text = "始値：\(open)  高値：\(high)"
+        self.lowerLabel.text = "安値：\(low)  終値：\(close)"
     }
 }
 

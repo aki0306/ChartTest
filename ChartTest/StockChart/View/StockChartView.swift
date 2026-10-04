@@ -435,11 +435,7 @@ extension StockChartView {
         self.market = market
 
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
-        var newStyle = self.style
-        newStyle.dateFormat = period.dateFormat
-        newStyle.xAxisLabelCount = period.xAxisLabelCount
-        newStyle.visibleCount = period.visibleCount
-        self.style = newStyle
+        self.style = self.style.applying(period)
 
         switch market {
         case .domestic:

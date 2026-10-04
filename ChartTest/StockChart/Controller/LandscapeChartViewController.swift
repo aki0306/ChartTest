@@ -315,7 +315,7 @@ final class LandscapeChartViewController: UIViewController {
     @objc(updatePriceInfoWithName:price:date:)
     func updatePriceInfo(name: String, price: Double, date: Date) {
         self.loadViewIfNeeded()
-        let priceText = String(format: "%.2f", price)
+        let priceText = ChartNumberFormatter.plainPrice(price)
         let dateText = Self.priceDateFormatter.string(from: date)
 
         // 指数名・現在値は太字の大きい文字、日時は細い小さい文字

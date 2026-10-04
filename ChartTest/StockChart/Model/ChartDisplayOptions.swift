@@ -27,6 +27,39 @@ struct ChartDisplayOptions: Equatable {
     var showsOHLC = false
 }
 
+extension ChartDisplayOptions {
+
+    /// チャートの種類・指数の種類に合わせて、実際に効く表示オプションを返す。
+    /// 設定画面の値(self)は変えずに残すので、ローソク足・国内指数に戻すと、元の設定のまま表示される
+    ///
+    ///   | オプション        | オフにする場合                                         |
+    ///   |-------------------|--------------------------------------------------------|
+    ///   | 4本値             | ローソク足以外(4本値はローソク足の値を見るためのもの) |
+    ///   | Y軸(サブ)固定     | 海外指数(サブチャートがない)                         |
+    ///
+    /// - Parameters:
+    ///   - chartType: チャートの種類
+    ///   - market: 指数の種類
+    func effective(for chartType: ChartType, market: IndexMarket) -> ChartDisplayOptions {
+        var options = self
+
+        // 4本値はローソク足のときだけ
+        if chartType != .candlestick {
+            options.showsOHLC = false
+        }
+
+        // この指数で使えないオプションは、オンでも効かないようにする
+        let availableOptions = ChartDisplayOption.options(for: market)
+        for option in ChartDisplayOption.allCases {
+            if availableOptions.contains(option) {
+                continue
+            }
+            options[keyPath: option.keyPath] = false
+        }
+        return options
+    }
+}
+
 /// 表示オプションの1項目(設定画面のトグル1つ分)
 enum ChartDisplayOption: CaseIterable {
     /// Y軸(メイン)固定

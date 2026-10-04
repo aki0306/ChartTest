@@ -150,6 +150,21 @@ struct StockChartStyle {
     /// データが0件のときにメインチャートの凡例の下に表示するメッセージ
     var noDataMessage = "現在、指定の条件で表示できる情報はありません。"
 
+    // MARK: - 足種に合わせる
+
+    /// 足種に合わせた見た目にしたコピーを返す(日付の書式・日付ラベルの数・初期表示本数。値は ChartPeriod)。
+    /// 縦画面(StockChartView.setCandles(_:period:))と横画面(StockChartViewController.setCandles(_:period:))の
+    /// 両方がこれを使うので、足種ごとの見た目を変えるときはここ(と ChartPeriod)だけを直せばよい
+    ///
+    ///   例) 週足: 日付の書式「2025/9」・日付ラベル 約5個・初期表示 55本
+    func applying(_ period: ChartPeriod) -> StockChartStyle {
+        var style = self
+        style.dateFormat = period.dateFormat
+        style.xAxisLabelCount = period.xAxisLabelCount
+        style.visibleCount = period.visibleCount
+        return style
+    }
+
     // MARK: - 色の役割 → 実際の色
 
     /// Model が指定した色の役割を実際の色に変換する
