@@ -15,6 +15,10 @@ struct StockChartStyle {
     /// 初期表示する本数。直近から数えてこの本数分を表示し、それより古いデータは右方向へのスワイプで表示する。
     /// nil の場合は全件を表示する
     var visibleCount: Int? = 55
+    /// 拡大の限界(ピンチで拡大したときに、最低でも表示する本数)。nil なら DGCharts の標準のまま
+    var minimumVisibleCount: Int? = 20
+    /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数)。nil なら全件まで縮小できる
+    var maximumVisibleCount: Int? = nil
 
     // MARK: - 色
 

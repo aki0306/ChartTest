@@ -131,6 +131,7 @@ extension StockChartView {
             if let matrix {
                 // 指定された表示位置・拡大率(切り替え前の状態)をそのまま適用する
                 chart.notifyDataSetChanged()
+                self.applyZoomLimits(to: chart)
                 chart.viewPortHandler.refresh(newMatrix: matrix, chart: chart, invalidate: true)
             } else {
                 // 直近 visibleCount 本を表示し、右端(最新)にスクロールしておく。
@@ -139,12 +140,41 @@ extension StockChartView {
                 // 表示本数の指定があり、全体の本数より少ない場合だけ、拡大して右端に寄せる(それ以外は全件表示)
                 if let visibleCount = self.effectiveVisibleCount {
                     if visibleCount < self.totalCount {
+                        // 縮小の限界を visibleCount 本にすると、その本数まで拡大された状態になる(初期表示の拡大率)
                         chart.setVisibleXRangeMaximum(Double(visibleCount))
                         chart.moveViewToX(Double(self.totalCount))
                     }
                 }
+                // 初期表示の拡大率を決めたあとで、ピンチで拡大・縮小できる範囲に設定し直す
+                // (限界を変えても、今の拡大率はそのまま)
+                self.applyZoomLimits(to: chart)
                 chart.notifyDataSetChanged()
             }
+        }
+    }
+
+    /// ピンチで拡大・縮小できる範囲(表示本数)を設定する
+    ///
+    ///   拡大の限界: style.minimumVisibleCount 本(縦画面の参考: 約20本)
+    ///   縮小の限界: style.maximumVisibleCount 本。nil なら全件(データ全体が1画面に入るまで)
+    ///
+    /// ・どちらも、X軸全体の本数より多くはしない(全体より多く表示することはできないため)
+    /// ・DGCharts は「表示本数」ではなく「拡大率(X軸全体 ÷ 表示本数)」で限界を持っている
+    func applyZoomLimits(to chart: CombinedChartView) {
+        let axisWidth = chart.xAxis.axisRange  // X軸全体の本数(前後の余白 0.5 本ずつを含む)
+        guard axisWidth > 0 else { return }
+
+        // 縮小の限界(最大の表示本数)
+        var maximumCount = axisWidth
+        if let maximumVisibleCount = self.style.maximumVisibleCount {
+            maximumCount = min(Double(maximumVisibleCount), axisWidth)
+        }
+        chart.setVisibleXRangeMaximum(maximumCount)
+
+        // 拡大の限界(最小の表示本数)
+        if let minimumVisibleCount = self.style.minimumVisibleCount {
+            let minimumCount = min(Double(minimumVisibleCount), axisWidth)
+            chart.setVisibleXRangeMinimum(minimumCount)
         }
     }
 

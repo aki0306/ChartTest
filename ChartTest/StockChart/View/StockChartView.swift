@@ -385,7 +385,8 @@ final class StockChartView: UIView {
         let totalWidth = Double(self.totalCount) - 0.5 - self.xAxisMinimum
 
         for chart in [self.priceChart, self.subChart] {
-            chart.fitScreen()  // 拡大率・スクロール位置をリセット
+            chart.fitScreen()  // 拡大率・スクロール位置をリセット(拡大・縮小の限界もリセットされる)
+            self.applyZoomLimits(to: chart)  // 拡大・縮小の限界を設定し直す
             chart.zoom(scaleX: CGFloat(totalWidth / visibleWidth), scaleY: 1, x: 0, y: 0)  // 表示本数に合わせて拡大
             chart.moveViewToX(low)  // 左端を元の位置に合わせる
         }
@@ -495,6 +496,34 @@ extension StockChartView {
                 self.style.visibleCount = newValue
             } else {
                 self.style.visibleCount = nil
+            }
+        }
+    }
+
+    /// 拡大の限界(ピンチで拡大したときに、最低でも表示する本数)。0 以下を指定すると制限なし(DGCharts の標準)
+    @objc var minimumVisibleCount: Int {
+        get {
+            return self.style.minimumVisibleCount ?? 0
+        }
+        set {
+            if newValue > 0 {
+                self.style.minimumVisibleCount = newValue
+            } else {
+                self.style.minimumVisibleCount = nil
+            }
+        }
+    }
+
+    /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数)。0 以下を指定すると全件まで縮小できる
+    @objc var maximumVisibleCount: Int {
+        get {
+            return self.style.maximumVisibleCount ?? 0
+        }
+        set {
+            if newValue > 0 {
+                self.style.maximumVisibleCount = newValue
+            } else {
+                self.style.maximumVisibleCount = nil
             }
         }
     }
