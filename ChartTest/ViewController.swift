@@ -10,7 +10,9 @@
 //  ・縦画面: PortraitChartViewController(Portrait.storyboard。足種のタブ + StockChartView)
 //  ・横画面: LandscapeChartViewController(Landscape.storyboard。StockChartViewController で指標メニュー付き表示)
 //  この画面は「どちらを表示するか」と「データを渡す」ことだけを担当する。
-//  左下の切り替えボタン(marketControl)で、国内指数/海外指数を切り替えて表示を確かめられる。
+//  縦画面の左下の切り替えボタン(marketControl)で、国内指数/海外指数を切り替えて表示を確かめられる
+//  (横画面では下の帯と重なるので隠す。縦画面で切り替えてから横にする)。
+//  横画面の下の帯(足種・更新・縦画面に戻す)が押されたときの処理も、ここで設定している(setupLandscapeFooter)。
 //
 
 import UIKit
@@ -29,7 +31,7 @@ class ViewController: UIViewController {
 
     // MARK: - 国内指数/海外指数の切り替え
 
-    /// 国内指数/海外指数を切り替えるボタン(左下。縦画面・横画面のどちらでも表示する)
+    /// 国内指数/海外指数を切り替えるボタン(左下。縦画面だけに表示する)
     private let marketControl = UISegmentedControl(items: ["国内指数", "海外指数"])
 
     /// 切り替えボタンの並び順と同じ、指数の種類
@@ -51,14 +53,12 @@ class ViewController: UIViewController {
             return SampleData.candles(for: period)
         }
 
+        // 横画面: 下の帯のボタンが押されたときの処理
+        setupLandscapeFooter()
+
         // 国内指数/海外指数の切り替えボタン(最初は国内指数)
         setupMarketControl()
         showCharts(for: .domestic)
-
-        // 横画面でテクニカル/設定のパネルを開いている間は、切り替えボタンをパネル(と背景のグレー)の奥に回す
-        landscapeViewController.onPanelVisibilityChange = { [weak self] isOpen in
-            self?.updateMarketControlLayering(isPanelOpen: isOpen)
-        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -89,7 +89,7 @@ class ViewController: UIViewController {
 
     // MARK: - 国内指数/海外指数
 
-    /// 切り替えボタンを左下に置く(チャート画面より手前。横画面では右下に「チャートの種類」ボタンがあるので左に置く)
+    /// 切り替えボタンを左下に置く(チャート画面より手前)
     private func setupMarketControl() {
         marketControl.selectedSegmentIndex = 0
         marketControl.addTarget(self, action: #selector(marketControlChanged), for: .valueChanged)
@@ -100,17 +100,6 @@ class ViewController: UIViewController {
             marketControl.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
             marketControl.heightAnchor.constraint(equalToConstant: 36),
         ])
-    }
-
-    /// 切り替えボタンの重なり順を、横画面のパネルの開閉に合わせる
-    ///   ・開いている間: 横画面のチャート画面の奥に回す(パネル・背景のグレーの下になり、押せなくなる)
-    ///   ・閉じている間: 一番手前に戻す(横画面のチャート画面は透明な部分もタップを受けるので、奥にあると押せない)
-    private func updateMarketControlLayering(isPanelOpen: Bool) {
-        if isPanelOpen {
-            view.insertSubview(marketControl, belowSubview: landscapeViewController.view)
-        } else {
-            view.bringSubviewToFront(marketControl)
-        }
     }
 
     /// 切り替えボタンが押されたら、選ばれた指数の種類で表示し直す
@@ -131,9 +120,43 @@ class ViewController: UIViewController {
         portraitViewController.market = market
         portraitViewController.reloadChart()
 
-        // 横画面: 日足のデータを渡すと描画される
+        // 横画面: 日足のデータを渡すと描画される。下の帯の指数名・現在値も変える
         landscapeViewController.chartViewController.market = market
         landscapeViewController.setCandles(SampleData.candles(for: .daily), period: .daily)
+        updateLandscapePriceInfo()
+    }
+
+    // MARK: - 横画面の下の帯
+
+    /// 横画面の下の帯のボタンが押されたときの処理を設定する
+    /// (サンプルなので SampleData から読み込む。実際のアプリでは API から取得して setCandles(_:period:) で渡す)
+    private func setupLandscapeFooter() {
+        // 足種が選ばれたら、その足種のデータを渡す(足種のボタンの表示も切り替わる)
+        landscapeViewController.onPeriodSelect = { [weak self] period in
+            self?.landscapeViewController.setCandles(SampleData.candles(for: period), period: period)
+        }
+        // 更新: 表示中の足種のデータを読み込み直し、現在値も更新する
+        landscapeViewController.onReload = { [weak self] in
+            guard let self else { return }
+            let period = self.landscapeViewController.chartViewController.period
+            self.landscapeViewController.setCandles(SampleData.candles(for: period), period: period)
+            self.updateLandscapePriceInfo()
+        }
+        // 縦画面に戻す
+        landscapeViewController.onRotate = { [weak self] in
+            self?.view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+    }
+
+    /// 横画面の下の帯に、指数名・現在値・日時を表示する
+    /// (サンプルなので、当日の分足の最後の足の終値・時刻を現在値として使う)
+    private func updateLandscapePriceInfo() {
+        guard let latest = SampleData.candles(for: .oneMinute).last else { return }
+        var name = "日経平均"
+        if landscapeViewController.chartViewController.market == .overseas {
+            name = "NYダウ"
+        }
+        landscapeViewController.updatePriceInfo(name: name, price: latest.close, date: latest.date)
     }
 
     // MARK: - Layout switching
@@ -143,5 +166,7 @@ class ViewController: UIViewController {
         isLandscapeLayout = isLandscape
         portraitViewController.view.isHidden = isLandscape
         landscapeViewController.view.isHidden = !isLandscape
+        // 切り替えボタンは縦画面だけ(横画面では下の帯の文字と重なるため)
+        marketControl.isHidden = isLandscape
     }
 }

@@ -10,7 +10,7 @@
 
 | 縦画面 | 横画面 |
 |---|---|
-| 上部のタブで足種(1分足・日中足・日足・週足・月足)を切り替える。チャートは移動平均線 + 出来高 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。右下のボタンでチャートの種類を切り替える(日足) |
+| 上部のタブで足種(1分足・日中足・日足・週足・月足)を切り替える。チャートは移動平均線 + 出来高 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。下の帯で、チャートの種類・足種の切り替え、更新、縦画面に戻す操作ができる |
 | `Portrait.storyboard` / `PortraitChartViewController` | `Landscape.storyboard` / `LandscapeChartViewController` |
 
 `ViewController`(`Main.storyboard`)が縦画面用と横画面用の両方を読み込み、画面の向きに合わせて片方だけを表示します。
@@ -70,11 +70,51 @@
 
 自分の画面に組み込む場合は、`StockChartViewController` を画面いっぱいに置き、チャート本体の位置は `chartInsets`(セーフエリアの端からの余白)で決めます。
 パネルは `StockChartViewController` の View の上端〜セーフエリアの下端(`panelBottomInset` でさらにあけられます)、背景のグレーは View いっぱいに表示されます。
-`LandscapeChartViewController` は、下の「チャートの種類」ボタンの分を `chartInsets.bottom` で空け、パネルを開いている間だけチャート部品をボタンより手前に出しています(`onPanelVisibilityChange`)。
+`LandscapeChartViewController` は、下の帯の分を `chartInsets.bottom` で空け、パネルを開いている間だけチャート部品を帯より手前に出しています(`onPanelVisibilityChange`)。
+
+### 横画面の下の帯
+
+```
+日経平均 68309.46 10/02 15:45            [ローソク足 ▼] [月足 ▼] [↻] | [⤾]
+```
+
+`Landscape.storyboard` の Footer View に置いています。データの取得や画面の回転はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
+
+| 部品 | 動き | 使うもの |
+|---|---|---|
+| 指数名・現在値・日時 | 「日経平均 68309.46 10/02 15:45」のように表示する(現在値は小数2桁・3桁区切りなし、日時は MM/dd HH:mm) | `updatePriceInfo(name:price:date:)`(Objective-C は `updatePriceInfoWithName:price:date:`) |
+| ローソク足 ▼ | チャートの種類のメニュー(下の「横画面のチャートの種類」) | `chartViewController.chartType` |
+| 月足 ▼ | 足種のメニュー(国内指数は 1分足〜月足、海外指数は 日足・週足・月足)。選ばれると `onPeriodSelect` が呼ばれるので、その足種のデータを取得して `setCandles(_:period:)` で渡す。ボタンの文字は、渡した足種に変わる | `onPeriodSelect` |
+| ↻(更新) | `onReload` が呼ばれるので、表示中の足種(`chartViewController.period`)のデータと現在値を取得し直して渡す | `onReload` |
+| ⤾(縦画面に戻す) | `onRotate` が呼ばれるので、縦画面に戻す処理をする(全画面で表示している場合は `dismiss` など) | `onRotate` |
+
+```swift
+// Swift
+landscape.onPeriodSelect = { period in
+    // その足種のデータを API から取得して渡す(ChartResponseLoader で渡してもよい)
+    landscape.setCandles(candles, period: period)
+}
+landscape.onReload = { /* 表示中の足種のデータを取得し直して setCandles(_:period:)・updatePriceInfo を呼ぶ */ }
+landscape.onRotate = { /* 縦画面に戻す */ }
+landscape.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
+```
+
+```objc
+// Objective-C
+landscape.onPeriodSelect = ^(ChartPeriod period) {
+    [ChartResponseLoader setResponse:responseArray period:period to:landscape];
+};
+landscape.onReload = ^{ /* 取得し直す */ };
+landscape.onRotate = ^{ /* 縦画面に戻す */ };
+[landscape updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
+```
+
+このアプリの `ViewController.swift`(`setupLandscapeFooter`)では、SampleData のデータで動かしています。
+縦画面の左下にある「国内指数/海外指数」の切り替えボタンはサンプル用で、横画面では帯と重なるので表示しません。
 
 ### 横画面のチャートの種類
 
-右下のボタンで切り替えます(`ChartType`)。ローソク足以外では、テクニカル指標とサブチャートは表示しません。
+下の帯の「ローソク足 ▼」ボタンで切り替えます(`ChartType`)。ローソク足以外では、テクニカル指標とサブチャートは表示しません。
 
 - 「テクニカル」のメニューは、メインチャート・サブチャートとも「なし」だけになります(ローソク足に戻すと、それまでの選択に戻ります)
 - 「設定」は使えますが、「4本値」はオンにしてもローソク足のときだけ表示されます
@@ -493,7 +533,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
-| `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし) | ― |
+| `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし)、`updatePriceInfo`、`onPeriodSelect`、`onReload`、`onRotate` | `onPanelVisibilityChange` |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
 `StockChartViewController` の `shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod` は、設定すると**すべての足種**に反映されます(読み出すと表示中の足種の値)。足種ごとに変えたい場合は、設定画面か Swift の `setParameters(_:for:)` を使います。
@@ -534,7 +574,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 ## 既存アプリへの組み込み
 
 チャート部分(`ChartTest/StockChart/`)は、ほかのアプリにそのまま組み込めるよう、ダミーデータ(`SampleData`)やサンプルの画面切り替え(`ViewController`)には依存しないように作っています。
-`StockChart/Controller/` にある縦画面・横画面(`PortraitChartViewController` / `LandscapeChartViewController`)は、`ChartTest/` 直下の `Portrait.storyboard` / `Landscape.storyboard` から作る画面です。使う場合は storyboard もコピーします。
+`StockChart/Controller/` にある縦画面・横画面(`PortraitChartViewController` / `LandscapeChartViewController`)は、同じフォルダにある `Portrait.storyboard` / `Landscape.storyboard` から作る画面です。`StockChart/` フォルダごとコピーすれば storyboard も入ります。
 
 ### 手順
 
@@ -552,7 +592,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
    | チャートだけ | `StockChartView` | 「3. チャートだけを置く」 |
    | テクニカル・設定画面・チャートの種類も | `StockChartViewController`(子 ViewController として埋め込む) | 「4. 指標メニュー・設定画面付きのチャート」 |
 
-   このアプリと同じ縦画面・横画面をそのまま使う場合は、`ChartTest/` 直下の `Portrait.storyboard` / `Landscape.storyboard` もコピーします(画面のクラス `PortraitChartViewController` / `LandscapeChartViewController` は `StockChart/Controller/` に入っています。中身は自由に変えて構いません)。
+   このアプリと同じ縦画面・横画面をそのまま使う場合は、`StockChart/Controller/` にある `Portrait.storyboard` / `Landscape.storyboard` と、画面のクラス `PortraitChartViewController` / `LandscapeChartViewController` を使います(`StockChart/` フォルダごとコピーすれば入っています。中身は自由に変えて構いません)。
 
 4. **データを渡す**
    API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
@@ -605,14 +645,14 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 ### 横画面のチャートだけを使う場合
 
-縦画面は既存アプリの画面をそのまま使い、横画面のチャート(テクニカル・設定画面・チャートの種類のボタン付き)だけを組み込む場合です。
+縦画面は既存アプリの画面をそのまま使い、横画面のチャート(テクニカル・設定画面・下の帯付き)だけを組み込む場合です。
 
 #### コピーするもの・しないもの
 
 | ファイル | 必要か | 説明 |
 |---|---|---|
 | `StockChart/` フォルダ(`ChartSettingsView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
-| `Landscape.storyboard`(`ChartTest/` 直下) | 必要 | 横画面(チャートの種類のボタン付き)。画面のクラス `LandscapeChartViewController` は `StockChart/Controller/` に入っている。下のボタンが不要なら、`StockChartViewController` を直接使ってもよい |
+| `StockChart/Controller/Landscape.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` は `StockChart/Controller/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
 | `Portrait.storyboard`、`StockChart/Controller/PortraitChartViewController.swift` | 不要 | このアプリの縦画面。フォルダごとコピーした場合、`PortraitChartViewController.swift` は削除してよい |
 | `ViewController.swift` / `Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
 | `SampleData.swift` | 不要 | 動作確認用のダミーデータ |
@@ -649,15 +689,19 @@ landscape.modalPresentationStyle = UIModalPresentationFullScreen;
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
     ```
 
-  - 閉じる操作: `LandscapeChartViewController` には閉じるボタンがないので、ボタンを追加して `dismiss(animated:)` を呼ぶ(参考画面の右下の回転ボタンなど)
+  - 閉じる操作: 下の帯の「縦画面に戻す」ボタンが押されたら呼ばれる `onRotate` で、`dismiss(animated:)` を呼ぶ
+
+    ```swift
+    landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }
+    ```
 
 - **端末を横にしたときに切り替える**
 
   このアプリの `ViewController.swift` と同じ方法です。既存の画面に `LandscapeChartViewController` を子 ViewController として画面いっぱいに埋め込んでおき、`viewDidLayoutSubviews` で縦横を判定して、横のときだけ表示します(`ViewController.swift` の `embed` / `applyLayout` を参照)。
 
-#### 下のボタンを既存アプリのものにする場合
+#### 下の帯を既存アプリのものにする場合
 
-`Landscape.storyboard` の「チャートの種類」ボタンの代わりに既存アプリのボタン(足種・更新など)を使う場合は、`StockChartViewController` を直接埋め込み、ボタンの分の余白を `chartInsets` で空けます。チャートの種類は `chartType` で切り替えます(`LandscapeChartViewController.swift` が実装例です)。
+`Landscape.storyboard` の下の帯の代わりに既存アプリのボタン(足種・更新など)を使う場合は、`StockChartViewController` を直接埋め込み、ボタンの分の余白を `chartInsets` で空けます。チャートの種類は `chartType` で切り替えます(`LandscapeChartViewController.swift` が実装例です)。
 
 ```swift
 chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 下のボタンの高さ + 余白, right: 8)
@@ -683,13 +727,12 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 ```
 ChartTest/
 ├─ ViewController.swift              … 縦/横の画面を切り替えるだけの画面
-├─ Portrait.storyboard               … 縦画面のレイアウト(PortraitChartViewController)
-├─ Landscape.storyboard              … 横画面のレイアウト(LandscapeChartViewController)
 ├─ SampleData.swift                  … 動作確認用のダミーデータ(足種ごと)
 └─ StockChart/                       … チャートの共通部品(MVC で役割を分けている)
    ├─ Model/       … 計算とデータ(UIKit・DGCharts に依存しない)
    ├─ View/        … 描画と画面部品
    └─ Controller/  … 状態の保持と、Model と View の橋渡し
+                      縦画面・横画面のレイアウト(Portrait.storyboard / Landscape.storyboard)もここに置いている
 ```
 
 ### Model(`StockChart/Model/`)
@@ -734,7 +777,7 @@ ChartTest/
 |---|---|
 | `ChartResponseLoader.swift` | API のレスポンス(足種ごと)を、どこからでもチャートに渡して描画するユーティリティ(描画先は `StockCandleReceiving`) |
 | `PortraitChartViewController.swift` | 縦画面(足種のタブ + StockChartView)。`Portrait.storyboard` から作る |
-| `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、チャートの種類のボタンを付ける)。`Landscape.storyboard` から作る |
+| `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻す)を付ける)。`Landscape.storyboard` から作る |
 | `StockChartViewController.swift` | 足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
 
 ## データの流れ
