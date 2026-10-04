@@ -268,6 +268,11 @@ final class StockChartViewController: UIViewController {
         // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
         self.chartView.style = self.chartView.style.applying(period)
 
+        // テクニカルで選べる指標を足種に合わせる(1分足・日中足は 移動平均線・出来高 などだけ)。
+        // 選べない指標から切り替えたときに、新しい足種のデータで描き直されるよう、先にデータを持たせておく
+        self.candles = candles
+        self.applyIndicatorChoices()
+
         self.setCandles(candles)
     }
 
@@ -401,8 +406,8 @@ final class StockChartViewController: UIViewController {
         self.menuView.selectedMainIndicator = self.mainIndicator
         self.menuView.selectedSubIndicator = self.subIndicator
         self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
-        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market)
-        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market)
+        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market, period: self.period)
+        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market, period: self.period)
         self.view.addSubview(self.menuView)
 
         // 設定画面: このViewの左側に幅 75% で表示(左側リスト + 右側パネル)
@@ -612,17 +617,10 @@ final class StockChartViewController: UIViewController {
     private func applyMarket(previousMarket: IndexMarket) {
         // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
         self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
-        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market)
-        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market)
+        self.applyIndicatorChoices()
 
-        // 選べない指標・チャートの種類を選んでいた場合は、選べるものに切り替える
+        // 選べないチャートの種類を選んでいた場合は、ローソク足に切り替える
         // (それぞれの didSet でも描き直すが、最後にまとめて描き直す)
-        if !MainChartIndicator.choices(for: self.market).contains(self.mainIndicator) {
-            self.mainIndicator = .movingAverage
-        }
-        if !SubChartIndicator.choices(for: self.market).contains(self.subIndicator) {
-            self.subIndicator = .hidden
-        }
         if !ChartType.choices(for: self.market).contains(self.chartType) {
             self.chartType = .candlestick
         }
@@ -640,6 +638,29 @@ final class StockChartViewController: UIViewController {
         }
         self.reloadSettingsList()
         self.reloadSettingsRows()
+    }
+
+    /// テクニカルのメニューに並べる指標を、指数の種類・足種に合わせる(MainChartIndicator / SubChartIndicator の choices)。
+    /// 選べない指標を選んでいた場合は、選べるものに切り替える
+    ///   ・メイン: 移動平均線(どの指数・足種でも選べる)
+    ///   ・サブ  : 出来高(選べない場合 = 海外指数は なし)
+    /// 例) 日足で 一目均衡表 + MACD を表示中に 1分足 にすると、移動平均線 + 出来高 になる
+    private func applyIndicatorChoices() {
+        let mainChoices = MainChartIndicator.choices(for: self.market, period: self.period)
+        let subChoices = SubChartIndicator.choices(for: self.market, period: self.period)
+        self.menuView.availableMainIndicators = mainChoices
+        self.menuView.availableSubIndicators = subChoices
+
+        if !mainChoices.contains(self.mainIndicator) {
+            self.mainIndicator = .movingAverage
+        }
+        if !subChoices.contains(self.subIndicator) {
+            if subChoices.contains(.volume) {
+                self.subIndicator = .volume
+            } else {
+                self.subIndicator = .hidden
+            }
+        }
     }
 
     /// 指定した指数の種類のリストで、指定した位置にある項目(範囲外なら nil)

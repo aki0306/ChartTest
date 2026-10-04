@@ -165,9 +165,12 @@ final class LandscapeChartViewController: UIViewController {
             self?.onRotate?()
         }
 
-        // チャートの種類が変わったら(メニューからでも、コードから chartType を変えた場合でも)ボタンの表示を合わせる
+        // チャートの種類が変わったら(メニューからでも、コードから chartType を変えた場合でも)ボタンの表示を合わせ、
+        // 表示中の足種がその種類では選べない場合(新値足の1分足)は、選べる足種に切り替える
         self.chartViewController.onChartTypeChange = { [weak self] _ in
-            self?.updateChartTypeMenu()
+            guard let self else { return }
+            self.updateChartTypeMenu()
+            self.switchPeriodIfUnavailable()
         }
     }
 
@@ -203,7 +206,8 @@ final class LandscapeChartViewController: UIViewController {
     // MARK: - 足種
 
     /// 「足種」ボタンの文字とメニュー(表示中の足種にチェック)を、表示中の足種に合わせる。
-    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は 日足・週足・月足 だけ)が後から変わっても反映される
+    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は 日足・週足・月足 だけ)・
+    /// チャートの種類(VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を除く。ChartType.periods(in:))が後から変わっても反映される
     private func updatePeriodMenu() {
         let items = UIDeferredMenuElement.uncached { [weak self] completion in
             guard let self else {
@@ -212,7 +216,7 @@ final class LandscapeChartViewController: UIViewController {
             }
             let selectedPeriod = self.chartViewController.period
             var actions: [UIAction] = []
-            for period in self.chartViewController.market.periods {
+            for period in self.availablePeriods {
                 let action = UIAction(title: Self.shortTitle(of: period)) { [weak self] _ in
                     self?.onPeriodSelect?(period)
                 }
@@ -227,6 +231,27 @@ final class LandscapeChartViewController: UIViewController {
         let candidates = ChartPeriod.allCases.map { period in Self.shortTitle(of: period) }
         self.footerView.setPeriodMenu(title: Self.shortTitle(of: self.chartViewController.period),
                                       candidates: candidates, menu: UIMenu(children: [items]))
+    }
+
+    /// 今のチャートの種類・指数の種類で選べる足種(VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を除く)
+    private var availablePeriods: [ChartPeriod] {
+        return self.chartViewController.chartType.periods(in: self.chartViewController.market)
+    }
+
+    /// 表示中の足種が今のチャートの種類では選べない場合(1分足のまま新値足・折線チャートにした・日足のまま VWAP にした など)、
+    /// 選べる足種に切り替える。データの取得はアプリの仕事なので、足種のメニューで選んだときと同じく onPeriodSelect を呼ぶ
+    /// (日中足を選べるなら 日中足 に切り替える。日中足も選べなければ、選べる足種の先頭)
+    private func switchPeriodIfUnavailable() {
+        let periods = self.availablePeriods
+        if periods.contains(self.chartViewController.period) {
+            return
+        }
+        var nextPeriod = periods.first
+        if periods.contains(.intraday) {
+            nextPeriod = .intraday
+        }
+        guard let nextPeriod else { return }
+        self.onPeriodSelect?(nextPeriod)
     }
 
     /// ボタン・メニューに出す足種の名前。タブ用の名前(「月 足」)から空白を除く(「月足」)

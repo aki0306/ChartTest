@@ -14,6 +14,7 @@
 //
 //  Objective-C からも使えるよう @objc enum(Int)にしている(Objective-C での名前は ChartTypeNewPrice など)。
 //  指数の種類によって、選べる種類が変わる(choices(for:)。海外指数は ローソク足・折線チャート だけ)。
+//  チャートの種類によって、選べる足種が変わる(periods(in:)。VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を選べない)。
 //
 
 import Foundation
@@ -57,6 +58,32 @@ import Foundation
             }
         case .vwapLine, .vwapDots, .newPrice:
             return false
+        }
+    }
+}
+
+// MARK: - チャートの種類ごとに選べる足種
+
+extension ChartType {
+    /// このチャートの種類で選べる足種(指数の種類で使う足種のうち、この種類に合うもの。並びは左から順)
+    ///
+    ///   | 種類                 | 国内指数                        | 海外指数              |
+    ///   |----------------------|---------------------------------|-----------------------|
+    ///   | VWAP：線 / VWAP：点  | 日中足                          | (選べない種類)      |
+    ///   | 新値足・折線チャート | 日中足・日足・週足・月足        | 日足・週足・月足      |
+    ///   | ローソク足           | 1分足・日中足・日足・週足・月足 | 日足・週足・月足      |
+    ///
+    /// ・VWAP は、その日の寄り付きからの平均価格なので、1日の中の動きを見る日中足だけで使う
+    /// ・新値足・折線チャートは 1分足 では使わない(新値足は細かい値動きを除いて流れの転換を見るためのもの)
+    /// - Parameter market: 指数の種類
+    func periods(in market: IndexMarket) -> [ChartPeriod] {
+        switch self {
+        case .vwapLine, .vwapDots:
+            return market.periods.filter { period in period == .intraday }
+        case .newPrice, .lineChart:
+            return market.periods.filter { period in period != .oneMinute }
+        case .candlestick:
+            return market.periods
         }
     }
 }

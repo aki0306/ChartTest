@@ -5,9 +5,13 @@
 //  【Model】テクニカル指標の種類(メインチャート/サブチャート)の定義。
 //  Objective-C からも使えるよう @objc enum(Int)にしている。
 //
-//  指数の種類によって、選べる指標が変わる(choices(for:))。
-//    国内指数: すべて
-//    海外指数: メインは 移動平均線・なし、サブは なし だけ(サブチャートは表示しない)
+//  指数の種類・足種によって、選べる指標が変わる(choices(for:period:))。
+//
+//    | 条件                       | メインチャート       | サブチャート     |
+//    |----------------------------|----------------------|------------------|
+//    | 国内指数・日足/週足/月足   | すべて               | すべて           |
+//    | 国内指数・1分足/日中足     | 移動平均線・なし     | 出来高・なし     |
+//    | 海外指数                   | 移動平均線・なし     | なし             |
 //
 
 import Foundation
@@ -86,6 +90,36 @@ extension MainChartIndicator {
             return allCases
         case .overseas:
             return [.movingAverage, .candleOnly]
+        }
+    }
+}
+
+extension MainChartIndicator {
+    /// 指定した指数の種類・足種で選べるメインチャートの指標(メニューに並べる順)。
+    /// 1分足・日中足は、当日の細かい動きを見るためのものなので、移動平均線・なし だけにする
+    static func choices(for market: IndexMarket, period: ChartPeriod) -> [MainChartIndicator] {
+        let marketChoices = self.choices(for: market)
+        switch period {
+        case .oneMinute, .intraday:
+            let periodChoices: [MainChartIndicator] = [.movingAverage, .candleOnly]
+            return marketChoices.filter { indicator in periodChoices.contains(indicator) }
+        case .daily, .weekly, .monthly:
+            return marketChoices
+        }
+    }
+}
+
+extension SubChartIndicator {
+    /// 指定した指数の種類・足種で選べるサブチャートの指標(メニューに並べる順)。
+    /// 1分足・日中足は、出来高・なし だけにする
+    static func choices(for market: IndexMarket, period: ChartPeriod) -> [SubChartIndicator] {
+        let marketChoices = self.choices(for: market)
+        switch period {
+        case .oneMinute, .intraday:
+            let periodChoices: [SubChartIndicator] = [.volume, .hidden]
+            return marketChoices.filter { indicator in periodChoices.contains(indicator) }
+        case .daily, .weekly, .monthly:
+            return marketChoices
         }
     }
 }
