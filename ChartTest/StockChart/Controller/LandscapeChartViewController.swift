@@ -14,7 +14,7 @@
 //
 //  ・共通チャート部品は storyboard のコンテナビューに埋め込んであり、
 //    左端のテクニカル/設定タブで指標の切り替え・設定変更ができる
-//  ・下の帯(Landscape.storyboard の Footer View)
+//  ・下の帯(Landscape.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
 //      左     : 指数名・現在値・日時(updatePriceInfo(name:price:date:) で設定する)
 //      ローソク足▼: チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート)を切り替える。
 //                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない
@@ -59,18 +59,9 @@ final class LandscapeChartViewController: UIViewController {
 
     // MARK: - 部品(storyboard に配置)
 
-    /// 下の帯(テクニカル/設定のパネルを閉じている間は、チャート部品より手前に置く)
-    @IBOutlet private weak var footerView: UIView!
-    /// 指数名・現在値・日時(例:「日経平均 68309.46 10/02 15:45」)
-    @IBOutlet private weak var priceInfoLabel: UILabel!
-    /// チャートの種類を切り替えるボタン(タップで種類のメニューを表示する)
-    @IBOutlet private weak var chartTypeButton: UIButton!
-    /// 足種を選ぶボタン(タップで足種のメニューを表示する)
-    @IBOutlet private weak var periodButton: UIButton!
-    /// 更新ボタン
-    @IBOutlet private weak var reloadButton: UIButton!
-    /// 縦画面に戻すボタン
-    @IBOutlet private weak var rotateButton: UIButton!
+    /// 下の帯(ChartFooterView。見た目は ChartFooterView.xib)。
+    /// テクニカル/設定のパネルを閉じている間は、チャート部品より手前に置く
+    @IBOutlet private weak var footerView: ChartFooterView!
 
     // MARK: - 操作されたときの処理(外から設定する)
 
@@ -110,11 +101,8 @@ final class LandscapeChartViewController: UIViewController {
         super.viewDidLoad()
 
         self.chartViewController.isTechnicalMenuEnabled = true
-        self.configureChartTypeButton()
-        self.configurePeriodButton()
-        self.configureIconButtons()
+        self.configureFooter()
         self.configurePanelLayering()
-        self.priceInfoLabel.text = nil  // updatePriceInfo で設定されるまでは空にする
 
         // チャート部品は画面いっぱいに置き(パネルを画面の上端〜下端まで広げるため)、チャート本体だけを内側に置く。
         // 下は帯(セーフエリアの下端から 44pt。Landscape.storyboard)と、その上の間隔 4pt の分を空ける
@@ -163,25 +151,31 @@ final class LandscapeChartViewController: UIViewController {
         }
     }
 
-    // MARK: - チャートの種類
+    // MARK: - 下の帯
 
-    /// チャートの種類のボタンを設定する(タップすると種類のメニューを表示する)
-    private func configureChartTypeButton() {
-        self.chartTypeButton.configuration = Self.menuButtonConfiguration()
-        self.chartTypeButton.showsMenuAsPrimaryAction = true
-        self.updateChartTypeButton()
+    /// 下の帯のメニュー・ボタンを設定する。
+    /// 見た目は帯(ChartFooterView)が決め、この画面はメニューの中身と、押されたときの処理だけを渡す
+    private func configureFooter() {
+        self.updateChartTypeMenu()
+        self.updatePeriodMenu()
+        self.footerView.onReload = { [weak self] in
+            self?.onReload?()
+        }
+        self.footerView.onRotate = { [weak self] in
+            self?.onRotate?()
+        }
 
-        // 種類が変わったら(メニューからでも、コードから chartType を変えた場合でも)ボタンの表示を合わせる
+        // チャートの種類が変わったら(メニューからでも、コードから chartType を変えた場合でも)ボタンの表示を合わせる
         self.chartViewController.onChartTypeChange = { [weak self] _ in
-            self?.updateChartTypeButton()
+            self?.updateChartTypeMenu()
         }
     }
 
-    /// ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
-    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)が後から変わっても反映される
-    private func updateChartTypeButton() {
-        self.chartTypeButton.configuration?.title = self.chartViewController.chartType.title
+    // MARK: - チャートの種類
 
+    /// 「チャートの種類」ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
+    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)が後から変わっても反映される
+    private func updateChartTypeMenu() {
         let items = UIDeferredMenuElement.uncached { [weak self] completion in
             guard let self else {
                 completion([])
@@ -191,7 +185,7 @@ final class LandscapeChartViewController: UIViewController {
             var actions: [UIAction] = []
             for chartType in ChartType.choices(for: self.chartViewController.market) {
                 let action = UIAction(title: chartType.title) { [weak self] _ in
-                    self?.selectChartType(chartType)
+                    self?.chartViewController.chartType = chartType  // ボタンの表示は onChartTypeChange で更新される
                 }
                 if chartType == selectedType {
                     action.state = .on
@@ -200,28 +194,17 @@ final class LandscapeChartViewController: UIViewController {
             }
             completion(actions)
         }
-        self.chartTypeButton.menu = UIMenu(children: [items])
-    }
-
-    /// チャートの種類を切り替える(ボタンの表示は onChartTypeChange で更新される)
-    private func selectChartType(_ chartType: ChartType) {
-        self.chartViewController.chartType = chartType
+        // ボタンの幅は、すべての種類の名前のうち一番長いもの(「折線チャート」など)が1行で入る幅にする
+        let candidates = ChartType.allCases.map { chartType in chartType.title }
+        self.footerView.setChartTypeMenu(title: self.chartViewController.chartType.title,
+                                         candidates: candidates, menu: UIMenu(children: [items]))
     }
 
     // MARK: - 足種
 
-    /// 足種のボタンを設定する(タップすると足種のメニューを表示する)
-    private func configurePeriodButton() {
-        self.periodButton.configuration = Self.menuButtonConfiguration()
-        self.periodButton.showsMenuAsPrimaryAction = true
-        self.updatePeriodButton()
-    }
-
-    /// ボタンの文字とメニュー(表示中の足種にチェック)を、表示中の足種に合わせる。
+    /// 「足種」ボタンの文字とメニュー(表示中の足種にチェック)を、表示中の足種に合わせる。
     /// メニューの中身は開くたびに作るので、指数の種類(海外指数は 日足・週足・月足 だけ)が後から変わっても反映される
-    private func updatePeriodButton() {
-        self.periodButton.configuration?.title = Self.shortTitle(of: self.chartViewController.period)
-
+    private func updatePeriodMenu() {
         let items = UIDeferredMenuElement.uncached { [weak self] completion in
             guard let self else {
                 completion([])
@@ -240,7 +223,10 @@ final class LandscapeChartViewController: UIViewController {
             }
             completion(actions)
         }
-        self.periodButton.menu = UIMenu(children: [items])
+        // ボタンの幅は、すべての足種の名前のうち一番長いもの(「1分足」「日中足」)が1行で入る幅にする
+        let candidates = ChartPeriod.allCases.map { period in Self.shortTitle(of: period) }
+        self.footerView.setPeriodMenu(title: Self.shortTitle(of: self.chartViewController.period),
+                                      candidates: candidates, menu: UIMenu(children: [items]))
     }
 
     /// ボタン・メニューに出す足種の名前。タブ用の名前(「月 足」)から空白を除く(「月足」)
@@ -248,66 +234,9 @@ final class LandscapeChartViewController: UIViewController {
         return period.title.replacingOccurrences(of: " ", with: "")
     }
 
-    // MARK: - 更新・縦画面に戻す
-
-    /// 更新ボタン・縦画面に戻すボタン(アイコンだけのボタン)を設定する
-    private func configureIconButtons() {
-        self.reloadButton.configuration = Self.iconButtonConfiguration(systemName: "arrow.clockwise")
-        self.reloadButton.addTarget(self, action: #selector(self.reloadTapped), for: .touchUpInside)
-        self.rotateButton.configuration = Self.iconButtonConfiguration(systemName: "rectangle.portrait.rotate")
-        self.rotateButton.addTarget(self, action: #selector(self.rotateTapped), for: .touchUpInside)
-    }
-
-    /// 更新ボタンが押されたとき
-    @objc private func reloadTapped() {
-        self.onReload?()
-    }
-
-    /// 縦画面に戻すボタンが押されたとき
-    @objc private func rotateTapped() {
-        self.onRotate?()
-    }
-
-    // MARK: - ボタンの見た目(下の帯で共通)
-
-    /// メニューを開くボタンの見た目(白地・灰色の枠・青い文字 + 右に ▼)
-    private static func menuButtonConfiguration() -> UIButton.Configuration {
-        var configuration = self.baseButtonConfiguration()
-        configuration.image = UIImage(systemName: "arrowtriangle.down.fill",
-                                      withConfiguration: UIImage.SymbolConfiguration(pointSize: 11))
-        configuration.imagePlacement = .trailing
-        configuration.imagePadding = 6
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6)
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-            var attributes = attributes
-            attributes.font = .boldSystemFont(ofSize: 15)
-            return attributes
-        }
-        return configuration
-    }
-
-    /// アイコンだけのボタンの見た目(白地・灰色の枠・青いアイコン)
-    private static func iconButtonConfiguration(systemName: String) -> UIButton.Configuration {
-        var configuration = self.baseButtonConfiguration()
-        configuration.image = UIImage(systemName: systemName,
-                                      withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold))
-        return configuration
-    }
-
-    /// 下の帯のボタンの共通の見た目(白地・灰色の枠・青)
-    private static func baseButtonConfiguration() -> UIButton.Configuration {
-        var configuration = UIButton.Configuration.bordered()
-        configuration.baseBackgroundColor = .white
-        configuration.baseForegroundColor = .systemBlue
-        configuration.background.strokeColor = .systemGray4
-        configuration.background.strokeWidth = 1
-        configuration.background.cornerRadius = 6
-        return configuration
-    }
-
     // MARK: - 指数名・現在値・日時
 
-    /// 下の帯の左に、指数名・現在値・日時を表示する(例:「日経平均 68309.46 10/02 15:45」)
+    /// 下の帯の左に、指数名・現在値・日時を表示する(例:「日経平均 68309.46 10/02 15:45」。書式は ChartFooterView)
     /// - Parameters:
     ///   - name: 指数名(「日経平均」など)
     ///   - price: 現在値。小数2桁で表示する(3桁区切りなし)
@@ -315,23 +244,8 @@ final class LandscapeChartViewController: UIViewController {
     @objc(updatePriceInfoWithName:price:date:)
     func updatePriceInfo(name: String, price: Double, date: Date) {
         self.loadViewIfNeeded()
-        let priceText = ChartNumberFormatter.plainPrice(price)
-        let dateText = Self.priceDateFormatter.string(from: date)
-
-        // 指数名・現在値は太字の大きい文字、日時は細い小さい文字
-        let text = NSMutableAttributedString(string: "\(name) \(priceText) ",
-                                             attributes: [.font: UIFont.boldSystemFont(ofSize: 20)])
-        text.append(NSAttributedString(string: dateText, attributes: [.font: UIFont.systemFont(ofSize: 16)]))
-        self.priceInfoLabel.attributedText = text
+        self.footerView.updatePriceInfo(name: name, price: price, date: date)
     }
-
-    /// 日時の書式(例: 10/02 15:45)
-    private static let priceDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "MM/dd HH:mm"
-        return formatter
-    }()
 
     // MARK: - データ
 
@@ -344,7 +258,7 @@ final class LandscapeChartViewController: UIViewController {
     /// 足種のボタンの表示も、この足種に合わせる
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
         self.chartViewController.setCandles(candles, period: period)
-        self.updatePeriodButton()
+        self.updatePeriodMenu()
     }
 }
 

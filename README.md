@@ -69,11 +69,12 @@
    |---|---|
    | `Controller/PortraitChartViewController.swift`・`Portrait.storyboard` | 縦画面(足種のタブ付き)を使わない |
    | `Controller/LandscapeChartViewController.swift`・`Landscape.storyboard` | 横画面(下の帯付き)を使わない |
+   | `View/ChartFooterView.swift`・`View/ChartFooterView.xib` | 下の帯を使わない(横画面を使う場合は必要) |
 
    それ以外(`Model/`・`View/`・`ChartSettingsView.xib`・`StockChartViewController.swift`・`ChartResponseLoader.swift`)は、すべて必要です。
 6. ファイルがアプリのターゲットに入っているか確認する
    - **フォルダとして追加した場合**(Xcode 16 以降の既定。左の一覧で青いフォルダのアイコンになる): 中のファイルは自動でビルド・コピーされます。`StockChart` フォルダを選んで、右側の **File Inspector**(⌥⌘1)の **Target Membership** に既存アプリのターゲットのチェックが入っていれば OK です
-   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`(と、使う場合は `Landscape.storyboard` / `Portrait.storyboard`)が入っているか確認します。入っていないと、設定画面・横画面を開いたときにアプリが落ちます
+   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard` / `Portrait.storyboard`)が入っているか確認します。入っていないと、設定画面・横画面を開いたときにアプリが落ちます
 
 **確認ポイント**: ⌘B(ビルド)が成功する。
 (既存アプリに `StockCandle` や `ChartType` など同じ名前の型があるとエラーになります。[困ったとき](#困ったとき) を見てください)
@@ -248,7 +249,7 @@ final class MyChartViewController: UIViewController {
 | チャートが何も表示されない(真っ白) | チャートの高さ・幅が 0 | 高さの制約(例: 260)を付けているか確認する。storyboard に置いた場合は、View のクラスが `StockChartView` になっているか確認する |
 | 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
-| 設定タブを押すとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、`ChartSettingsView.xib` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
+| 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横画面・縦画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` / `Portrait.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横向きにならない | アプリが横向きに対応していない | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる |
 | 横画面を閉じたあとも、メモリが解放されない | クロージャ(ブロック)の中で、画面を強く参照している | `[weak self]` / `__weak` を使う(ステップ 7 の注意) |
@@ -328,7 +329,9 @@ final class MyChartViewController: UIViewController {
 日経平均 68309.46 10/02 15:45            [ローソク足 ▼] [月足 ▼] [↻] | [⤾]
 ```
 
-`Landscape.storyboard` の Footer View に置いています。データの取得や画面の回転はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
+帯は [`ChartFooterView`](ChartTest/StockChart/View/Controls/ChartFooterView.swift)(View)で、`Landscape.storyboard` の Footer View に置いています。配置は [`ChartFooterView.xib`](ChartTest/StockChart/View/Controls/ChartFooterView.xib) を Interface Builder で開いて編集します。
+帯は見た目(ボタンの色・幅・現在値の文字)だけを担当し、メニューの中身と「押されたら何をするか」は `LandscapeChartViewController` が渡します。データの取得や画面の回転はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
+「チャートの種類」「足種」のボタンの幅は、メニューの中で一番長い名前(「折線チャート」など)が1行で入る幅に固定しています(文字は縮小しません。選ぶたびに幅が変わらないようにするため)。
 
 | 部品 | 動き | 使うもの |
 |---|---|---|
@@ -683,7 +686,7 @@ chartViewController.market = IndexMarketOverseas;
 
 ### 5. 見た目を変える(色・文字の位置・フォントの大きさ)
 
-チャートの見た目は、すべて `StockChartView` の `style`([`StockChart/View/StockChartStyle.swift`](ChartTest/StockChart/View/StockChartStyle.swift))で決まっています。
+チャートの見た目は、すべて `StockChartView` の `style`([`StockChart/View/Chart/StockChartStyle.swift`](ChartTest/StockChart/View/Chart/StockChartStyle.swift))で決まっています。
 アプリ全体の既定値を変えるなら `StockChartStyle.swift` の初期値を書き換え、画面ごとに変えるならコードで `style` を設定します。
 
 `style` は代入するたびに描き直されるので、まとめて変更してから1回で代入します。
@@ -776,13 +779,15 @@ chartView.increasingColor = UIColor.systemRedColor;
 
 | 部品 | ファイル | 項目 |
 |---|---|---|
-| 縦画面の足種タブ(色・文字の大きさ) | [`ChartPeriodTabView.swift`](ChartTest/StockChart/View/ChartPeriodTabView.swift) | `selectedColor`・`normalColor`、`updateSelection` 内のフォント |
-| 設定画面(配置・右側の行の見た目) | [`ChartSettingsView.xib`](ChartTest/StockChart/View/ChartSettingsView.xib) | Interface Builder で開いて編集する(Content View = 画面全体、Toggle Row / Stepper Row = 右側の行の見本) |
-| 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/View/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
-| テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/View/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
+| 縦画面の足種タブ(色・文字の大きさ) | [`ChartPeriodTabView.swift`](ChartTest/StockChart/View/Controls/ChartPeriodTabView.swift) | `selectedColor`・`normalColor`、`updateSelection` 内のフォント |
+| 設定画面(配置・右側の行の見た目) | [`ChartSettingsView.xib`](ChartTest/StockChart/View/Panels/ChartSettingsView.xib) | Interface Builder で開いて編集する(Content View = 画面全体、Toggle Row / Stepper Row = 右側の行の見本) |
+| 横画面の下の帯(配置) | [`ChartFooterView.xib`](ChartTest/StockChart/View/Controls/ChartFooterView.xib) | Interface Builder で開いて編集する(Content View = 帯全体) |
+| 横画面の下の帯(ボタンの色・文字の大きさ・現在値の書式) | [`ChartFooterView.swift`](ChartTest/StockChart/View/Controls/ChartFooterView.swift) | `baseButtonConfiguration`・`menuTitleFont`・`updatePriceInfo` |
+| 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/View/Panels/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
+| テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/View/Panels/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
 | 「テクニカル」「設定」タブ | [`StockChartViewController.swift`](ChartTest/StockChart/Controller/StockChartViewController.swift) | `configureTabButton` |
-| 4本値の枠(文字の大きさ・背景) | [`ChartCrosshairViews.swift`](ChartTest/StockChart/View/ChartCrosshairViews.swift) | `OHLCInfoView` |
-| 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartAxisFormatters.swift`](ChartTest/StockChart/View/ChartAxisFormatters.swift) | `ChartNumberFormatter` |
+| 4本値の枠(文字の大きさ・背景) | [`ChartCrosshairViews.swift`](ChartTest/StockChart/View/Crosshair/ChartCrosshairViews.swift) | `OHLCInfoView` |
+| 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartAxisFormatters.swift`](ChartTest/StockChart/View/Chart/ChartAxisFormatters.swift) | `ChartNumberFormatter` |
 | 凡例の文言(「短期移動平均(5)」など) | [`ChartContentBuilder.swift`](ChartTest/StockChart/Model/ChartContentBuilder.swift) | 各指標の `label` / `legendTitle` |
 
 ### Swift と Objective-C で使えるものの違い
@@ -895,7 +900,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 | ファイル | 必要か | 説明 |
 |---|---|---|
-| `StockChart/` フォルダ(`ChartSettingsView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
+| `StockChart/` フォルダ(`ChartSettingsView.xib`・`ChartFooterView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面・下の帯。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
 | `StockChart/Controller/Landscape.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` は `StockChart/Controller/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
 | `Portrait.storyboard`、`StockChart/Controller/PortraitChartViewController.swift` | 不要 | このアプリの縦画面。フォルダごとコピーした場合、`PortraitChartViewController.swift` は削除してよい |
 | `ViewController.swift` / `Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
@@ -969,18 +974,79 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 
 ## フォルダ構成
 
+`StockChart/` が、ほかのアプリにも組み込めるチャートの部品です。それ以外は、このサンプルアプリだけで使うものです。
+`StockChart/` の中は、役割ごとに **Model**(計算とデータ)・**View**(画面の部品)・**Controller**(状態を持ち、Model と View をつなぐ)に分けています。
+
 ```
-docs/images/                         … README の画像
 ChartTest/
-├─ ViewController.swift              … 縦/横の画面を切り替えるだけの画面
-├─ ObjCSample/                       … Objective-C から使うサンプル
-├─ SampleData.swift                  … 動作確認用のダミーデータ(足種ごと)
-└─ StockChart/                       … チャートの共通部品(MVC で役割を分けている)
-   ├─ Model/       … 計算とデータ(UIKit・DGCharts に依存しない)
-   ├─ View/        … 描画と画面部品
-   └─ Controller/  … 状態の保持と、Model と View の橋渡し
-                      縦画面・横画面のレイアウト(Portrait.storyboard / Landscape.storyboard)もここに置いている
+├─ ViewController.swift                 … サンプル: 縦/横の画面を切り替える画面
+├─ SampleData.swift                     … サンプル: 動作確認用のダミーデータ
+├─ ObjCSample/                          … サンプル: Objective-C から使う例
+│
+└─ StockChart/                          ★ チャートの部品(ほかのアプリにはこのフォルダごとコピーする)
+   │
+   ├─ Model/                            計算とデータ(画面の部品には依存しない)
+   │   ├─ StockCandle.swift                 ローソク足1本分のデータ
+   │   ├─ StockCandleResponseParser.swift   API のレスポンス → StockCandle の配列
+   │   ├─ ChartPeriod.swift                 足種(1分足〜月足)・指数の種類(国内/海外)
+   │   ├─ ChartType.swift                   チャートの種類(ローソク足・折線チャート など)
+   │   ├─ ChartIndicatorType.swift          指標の種類(移動平均線・RSI など)
+   │   ├─ IndicatorParameters.swift         指標のパラメータ(期間など)
+   │   ├─ TechnicalIndicators.swift         指標の計算式
+   │   ├─ ChartContent.swift                「何を描くか」を表すデータ
+   │   ├─ ChartContentBuilder.swift         データ + 指標 → 「何を描くか」を組み立てる
+   │   ├─ ChartDisplayOptions.swift         表示オプション(Y軸固定・4本値)
+   │   └─ ChartSettingsCatalog.swift        設定画面に並べる項目
+   │
+   ├─ View/                             画面の部品
+   │   ├─ Chart/                            チャート本体
+   │   │   ├─ StockChartView.swift              ★ チャート本体の入口
+   │   │   ├─ StockChartView+Layout.swift       部品の配置
+   │   │   ├─ StockChartView+Rendering.swift    描画・凡例
+   │   │   ├─ StockChartView+AxisRange.swift    スクロール/ズームと、Y軸の範囲
+   │   │   ├─ StockChartView+HighLowLabels.swift 最高値・最安値の文字
+   │   │   ├─ StockChartStyle.swift             ★ 見た目の設定(色・フォント・余白など)
+   │   │   ├─ ChartAxisFormatters.swift         軸ラベル・価格などの書式
+   │   │   └─ Renderers/                        DGCharts の描き方を変える部品(ふだんは触らない)
+   │   │       ├─ CloudCombinedRenderer.swift       一目均衡表の雲
+   │   │       ├─ LatestAlignedXAxisRenderer.swift  日付ラベルの並べ方
+   │   │       ├─ AlignedYAxisRenderer.swift        価格ラベルの揃え方
+   │   │       └─ SafePinchCombinedChartView.swift  ピンチのクラッシュ対策
+   │   ├─ Crosshair/                        4本値(十字線)
+   │   │   ├─ StockChartView+Crosshair.swift    十字線の操作・配置
+   │   │   └─ ChartCrosshairViews.swift         十字線・4本値の枠・マーカーの部品
+   │   ├─ Panels/                           左のタブで開くパネル
+   │   │   ├─ TechnicalMenuView.swift           テクニカル(指標の選択メニュー)
+   │   │   └─ ChartSettingsView.swift / .xib    設定画面
+   │   └─ Controls/                         チャートの外に置く操作部品
+   │       ├─ ChartPeriodTabView.swift          足種のタブ(縦画面の上・設定画面の上)
+   │       └─ ChartFooterView.swift / .xib      横画面の下の帯
+   │
+   └─ Controller/                       状態を持ち、Model と View をつなぐ
+       ├─ StockChartViewController.swift    ★ テクニカル・設定画面付きのチャート
+       ├─ PortraitChartViewController.swift 縦画面(+ Portrait.storyboard)
+       ├─ LandscapeChartViewController.swift 横画面(+ Landscape.storyboard)
+       └─ ChartResponseLoader.swift         API のレスポンスをチャートに渡す
+
+docs/images/                            README の画像
 ```
+
+★ は、使うとき・見た目を変えるときに、最初に見るファイルです。
+
+### やりたいことから探す
+
+| やりたいこと | 見るファイル |
+|---|---|
+| 色・フォント・余白を変えたい | `View/Chart/StockChartStyle.swift` |
+| 足種ごとの移動平均の期間・初期表示本数を変えたい | `Model/ChartPeriod.swift` |
+| 指標の計算式を確かめたい | `Model/TechnicalIndicators.swift` |
+| 凡例の文言(「短期移動平均(5)」など)を変えたい | `Model/ChartContentBuilder.swift` |
+| API のレスポンスのキーの名前・日付の形式を合わせたい | `Model/StockCandleResponseParser.swift` |
+| 設定画面に並べる項目・値の範囲を変えたい | `Model/ChartSettingsCatalog.swift` |
+| 設定画面・下の帯の配置を変えたい | `View/Panels/ChartSettingsView.xib`・`View/Controls/ChartFooterView.xib`(Interface Builder で開く) |
+| 4本値(十字線)の動きを変えたい | `View/Crosshair/StockChartView+Crosshair.swift` |
+| テクニカル/設定パネルの開き方を変えたい | `Controller/StockChartViewController.swift` |
+| 横画面の下の帯のボタンの動きを変えたい | `Controller/LandscapeChartViewController.swift` |
 
 ### Model(`StockChart/Model/`)
 
@@ -1000,23 +1066,25 @@ ChartTest/
 
 ### View(`StockChart/View/`)
 
-| ファイル | 内容 |
-|---|---|
-| `StockChartView.swift` | **チャート本体**。外から呼ぶ入口とプロパティ |
-| `StockChartView+Layout.swift` | 部品の配置(Auto Layout)と見た目の設定 |
-| `StockChartView+Rendering.swift` | `ChartContent` を DGCharts のデータに変換して描く・凡例を作る |
-| `StockChartView+AxisRange.swift` | スクロール/ズームの同期と、Y軸の範囲の調整 |
-| `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線・4本値の表示 |
-| `StockChartView+HighLowLabels.swift` | 表示中の範囲の最高値・最安値を、その足の上・下に表示する |
-| `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値) |
-| `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数) |
-| `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |
-| `AlignedYAxisRenderer.swift` | 価格(Y軸)ラベルの中央揃え・枠内に収める描画処理 |
-| `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
-| `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
-| `ChartPeriodTabView.swift` | 足種のタブ(縦画面の上部) |
-| `TechnicalMenuView.swift` | 指標の選択メニュー(テクニカルタブ) |
-| `ChartSettingsView.swift` / `.xib` | 設定画面(設定タブ)。画面の配置(足種のタブ・行・下のボタン)と、右側の行の見本(トグル行・数値行)は XIB で編集する |
+| フォルダ | ファイル | 内容 |
+|---|---|---|
+| `Chart/` | `StockChartView.swift` | **チャート本体**。外から呼ぶ入口とプロパティ |
+| | `StockChartView+Layout.swift` | 部品の配置(Auto Layout)と見た目の設定 |
+| | `StockChartView+Rendering.swift` | `ChartContent` を DGCharts のデータに変換して描く・凡例を作る |
+| | `StockChartView+AxisRange.swift` | スクロール/ズームの同期と、Y軸の範囲の調整 |
+| | `StockChartView+HighLowLabels.swift` | 表示中の範囲の最高値・最安値を、その足の上・下に表示する |
+| | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数・拡大縮小の限界) |
+| | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値)と、価格などの数値の書式(`ChartNumberFormatter`) |
+| `Chart/Renderers/` | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |
+| | `LatestAlignedXAxisRenderer.swift` | 日付(X軸)ラベルを、最新の足を基準に並べる描画処理 |
+| | `AlignedYAxisRenderer.swift` | 価格(Y軸)ラベルの中央揃え・枠内に収める描画処理 |
+| | `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
+| `Crosshair/` | `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線・4本値の表示・操作 |
+| | `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
+| `Panels/` | `TechnicalMenuView.swift` | 指標の選択メニュー(テクニカルタブ) |
+| | `ChartSettingsView.swift` / `.xib` | 設定画面(設定タブ)。画面の配置(足種のタブ・行・下のボタン)と、右側の行の見本(トグル行・数値行)は XIB で編集する |
+| `Controls/` | `ChartPeriodTabView.swift` | 足種のタブ(縦画面の上部・設定画面の上部) |
+| | `ChartFooterView.swift` / `.xib` | 横画面の下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)。配置は XIB で編集する |
 
 ### Controller(`StockChart/Controller/`)
 
@@ -1026,6 +1094,7 @@ ChartTest/
 | `PortraitChartViewController.swift` | 縦画面(足種のタブ + StockChartView)。`Portrait.storyboard` から作る |
 | `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻す)を付ける)。`Landscape.storyboard` から作る |
 | `StockChartViewController.swift` | 足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す |
+| `Portrait.storyboard` / `Landscape.storyboard` | 縦画面・横画面のレイアウト(Interface Builder で開いて編集する) |
 
 ## データの流れ
 
@@ -1051,8 +1120,8 @@ MainChartContent / SubChartContent(何を描くか)
 
 1. `StockChart/Model/StockCandle.swift` と `ChartContent.swift` … 扱うデータの形
 2. `StockChart/Model/ChartContentBuilder.swift` … 指標から「何を描くか」を作るところ
-3. `StockChart/View/StockChartView.swift` … チャート本体の入口(冒頭のコメントに全体図があります)
-4. `StockChartView+Layout.swift` → `+Rendering.swift` → `+AxisRange.swift` → `+Crosshair.swift`
+3. `StockChart/View/Chart/StockChartView.swift` … チャート本体の入口(冒頭のコメントに全体図があります)
+4. 同じフォルダの `StockChartView+Layout.swift` → `+Rendering.swift` → `+AxisRange.swift` → `View/Crosshair/StockChartView+Crosshair.swift`
 5. `StockChart/Controller/StockChartViewController.swift` … 横画面のメニュー・設定の制御
 
 指標の計算式を知りたいときは `TechnicalIndicators.swift` を見てください(各関数のコメントに式があります)。
