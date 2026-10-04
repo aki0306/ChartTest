@@ -13,6 +13,7 @@
 | まず動かしたい・既存アプリに入れたい | [はじめての導入ガイド](#はじめての導入ガイド)(ステップごとに説明しています) |
 | うまく動かない | [困ったとき](#困ったとき) |
 | どんな画面・機能があるか | [画面](#画面) |
+| 出来高・サブチャートの仕組み | [サブチャート(出来高など)](#サブチャート出来高など) |
 | コードの書き方(Swift / Objective-C) | [使い方](#使い方swift--objective-c) |
 | 色・文字の大きさなどを変えたい | [見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
 | API のレスポンスを渡したい | [API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す) |
@@ -248,6 +249,7 @@ final class MyChartViewController: UIViewController {
 | 「Empty paragraph passed to '\param' command」の警告が大量に出る | DGCharts のヘッダのコメントの書き方(動作には影響しない) | **Build Settings** の **Documentation Comments** を **No** にする |
 | チャートが何も表示されない(真っ白) | チャートの高さ・幅が 0 | 高さの制約(例: 260)を付けているか確認する。storyboard に置いた場合は、View のクラスが `StockChartView` になっているか確認する |
 | 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
+| 出来高(サブチャート)の棒が表示されない(凡例だけ出る・段ごとない) | `volume` がすべて 0(レスポンスに `"volume"` キーがない)、海外指数を指定している、または横画面でローソク足以外のチャートを選んでいる | レスポンスのキーを `StockCandleResponseParser` の `Key.volume` に合わせる。指数の種類・チャートの種類を確認する([サブチャート(出来高など)](#サブチャート出来高など)) |
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
 | 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横画面・縦画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` / `Portrait.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
@@ -418,6 +420,75 @@ landscape.onRotate = ^{ /* 縦画面に戻す */ };
 
 - 出来高がすべて 0 のデータ(指数の1分足・日中足など)は、出来高の棒と線を描かず、凡例だけを表示します
 - データが0件のときは、枠と凡例を残したまま「現在、指定の条件で表示できる情報はありません。」と表示します
+
+### サブチャート(出来高など)
+
+サブチャートは、メインチャート(ローソク足)の下にある小さい段です。**出来高は、サブチャートに出せる指標の1つ**です。
+
+```
+┌──────────────────────────────┐
+│ 移動平均 短期… 長期…          │ ← メインチャート(ローソク足 + 移動平均線など)
+│   ローソク足                  │
+├──────────────────────────────┤
+│ 出来高 出来高移動平均          │ ← サブチャート(出来高・RSI・MACD などのうち1つ)
+│ ▮▮ ▮▮▮ ▮ ▮▮                  │
+└──────────────────────────────┘
+```
+
+サブチャートに出せるのは `SubChartIndicator` の次の8種類で、同時に出せるのは**1つだけ**です。
+
+出来高(`.volume`)・移動平均乖離率・RSI・サイコロジカル・ストキャス・MACD・DMI・なし(`.hidden`。サブチャートの段を消す)
+
+#### いつ何が出るか
+
+| 画面 | サブチャート |
+|---|---|
+| 縦画面(`PortraitChartViewController`)・国内指数 | **出来高**(固定。選べない) |
+| 縦画面・海外指数 | なし |
+| 横画面(`StockChartViewController`) | 「テクニカル」タブで選ぶ。**最初は出来高**。選べるものは足種・チャートの種類で絞られる(上の「横画面のテクニカル」の表) |
+
+#### 出来高のデータ
+
+サブチャート用のデータを別に渡す必要はありません。**`StockCandle` の `volume`** をそのまま使います。
+API のレスポンスを `ChartResponseLoader` で渡す場合は、`"volume"` キーの値が入ります(キーがない場合は `0`。`StockCandleResponseParser`)。
+
+#### 出来高のサブチャートに描くもの
+
+| 描くもの | 値 | 色(`StockChartStyle`) |
+|---|---|---|
+| 棒(出来高) | 各足の `volume` をそのまま | `volumeColor`(黄緑) |
+| 線(出来高移動平均) | 直近 25本の `volume` の平均(`IndicatorParameters.volumeMAPeriod`) | `volumeAverageColor`(青) |
+
+- Y軸の上限は、スクロール・拡大のたびに、見えている範囲の出来高に合わせて決め直します。下限は必ず 0 です
+- 凡例は、1分足・日中足・日足は「出来高 出来高移動平均」、週足・月足は「出来高(平均) 出来高移動平均」です(`ChartPeriod.indicatorParameters`)。
+  チャート側では平均を計算しないので、週足・月足は API から「期間中の1日あたりの平均」の値を渡す前提です
+- 出来高がすべて 0 のデータ(出来高が配信されない指数の1分足・日中足など)は、棒も線も描かず、凡例だけを表示します
+
+`volume` を使うのは、出来高のサブチャートと VWAP だけです。ほかのサブチャートの指標は、RSI・MACD・移動平均乖離率・サイコロジカルが終値、ストキャス・DMI が高値・安値・終値から計算します(「使い方 > チャート・指標ごとに使う値」)。
+
+#### サブチャートの処理の場所
+
+```
+StockCandle の配列
+   │
+   ▼ ChartContentBuilder.subContent(for:)       … 選ばれた指標の中身を作る(出来高は volumeContent)
+   │    計算は TechnicalIndicators(RSI・MACD など)
+   ▼
+SubChartContent                                 … 線(series)・棒(bars)・基準線(referenceLines)・Y軸の範囲・書式
+   │
+   ▼ StockChartView+Rendering.renderSubChart    … DGCharts のデータに変換して描く
+   │  StockChartView+AxisRange.updateSubAxisRange … 見えている範囲に合わせて Y軸の範囲を決める
+   ▼
+画面
+```
+
+| 変えたいこと | 見るところ |
+|---|---|
+| 出来高移動平均の本数(25) | `Model/IndicatorParameters.swift` の `volumeMAPeriod` |
+| 凡例の文言 | `Model/ChartContentBuilder.swift` の `volumeContent`、足種ごとの「出来高(平均)」は `Model/ChartPeriod.swift` |
+| 棒・線の色 | `StockChartStyle` の `volumeColor` / `volumeAverageColor` |
+| 縦画面のサブチャートを出来高以外にする | `View/Chart/StockChartView.swift` の `setCandles(_:period:market:)` の `subIndicator` |
+| 横画面で選べる指標 | `Model/ChartIndicatorType.swift` の `SubChartIndicator.choices(for:period:)` |
 
 ## 使い方(Swift / Objective-C)
 
@@ -1071,6 +1142,7 @@ docs/images/                            README の画像
 | 色・フォント・余白を変えたい | `View/Chart/StockChartStyle.swift` |
 | 足種ごとの移動平均の期間・初期表示本数を変えたい | `Model/ChartPeriod.swift` |
 | 指標の計算式を確かめたい | `Model/TechnicalIndicators.swift` |
+| サブチャート(出来高など)の中身・凡例を変えたい | `Model/ChartContentBuilder.swift`(`subContent(for:)`)。詳しくは [サブチャート(出来高など)](#サブチャート出来高など) |
 | 凡例の文言(「短期移動平均(5)」など)を変えたい | `Model/ChartContentBuilder.swift` |
 | API のレスポンスのキーの名前・日付の形式を合わせたい | `Model/StockCandleResponseParser.swift` |
 | 設定画面に並べる項目・値の範囲を変えたい | `Model/ChartSettingsCatalog.swift` |
