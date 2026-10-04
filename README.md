@@ -6,12 +6,262 @@
 - UIKit / iOS 18 以上 / 常にライトモード
 - Swift と Objective-C のどちらからでも呼び出せます(「使い方」に両方の書き方があります。Objective-C のサンプルは `ChartTest/ObjCSample/`)
 
+## 目次
+
+| 知りたいこと | 読むところ |
+|---|---|
+| まず動かしたい・既存アプリに入れたい | [はじめての導入ガイド](#はじめての導入ガイド)(ステップごとに説明しています) |
+| うまく動かない | [困ったとき](#困ったとき) |
+| どんな画面・機能があるか | [画面](#画面) |
+| コードの書き方(Swift / Objective-C) | [使い方](#使い方swift--objective-c) |
+| 色・文字の大きさなどを変えたい | [見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
+| API のレスポンスを渡したい | [API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す) |
+| ファイルの中身・仕組みを知りたい | [フォルダ構成](#フォルダ構成)・[データの流れ](#データの流れ) |
+
+## はじめての導入ガイド
+
+既存のアプリ(Swift でも Objective-C でも可)にチャートを入れるまでを、順番に説明します。
+各ステップの最後にある **確認ポイント** のとおりになっていれば、次のステップに進んでください。うまくいかないときは [困ったとき](#困ったとき) を見てください。
+
+### ステップ 0. 必要なもの
+
+| もの | バージョン | 備考 |
+|---|---|---|
+| Xcode | 26 以上(このプロジェクトは Xcode 27 で作成) | `nonisolated` を付けたクラスなど、Swift 6.2 の書き方を使っているため、Xcode 16 以前ではビルドできません |
+| iOS | 18 以上(動作確認済み) | iOS 15〜17 は未確認です |
+| DGCharts | 5.1.0 以上 | チャートを描くライブラリ。ステップ 2 で追加します |
+| Swift の言語モード | Swift 5 | Swift 6 の言語モードは未確認です |
+
+### ステップ 1. まずこのサンプルを動かす
+
+既存アプリに入れる前に、このプロジェクトで「どう動くか」を確かめます。
+
+1. `ChartTest.xcodeproj` をダブルクリックして Xcode で開く
+2. 初回は DGCharts の取得が自動で始まります。左下の進み具合の表示が消えるまで待つ
+3. 画面上部の実行先で、iPhone のシミュレータ(例: iPhone 16 Pro)を選ぶ
+4. **⌘R**(Product > Run)で実行する
+5. シミュレータで **⌘ →**(Device > Rotate Right)を押して横向きにする
+
+**確認ポイント**: 縦向きでは足種のタブ付きのチャート、横向きでは左に「テクニカル」「設定」タブ・下に帯のあるチャートが表示される(下の「画面」の画像と同じ見た目)。
+
+### ステップ 2. 既存アプリに DGCharts を追加する
+
+1. 既存アプリのプロジェクトを Xcode で開く
+2. メニューの **File > Add Package Dependencies…** を選ぶ
+3. 右上の検索欄に `https://github.com/ChartsOrg/Charts.git` を貼り付ける
+4. **Dependency Rule** を「Up to Next Major Version」・`5.1.0` にして **Add Package** を押す
+5. 次の画面で **DGCharts** の行の「Add to Target」に、既存アプリのターゲットを選んで **Add Package** を押す
+
+**確認ポイント**: 左のファイル一覧の下の **Package Dependencies** に「Charts」が表示され、⌘B(ビルド)が成功する。
+
+### ステップ 3. チャートの部品(`StockChart` フォルダ)をコピーする
+
+1. Finder でこのプロジェクトの `ChartTest/StockChart/` フォルダを開く
+2. フォルダごと、Xcode の左のファイル一覧(既存アプリのフォルダの中)にドラッグする
+3. 出てきた画面で次のように選んで **Finish** を押す
+   - **Action**(古い Xcode では **Copy items if needed**): 「Copy files to destination」(コピーする)を選ぶ。コピーせずに参照すると、元のフォルダを消したときに壊れるため
+   - **Groups**: 「Create folders」(フォルダとして追加)のままでよい
+   - **Targets**(古い Xcode では **Add to targets**): 既存アプリのターゲットにチェックを入れる
+4. **Objective-C だけのアプリの場合**: 「Would you like to configure an Objective-C bridging header?」と聞かれたら、**Don't Create** でかまいません(Objective-C から Swift を使うだけなら不要です)
+5. 使わないファイルは削除してかまいません
+
+   | ファイル | 使わない場合は削除してよい |
+   |---|---|
+   | `Controller/PortraitChartViewController.swift`・`Portrait.storyboard` | 縦画面(足種のタブ付き)を使わない |
+   | `Controller/LandscapeChartViewController.swift`・`Landscape.storyboard` | 横画面(下の帯付き)を使わない |
+
+   それ以外(`Model/`・`View/`・`ChartSettingsView.xib`・`StockChartViewController.swift`・`ChartResponseLoader.swift`)は、すべて必要です。
+6. ファイルがアプリのターゲットに入っているか確認する
+   - **フォルダとして追加した場合**(Xcode 16 以降の既定。左の一覧で青いフォルダのアイコンになる): 中のファイルは自動でビルド・コピーされます。`StockChart` フォルダを選んで、右側の **File Inspector**(⌥⌘1)の **Target Membership** に既存アプリのターゲットのチェックが入っていれば OK です
+   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`(と、使う場合は `Landscape.storyboard` / `Portrait.storyboard`)が入っているか確認します。入っていないと、設定画面・横画面を開いたときにアプリが落ちます
+
+**確認ポイント**: ⌘B(ビルド)が成功する。
+(既存アプリに `StockCandle` や `ChartType` など同じ名前の型があるとエラーになります。[困ったとき](#困ったとき) を見てください)
+
+### ステップ 4. Objective-C から使う準備(Objective-C のアプリだけ)
+
+Swift のクラスを Objective-C から使うには、Xcode が自動で作るヘッダを import します。
+
+```objc
+#import "既存アプリのモジュール名-Swift.h"   // 例: アプリ名が MyApp なら "MyApp-Swift.h"
+```
+
+- モジュール名は、ターゲットの **Build Settings** で「Product Module Name」を検索すると確認できます(アプリ名に `-` や空白があると `_` に置き換わります)
+- このヘッダは、Swift のファイルが1つでもターゲットに入っていれば、ビルドのときに自動で作られます(自分で作るファイルではありません)
+- DGCharts のヘッダから「Empty paragraph passed to '\param' command」という警告が大量に出ることがあります。エラーではないので動作には影響しません。消したい場合は **Build Settings** の **Documentation Comments**(`CLANG_WARN_DOCUMENTATION_COMMENTS`)を **No** にします
+
+Swift のアプリでは、この準備は不要です(同じターゲットの Swift のクラスはそのまま使えます)。
+
+**確認ポイント**: `.m` ファイルで `#import` を書いて ⌘B が成功し、`StockChartView` と入力すると補完候補に出てくる。
+
+### ステップ 5. いちばん簡単な表示を試す
+
+画面にチャートを1つ置き、仮のデータを渡して表示します。新しい ViewController を作って、次のコードをそのまま貼り付けてください。
+
+```swift
+// Swift: MyChartViewController.swift
+import UIKit
+
+/// チャートを1つ表示するだけの画面(導入の動作確認用)
+final class MyChartViewController: UIViewController {
+
+    /// チャート本体
+    private let chartView = StockChartView()
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        self.view.backgroundColor = .white
+
+        // 1. チャートを画面の上のほうに置く(高さを必ず決める。高さが 0 だと何も見えない)
+        self.chartView.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(self.chartView)
+        NSLayoutConstraint.activate([
+            self.chartView.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            self.chartView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 8),
+            self.chartView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+            self.chartView.heightAnchor.constraint(equalToConstant: 260),
+        ])
+
+        // 2. データを渡す(日足として表示する)
+        self.chartView.setCandles(self.makeTestCandles(), period: .daily)
+    }
+
+    /// 動作確認用の仮データ(60日分。日付の古い順)
+    private func makeTestCandles() -> [StockCandle] {
+        var candles: [StockCandle] = []
+        var close = 66_000.0
+        for daysAgo in (0..<60).reversed() {
+            let date = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+            let open = close
+            close = open + Double.random(in: -800...800)
+            let high = max(open, close) + Double.random(in: 0...300)
+            let low = min(open, close) - Double.random(in: 0...300)
+            candles.append(StockCandle(date: date, open: open, high: high, low: low, close: close, volume: 2.0e9))
+        }
+        return candles
+    }
+}
+```
+
+```objc
+// Objective-C: MyObjCChartViewController.m(.h は UIViewController を継承するだけ)
+#import "MyObjCChartViewController.h"
+#import "MyApp-Swift.h"   // 「既存アプリのモジュール名-Swift.h」(ステップ 4)
+
+@interface MyObjCChartViewController ()
+/// チャート本体
+@property (nonatomic, strong) StockChartView *chartView;
+@end
+
+@implementation MyObjCChartViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = UIColor.whiteColor;
+
+    // 1. チャートを画面の上のほうに置く(高さを必ず決める。高さが 0 だと何も見えない)
+    self.chartView = [[StockChartView alloc] initWithFrame:CGRectZero];
+    self.chartView.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.chartView];
+    [NSLayoutConstraint activateConstraints:@[
+        [self.chartView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16],
+        [self.chartView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:8],
+        [self.chartView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [self.chartView.heightAnchor constraintEqualToConstant:260],
+    ]];
+
+    // 2. データを渡す(日足として表示する)
+    [self.chartView setCandles:[self makeTestCandles] period:ChartPeriodDaily];
+}
+
+/// 動作確認用の仮データ(60日分。日付の古い順)
+- (NSArray<StockCandle *> *)makeTestCandles {
+    NSMutableArray<StockCandle *> *candles = [NSMutableArray array];
+    double close = 66000;
+    for (NSInteger daysAgo = 59; daysAgo >= 0; daysAgo--) {
+        NSDate *date = [NSDate dateWithTimeIntervalSinceNow:-daysAgo * 24 * 60 * 60];
+        double open = close;
+        close = open + (double)arc4random_uniform(1600) - 800;
+        double high = MAX(open, close) + arc4random_uniform(300);
+        double low = MIN(open, close) - arc4random_uniform(300);
+        StockCandle *candle = [[StockCandle alloc] initWithDate:date open:open high:high low:low close:close volume:2.0e9];
+        [candles addObject:candle];
+    }
+    return candles;
+}
+
+@end
+```
+
+この画面を表示する(既存の画面から `push` / `present` する、または一時的にアプリの最初の画面にする)と、チャートが表示されます。
+
+**確認ポイント**: 次のように、ローソク足・移動平均線・出来高が表示される(値はランダムなので、形は毎回変わります)。
+
+<img src="docs/images/minimal.png" width="300" alt="いちばん簡単な表示">
+
+### ステップ 6. 本物のデータを渡す
+
+仮データの代わりに、API から取得したデータを渡します。やり方は2つあります。
+
+- **A. レスポンス(辞書の配列)をそのまま渡す**(おすすめ): [`ChartResponseLoader`](ChartTest/StockChart/Controller/ChartResponseLoader.swift) に渡すと、`StockCandle` への変換・日付の並べ替えまでして描画します
+
+  ```objc
+  // Objective-C: 日足のレスポンス(NSMutableArray のままでよい)を、チャートに渡す
+  [ChartResponseLoader setDailyResponse:responseArray to:self.chartView];
+  ```
+
+  ```swift
+  // Swift
+  ChartResponseLoader.setDailyResponse(responseArray, to: self.chartView)
+  ```
+
+  最初に、[`StockCandleResponseParser.swift`](ChartTest/StockChart/Model/StockCandleResponseParser.swift) の **キーの名前**(`Key`)と **日付の形式**(`dateFormats`)を、既存アプリのレスポンスに合わせて書き換えてください(今は仮の名前 `date`・`open`・`high`・`low`・`close`・`volume` になっています)。詳しくは「[API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す)」。
+
+- **B. 自分で `StockCandle` を作って渡す**: 「[1. データを作る](#1-データを作る)」のとおり `StockCandle` の配列を作り、`setCandles(_:period:)` で渡します。**日付の古い順**に並べてください
+
+**確認ポイント**: 既存アプリの画面と同じ値(最新の足の終値など)が、チャートに表示される。
+
+### ステップ 7. 必要に応じて機能を足す
+
+ここまでで「チャートだけを置く」(`StockChartView`)形の導入は完了です。必要に応じて、次の部品に置き換えます。
+
+| やりたいこと | 使う部品 | 説明 |
+|---|---|---|
+| 足種(1分足〜月足)のタブを付けたい | `PortraitChartViewController` | [2. 足種のタブ付きの縦画面](#2-足種のタブ付きの縦画面portraitchartviewcontroller) |
+| テクニカル(指標)の切り替え・設定画面を付けたい | `StockChartViewController` | [4. 指標メニュー・設定画面付きのチャート](#4-指標メニュー設定画面付きのチャートstockchartviewcontroller) |
+| このアプリと同じ横画面(下の帯付き)を使いたい | `LandscapeChartViewController` | [横画面のチャートだけを使う場合](#横画面のチャートだけを使う場合) |
+| 海外指数(NYダウなど)を表示したい | `market = .overseas` | [海外指数の場合](#海外指数の場合) |
+| 色・文字の大きさを変えたい | `style` | [5. 見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
+
+> **メモリリークに注意**: 横画面の `onPeriodSelect` などのクロージャ(ブロック)の中で、画面自身や `self` を使うときは、Swift は `[weak self]`、Objective-C は `__weak` を付けた変数を使ってください。詳しくは「[横画面の下の帯](#横画面の下の帯)」。
+
+## 困ったとき
+
+| 症状・エラーメッセージ | 原因 | 直し方 |
+|---|---|---|
+| `No such module 'DGCharts'` | DGCharts がターゲットに追加されていない | ステップ 2 をやり直す。ターゲットの **General > Frameworks, Libraries, and Embedded Content** に `DGCharts` があるか確認する |
+| `'〇〇-Swift.h' file not found` | ヘッダの名前がモジュール名と違う | ステップ 4 のとおり、Product Module Name を確認して書き直す |
+| Objective-C で `StockChartView` などが見つからない(`Unknown type name`) | `-Swift.h` を import していない、または Swift のファイルがターゲットに入っていない | `#import "〇〇-Swift.h"` を書く。Swift のファイルの **Target Membership** にチェックが入っているか確認する |
+| `Invalid redeclaration of 'StockCandle'` など | 既存アプリに同じ名前の型がある | どちらかの名前を変える(Xcode で型名を右クリック > **Refactor > Rename** で、使っている箇所もまとめて変えられる) |
+| ビルドで `nonisolated` に関するエラーが出る | Xcode が古い | Xcode 26 以上を使う(ステップ 0) |
+| 「Empty paragraph passed to '\param' command」の警告が大量に出る | DGCharts のヘッダのコメントの書き方(動作には影響しない) | **Build Settings** の **Documentation Comments** を **No** にする |
+| チャートが何も表示されない(真っ白) | チャートの高さ・幅が 0 | 高さの制約(例: 260)を付けているか確認する。storyboard に置いた場合は、View のクラスが `StockChartView` になっているか確認する |
+| 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
+| ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
+| 設定タブを押すとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、`ChartSettingsView.xib` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
+| 横画面・縦画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` / `Portrait.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
+| 横向きにならない | アプリが横向きに対応していない | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる |
+| 横画面を閉じたあとも、メモリが解放されない | クロージャ(ブロック)の中で、画面を強く参照している | `[weak self]` / `__weak` を使う(ステップ 7 の注意) |
+| 配列を渡したらアプリが落ちた | 配列に辞書以外(文字列など)が入っている | `ChartResponseLoader` には辞書(`NSDictionary`)だけを入れた配列を渡す |
+
+
 ## 画面
 
 | 縦画面 | 横画面 |
 |---|---|
 | 上部のタブで足種(1分足・日中足・日足・週足・月足)を切り替える。チャートは移動平均線 + 出来高 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。下の帯で、チャートの種類・足種の切り替え、更新、縦画面に戻す操作ができる |
 | `Portrait.storyboard` / `PortraitChartViewController` | `Landscape.storyboard` / `LandscapeChartViewController` |
+| <img src="docs/images/portrait.png" width="260" alt="縦画面"> | <img src="docs/images/landscape.png" width="520" alt="横画面"> |
 
 `ViewController`(`Main.storyboard`)が縦画面用と横画面用の両方を読み込み、画面の向きに合わせて片方だけを表示します。
 
@@ -590,25 +840,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 
 ### 手順
 
-1. **DGCharts を追加する**
-   Swift Package Manager で `https://github.com/ChartsOrg/Charts.git`(5.1.0 以上)を追加し、アプリのターゲットにリンクします。
-
-2. **`StockChart` フォルダをコピーする**
-   Model / View / Controller の Swift ファイルと、設定画面の `ChartSettingsView.xib` をアプリのターゲットに追加します。
-   XIB が **Copy Bundle Resources** に入っていることを確認してください(入っていないと、設定画面を開いたときに落ちます)。
-
-3. **画面に置く**(どちらか)
-
-   | 使いたいもの | 置くもの | 書き方 |
-   |---|---|---|
-   | チャートだけ | `StockChartView` | 「3. チャートだけを置く」 |
-   | テクニカル・設定画面・チャートの種類も | `StockChartViewController`(子 ViewController として埋め込む) | 「4. 指標メニュー・設定画面付きのチャート」 |
-
-   このアプリと同じ縦画面・横画面をそのまま使う場合は、`StockChart/Controller/` にある `Portrait.storyboard` / `Landscape.storyboard` と、画面のクラス `PortraitChartViewController` / `LandscapeChartViewController` を使います(`StockChart/` フォルダごとコピーすれば入っています。中身は自由に変えて構いません)。
-
-4. **データを渡す**
-   API から取得した値で `StockCandle`(日付・4本値・出来高。「1. データを作る」を参照)を作り、**日付の古い順**の配列で渡します。
-   海外指数の場合は、データを渡す前に `market = .overseas` を指定します(「海外指数の場合」を参照)。
+手順は「[はじめての導入ガイド](#はじめての導入ガイド)」にステップごとにまとめています。ここでは、組み込むときに使う機能を説明します。
 
 ### API のレスポンス(足種ごと)を渡す
 
@@ -728,7 +960,8 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 | 項目 | このプロジェクトの設定 | 既存アプリで違う場合 |
 |---|---|---|
 | Objective-C から使う | `#import "ChartTest-Swift.h"` | ヘッダ名は `<既存アプリのモジュール名>-Swift.h` になる。Objective-C だけのアプリなら、Swift を使えるようにする設定(Bridging Header など)が必要 |
-| Swift の並行処理の設定 | Default Actor Isolation = **MainActor**、Swift 5 | 設定が違うと、コンパイルエラーや警告が出ることがある。同じ設定にするか、出たエラーを直す |
+| Swift の並行処理の設定 | Default Actor Isolation = **MainActor**、Swift 5 | 既存アプリで Default Actor Isolation を指定していない(nonisolated)場合も、エラー・警告なくビルドできることを確認済み。設定を変える必要はない |
+| Xcode | Xcode 27 で作成 | Xcode 26 以上が必要(Swift 6.2 の `nonisolated` を付けたクラスなどを使っているため) |
 | 対応 OS | iOS 18 以上で動作確認 | iOS 15 以降の API を使っているので、それより前の OS では使えない(iOS 18 未満は未確認) |
 | ダークモード | ライトモード固定 | 色はライトモード前提(白背景・黒文字)。ダークモードに対応しているアプリでは、`StockChartStyle` で見た目を調整する |
 | 型の名前 | `StockCandle`・`ChartType`・`ChartPeriod` など | 既存アプリに同じ名前の型があると衝突するので、名前を変える |
@@ -737,8 +970,10 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 ## フォルダ構成
 
 ```
+docs/images/                         … README の画像
 ChartTest/
 ├─ ViewController.swift              … 縦/横の画面を切り替えるだけの画面
+├─ ObjCSample/                       … Objective-C から使うサンプル
 ├─ SampleData.swift                  … 動作確認用のダミーデータ(足種ごと)
 └─ StockChart/                       … チャートの共通部品(MVC で役割を分けている)
    ├─ Model/       … 計算とデータ(UIKit・DGCharts に依存しない)
