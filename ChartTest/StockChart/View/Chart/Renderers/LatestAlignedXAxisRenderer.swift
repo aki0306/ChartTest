@@ -29,7 +29,8 @@
 //    ・足の中心に置くと画面からはみ出すラベルは、ずらさずに表示しない(ずらすと隣のラベルと重なるため)
 //    ・最新の足より右に日付だけを並べる時間帯(1分足・日中足の、これから値が来る時間)がある場合は、右へも同じ間隔で置く
 //    ・1分足・日中足(minuteMultiple = 5)は、最新の足を基準にせず、きりのいい間隔(5・10・15・30・60分 …)で、
-//      毎時 15分を基準にした時刻に置く(例: 全体を表示すると 30分おきで 9:15・9:45 … 15:15。拡大したときだけ細かくする)
+//      毎時 15分を基準にした時刻に置く(例: 全体を表示すると、端末の幅に関係なく 30分おきで 9:15・9:45 … 15:15 の 11個。
+//      拡大したときだけ細かくする)
 //
 //  ※ このプロジェクトは既定のアクター分離が MainActor だが、継承元の XAxisRenderer は
 //    アクター分離なしで宣言されているため、クラスを nonisolated にして override できるようにしている
@@ -145,17 +146,20 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     static let minuteLabelGap: CGFloat = 5
     /// 1分足・日中足のラベルの時刻の基準(分)。間隔が 30分なら :15・:45、60分なら :15 に置く(全体を表示すると 9:15 … 15:15)
     static let minuteLabelAnchor = 15
-    /// 画面にこの分数以上が入っているとき(全体表示など)は、ラベルの間隔を最低でも minuteLabelWideInterval にする
+    /// 画面にこの分数以上が入っているとき(全体表示など)は、ラベルの間隔を minuteLabelWideInterval に固定する
     static let minuteLabelWideSpan = 180
-    /// 全体表示などのときの、ラベルの間隔の最小値(分)。既存アプリの1分足と同じく、必ず 9:15・9:45 … 15:15 になるようにする
+    /// 全体表示などのときの、ラベルの間隔(分)。既存アプリの1分足と同じく、端末の幅に関係なく必ず
+    /// 9:15・9:45 … 15:15 の 11個になるようにする(ラベル同士は、重ならなければ間が詰まっていても置く)
     static let minuteLabelWideInterval = 30
 
     /// 1分足・日中足のラベルを置く足を選ぶ。
     ///
     ///   1. 間隔(分)を、multiple の倍数のきりのいい分数(5・10・15・30・60・120 …)のうち、
     ///      ラベル同士が重ならない(ラベルの幅 + minuteLabelGap 以上空く)一番短いものにする。
-    ///      ただし、画面に 3時間(minuteLabelWideSpan)以上が入っているとき(全体表示など)は、最低でも 30分にする
-    ///      (既存アプリの1分足と同じく、幅の広い横画面でも 9:15・9:45 … 15:15 になる。拡大したときだけ細かくする)
+    ///      ただし、画面に 3時間(minuteLabelWideSpan)以上が入っているとき(全体表示など)は、30分に固定し、
+    ///      ラベル同士は重ならなければ間が詰まっていても置く
+    ///      (既存アプリの1分足と同じく、幅の狭い iPhone SE でも広い横画面でも 9:15・9:45 … 15:15 の 11個になる。
+    ///       拡大したときだけ細かくする)
     ///   2. 時刻(0時からの分)が「基準(minuteLabelAnchor)+ 間隔の倍数」の足に置く
     ///      例) 間隔 30分: 9:15・9:45・10:15 … 15:15 / 間隔 60分: 9:15・10:15 … 15:15 / 間隔 10分: 9:05・9:15・9:25 …
     ///
@@ -182,7 +186,13 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             labelWidth = max(labelWidth, self.labelWidth(at: Double(item.index)))
         }
         let visibleMinutes = Int((visibleMax - visibleMin) * Double(self.minutesPerCandle()))
-        let interval = self.minuteLabelInterval(multiple: multiple, labelWidth: labelWidth, visibleMinutes: visibleMinutes)
+        let isWideSpan = visibleMinutes >= Self.minuteLabelWideSpan
+        var interval = Self.minuteLabelWideInterval
+        var gap: CGFloat = 0  // 全体表示などのときは、重ならなければ置く
+        if !isWideSpan {
+            interval = self.minuteLabelInterval(multiple: multiple, labelWidth: labelWidth)
+            gap = Self.minuteLabelGap
+        }
 
         var indexes: [Double] = []
         var previousRight: CGFloat?
@@ -198,9 +208,9 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             if centerX - labelWidth / 2 < self.viewPortHandler.contentLeft {
                 continue
             }
-            // 念のため、前のラベルと重なる場合も置かない
+            // 前のラベルと重なる(間が gap 未満)場合は置かない
             if let previousRight {
-                if centerX - labelWidth / 2 <= previousRight + Self.minuteLabelGap {
+                if centerX - labelWidth / 2 < previousRight + gap {
                     continue
                 }
             }
@@ -213,13 +223,9 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
         return indexes
     }
 
-    /// ラベルを置く間隔(分)。multiple の倍数のきりのいい分数のうち、ラベル同士が重ならない一番短いもの
-    /// (画面に minuteLabelWideSpan 分以上が入っているときは、minuteLabelWideInterval 分より短くしない)
-    private func minuteLabelInterval(multiple: Int, labelWidth: CGFloat, visibleMinutes: Int) -> Int {
-        var candidates = [1, 2, 3, 6, 12, 24, 36, 48, 72].map { factor in factor * multiple }
-        if visibleMinutes >= Self.minuteLabelWideSpan {
-            candidates = candidates.filter { candidate in candidate >= Self.minuteLabelWideInterval }
-        }
+    /// ラベルを置く間隔(分。拡大しているとき)。multiple の倍数のきりのいい分数のうち、ラベル同士が重ならない一番短いもの
+    private func minuteLabelInterval(multiple: Int, labelWidth: CGFloat) -> Int {
+        let candidates = [1, 2, 3, 6, 12, 24, 36, 48, 72].map { factor in factor * multiple }
         // 1分あたりの幅(pt) = 足1本の幅 ÷ 足1本の分数
         let pointsPerMinute = self.candleWidthInPoints() / CGFloat(self.minutesPerCandle())
         guard pointsPerMinute > 0 else { return candidates[candidates.count - 1] }

@@ -902,7 +902,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 下側の日付ラベル欄の高さ | `xAxisLabelHeight` | 20pt |
 | 日付ラベルの数 | `xAxisLabelCount`(おおよその個数。足種ごとの値は `ChartPeriod.xAxisLabelCount`) | 7(週足・月足は 5) |
 | 日付ラベル同士の間隔 | `xAxisLabelSpacing`(0 より大きいと `xAxisLabelCount` は使わず、この間隔を空けて横幅に入るだけ日付を並べる。Objective-C は `chartView.xAxisLabelSpacing`) | 0(横画面では 12pt) |
-| 日付ラベルを置く時刻(分の倍数) | `xAxisLabelMinuteMultiple`(5 なら、5・10・15・30・60分…のうちラベルが重ならない一番短い間隔で、毎時 15分を基準にした時刻に置く。3時間以上を表示しているときは最低でも 30分おきにするので、全体を表示すると既存アプリと同じく 9:15・9:45 … 15:15(幅が狭く重なる場合だけ 9:15・10:15 … 15:15)。拡大したときは 5・10・15分おきまで細かくする。足種に合わせて `ChartPeriod.xAxisLabelMinuteMultiple` が入る) | 1分足・日中足は 5、それ以外は nil(そろえない) |
+| 日付ラベルを置く時刻(分の倍数) | `xAxisLabelMinuteMultiple`(5 なら、5・10・15・30・60分…のうちラベルが重ならない一番短い間隔で、毎時 15分を基準にした時刻に置く。3時間以上を表示しているときは 30分おきに固定し、ラベル同士は重ならなければ間が詰まっていても置くので、全体を表示すると端末の幅に関係なく既存アプリと同じ 9:15・9:45 … 15:15 の 11個。拡大したときは 5・10・15分おきまで細かくする。足種に合わせて `ChartPeriod.xAxisLabelMinuteMultiple` が入る) | 1分足・日中足は 5、それ以外は nil(そろえない) |
 | メインとサブの高さの比 | `priceHeightRatio`(メイン : サブ = この値 : 1) | 2.0 |
 | 初期表示の本数 | `visibleCount`(nil で全件。足種ごとの値は `ChartPeriod.visibleCount`) | 55 |
 | 拡大の限界 | `minimumVisibleCount`(ピンチで拡大したときに、最低でも表示する本数。nil で制限なし) | 20 |
