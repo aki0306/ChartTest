@@ -15,7 +15,7 @@
 //    | PortraitChartViewController    | このアプリの縦画面(足種のタブ付き)をそのまま使う場合 |
 //
 //  使い方(Objective-C):
-//      NSMutableArray *responseArray = ...;   // 中身は NSDictionary(@{@"date": …, @"open": …, …})
+//      NSMutableArray *responseArray = [XxxChartDataUtil dataArrayFromResponse:…];   // 中身は NSDictionary(@{kTimestamp: …, kStart: …, …})
 //      [ChartResponseLoader setDailyResponse:responseArray to:landscapeViewController];   // 横画面
 //      [ChartResponseLoader setDailyResponse:responseArray to:self.chartView];            // 縦画面(StockChartView)
 //

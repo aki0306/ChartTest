@@ -5,9 +5,9 @@
 //  【Model】API のレスポンス(辞書の配列)を、チャートに渡すローソク足(StockCandle)の配列に変換する。
 //
 //  レスポンスの1件(辞書)の例:
-//      ["date": "2026/10/01", "open": "66,000", "high": 66500, "low": 65800, "close": "66300.5", "volume": 2.4e9]
+//      ["kTimestamp": "2026/10/01 00:00", "kStart": "66000", "kHeight": "66500", "kLow": "65800", "kEnd": "66300.5", "kTurnover": "2400000000"]
 //
-//  ・キーの名前と日付の形式は、下の Key / dateFormats にまとめている(仮の値。既存アプリのレスポンスに合わせて直す)
+//  ・キーの名前は、既存アプリの XxxChartDataUtil.h の定数(kTimestamp など)と同じ。日付の形式は dateFormats にまとめている
 //  ・値は 数値(NSNumber)・文字列("66,000" のようなカンマ付きも可)のどちらでも読める
 //  ・日付は Date・文字列(dateFormats のどれかの形式)のどちらでも読める
 //  ・日付が読めない件は飛ばす
@@ -34,22 +34,23 @@ import Foundation
 /// Objective-C からも使えるよう NSObject を継承したクラスにしている(インスタンスは作らない)
 final class StockCandleResponseParser: NSObject {
 
-    // MARK: - レスポンスの形(仮の値。既存アプリのレスポンスに合わせて直す)
+    // MARK: - レスポンスの形
 
-    /// レスポンスの1件(辞書)のキー
+    /// レスポンスの1件(辞書)のキー。
+    /// 既存アプリの XxxChartDataUtil.h の定数と同じ文字列にしている(dataArrayFromResponse:… の結果をそのまま渡せるように)
     enum Key {
-        /// 日付・時刻
-        static let date = "date"
-        /// 始値
-        static let open = "open"
-        /// 高値
-        static let high = "high"
-        /// 安値
-        static let low = "low"
-        /// 終値
-        static let close = "close"
-        /// 出来高
-        static let volume = "volume"
+        /// 日付・時刻(kTimestamp)
+        static let date = "kTimestamp"
+        /// 始値(kStart)
+        static let open = "kStart"
+        /// 高値(kHeight)
+        static let high = "kHeight"
+        /// 安値(kLow)
+        static let low = "kLow"
+        /// 終値(kEnd)
+        static let close = "kEnd"
+        /// 出来高(kTurnover)
+        static let volume = "kTurnover"
     }
 
     /// 日付の文字列の形式。上から順に試し、最初に読めた形式を使う。

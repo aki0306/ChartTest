@@ -217,7 +217,7 @@ final class MyChartViewController: UIViewController {
   ChartResponseLoader.setDailyResponse(responseArray, to: self.chartView)
   ```
 
-  最初に、[`StockCandleResponseParser.swift`](ChartTest/StockChart/Model/StockCandleResponseParser.swift) の **キーの名前**(`Key`)と **日付の形式**(`dateFormats`)を、既存アプリのレスポンスに合わせて書き換えてください(今は仮の名前 `date`・`open`・`high`・`low`・`close`・`volume` になっています)。詳しくは「[API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す)」。
+  最初に、[`StockCandleResponseParser.swift`](ChartTest/StockChart/Model/StockCandleResponseParser.swift) の **キーの名前**(`Key`)と **日付の形式**(`dateFormats`)が、既存アプリのレスポンスと合っているか確認してください(キーは既存アプリの `XxxChartDataUtil.h` の定数 `kTimestamp`・`kStart` などに合わせてあります)。詳しくは「[API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す)」。
 
 - **B. 自分で `StockCandle` を作って渡す**: 「[1. データを作る](#1-データを作る)」のとおり `StockCandle` の配列を作り、`setCandles(_:period:)` で渡します。**日付の古い順**に並べてください
 
@@ -971,8 +971,9 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 ```objc
 // Objective-C: レスポンスの辞書を配列に入れて、そのまま渡す
 NSMutableArray *responseArray = [NSMutableArray array];
-[responseArray addObject:@{@"date": @"2026/10/01", @"open": @"66,000", @"high": @66500,
-                           @"low": @65800, @"close": @"66300", @"volume": @2400000000}];
+[responseArray addObject:@{kTimestamp: @"2026/10/01 00:00", kStart: @"66000", kHeight: @"66500",
+                           kLow: @"65800", kEnd: @"66300", kTurnover: @"2400000000"}];
+// 既存アプリの XxxChartDataUtil を使う場合は、dataArrayFromResponse:… の結果をそのまま渡せばよい
 [ChartResponseLoader setDailyResponse:responseArray to:landscapeViewController];   // 横画面
 [ChartResponseLoader setDailyResponse:responseArray to:self.chartView];            // 縦画面(StockChartView)
 ```
@@ -983,7 +984,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 | 項目 | 内容 |
 |---|---|
-| キーの名前 | `StockCandleResponseParser.Key`(今は仮の名前 `date`・`open`・`high`・`low`・`close`・`volume`。既存アプリのレスポンスに合わせて直す) |
+| キーの名前 | `StockCandleResponseParser.Key`。既存アプリの `XxxChartDataUtil.h` の定数と同じ `kTimestamp`・`kStart`・`kHeight`・`kLow`・`kEnd`・`kTurnover`(`kVWAP` は読まない) |
 | 日付の形式 | `StockCandleResponseParser.dateFormats`(今は仮の形式 `yyyy/MM/dd HH:mm` など。上から順に試す) |
 | 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
 | 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの `値がない件の穴埋め処理` / `値がない件の穴埋め処理` と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす |
