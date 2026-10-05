@@ -313,7 +313,7 @@ extension StockChartView {
         axis.drawAxisLineEnabled = false
         axis.labelPosition = .outsideChart
         axis.xOffset = self.style.yAxisLabelOffset
-        axis.drawLimitLinesBehindDataEnabled = true  // 基準線(RSI の 30/70 など)は指標の線より下に描く
+        axis.drawLimitLinesBehindDataEnabled = true  // 基準線(RSI の 20/80 など)は指標の線より下に描く
     }
 
     /// X軸の設定(メイン/サブ共通)。縦グリッド線と軸線は描かない。1本単位でラベルを配置する

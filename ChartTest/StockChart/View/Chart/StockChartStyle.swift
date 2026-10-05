@@ -20,48 +20,48 @@ struct StockChartStyle {
     /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数)。nil なら全件まで縮小できる
     var maximumVisibleCount: Int? = nil
 
-    // MARK: - 色
+    // MARK: - 色(既存アプリ XxxChartView の色コードと同じ)
 
     /// 陽線(終値 > 始値)などの上昇を表す色。日本式に合わせて赤
-    var increasingColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+    var increasingColor = UIColor(hex: 0xe5003e)
     /// 陰線(終値 < 始値)などの下降を表す色。日本式に合わせて青
-    var decreasingColor = UIColor(red: 0.07, green: 0.47, blue: 0.95, alpha: 1)
+    var decreasingColor = UIColor(hex: 0x157efb)
     /// 汎用の線の色(ChartColorRole.line(n) の n 番目。足りない場合は先頭から繰り返す)
     var lineColors: [UIColor] = [
-        UIColor(red: 0.55, green: 0.80, blue: 0.10, alpha: 1),  // 0: 黄緑(短期移動平均など)
-        UIColor(red: 1.00, green: 0.55, blue: 0.00, alpha: 1),  // 1: オレンジ(長期移動平均など)
-        UIColor(red: 0.60, green: 0.30, blue: 0.85, alpha: 1),  // 2: 紫
-        UIColor(red: 0.10, green: 0.60, blue: 0.85, alpha: 1),  // 3: 水色
-        UIColor(red: 0.90, green: 0.30, blue: 0.55, alpha: 1),  // 4: ピンク
+        UIColor(hex: 0x94cb10),  // 0: 黄緑(短期移動平均・ボリンジャーの中心線・RSI・%D・シグナル・+DI など)
+        UIColor(hex: 0xff8a00),  // 1: オレンジ(長期移動平均・多重移動平均・±3σ・Slow%D・MACD・−DI など)
+        UIColor(hex: 0x157efb),  // 2: 青(サイコロジカル)
+        UIColor(hex: 0x00a2ff),  // 3: 水色(ボリンジャーの ±1σ)
+        UIColor(hex: 0x006cff),  // 4: 濃い青(ボリンジャーの ±2σ)
     ]
     /// 出来高バーの色(黄緑)
-    var volumeColor = UIColor(red: 0.60, green: 0.80, blue: 0.10, alpha: 1)
+    var volumeColor = UIColor(hex: 0x94cb10)
     /// 出来高移動平均線の色(青)
-    var volumeAverageColor = UIColor(red: 0.12, green: 0.50, blue: 0.95, alpha: 1)
-    /// 一目均衡表: 転換線の色
-    var ichimokuTenkanColor = UIColor(red: 0.90, green: 0.30, blue: 0.55, alpha: 1)
-    /// 一目均衡表: 基準線の色
-    var ichimokuKijunColor = UIColor(red: 0.10, green: 0.60, blue: 0.85, alpha: 1)
-    /// 一目均衡表: 先行スパン1 の色(陽雲の色にも使う)
-    var ichimokuSpanAColor = UIColor(red: 1.00, green: 0.55, blue: 0.00, alpha: 1)
-    /// 一目均衡表: 先行スパン2 の色(陰雲の色にも使う)
-    var ichimokuSpanBColor = UIColor(red: 0.60, green: 0.30, blue: 0.85, alpha: 1)
-    /// 一目均衡表: 遅行スパンの色
-    var ichimokuChikouColor = UIColor(red: 0.55, green: 0.80, blue: 0.10, alpha: 1)
+    var volumeAverageColor = UIColor(hex: 0x157efb)
+    /// 一目均衡表: 転換線の色(青)
+    var ichimokuTenkanColor = UIColor(hex: 0x005bd8)
+    /// 一目均衡表: 基準線の色(黄緑)
+    var ichimokuKijunColor = UIColor(hex: 0x94cb10)
+    /// 一目均衡表: 先行スパン1 の色(陽雲の色にも使う。黄緑)
+    var ichimokuSpanAColor = UIColor(hex: 0x94cb10)
+    /// 一目均衡表: 先行スパン2 の色(陰雲の色にも使う。オレンジ)
+    var ichimokuSpanBColor = UIColor(hex: 0xff8a00)
+    /// 一目均衡表: 遅行スパンの色(グレー)
+    var ichimokuChikouColor = UIColor(hex: 0x666666)
+    /// パラボリック(SAR)の点の色(グレー)
+    var parabolicColor = UIColor(hex: 0x666666)
     /// VWAP の線・点の色(赤)
-    var vwapColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+    var vwapColor = UIColor(hex: 0xe5003e)
     /// 新値足の色(陽線・陰線とも同じ青。陽線は枠だけ、陰線は塗りつぶしで区別する)
-    var newPriceColor = UIColor(red: 0.10, green: 0.50, blue: 1.00, alpha: 1)
+    var newPriceColor = UIColor(hex: 0x157efb)
     /// 折線チャートの線の色(青)
-    var lineChartColor = UIColor(red: 0.10, green: 0.50, blue: 1.00, alpha: 1)
+    var lineChartColor = UIColor(hex: 0x157efb)
     /// 現在値の破線(新値足・折線チャート)の色
     var currentPriceLineColor = UIColor.darkGray
-    /// 雲の不透明度(先行スパンの色をこの不透明度で塗る)
-    var cloudAlpha: CGFloat = 0.15
-    /// MACD ヒストグラムの不透明度(上昇/下降の色をこの不透明度で塗る)
-    var histogramAlpha: CGFloat = 0.5
-    /// オシレーターの基準線(RSI の 30/70 など)の色
-    var referenceLineColor = UIColor.systemGray2
+    /// 雲の不透明度(先行スパンの色をこの不透明度で塗る。既存アプリの 0x40 = 約 25%)
+    var cloudAlpha: CGFloat = 0.25
+    /// オシレーターの基準線(RSI の 20/80 など)の色(赤)
+    var referenceLineColor = UIColor(hex: 0xe5003e)
     /// 横グリッド線の色
     var gridColor = UIColor.systemGray5
     /// 外枠の色
@@ -183,11 +183,23 @@ struct StockChartStyle {
         case .ichimokuSpanA: return self.ichimokuSpanAColor
         case .ichimokuSpanB: return self.ichimokuSpanBColor
         case .ichimokuChikou: return self.ichimokuChikouColor
-        case .histogramPositive: return self.increasingColor.withAlphaComponent(self.histogramAlpha)
-        case .histogramNegative: return self.decreasingColor.withAlphaComponent(self.histogramAlpha)
+        case .parabolic: return self.parabolicColor
         case .vwap: return self.vwapColor
         case .newPrice: return self.newPriceColor
         case .closeLine: return self.lineChartColor
         }
+    }
+}
+
+// MARK: - 色コードから色を作る
+
+private extension UIColor {
+
+    /// 0xRRGGBB の色コードから色を作る(既存アプリの色コード 0xffRRGGBB の下6桁)
+    convenience init(hex: UInt32) {
+        let red = CGFloat((hex >> 16) & 0xff) / 255
+        let green = CGFloat((hex >> 8) & 0xff) / 255
+        let blue = CGFloat(hex & 0xff) / 255
+        self.init(red: red, green: green, blue: blue, alpha: 1)
     }
 }

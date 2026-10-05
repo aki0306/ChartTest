@@ -8,7 +8,7 @@
 //  【DGCharts のデータの形】
 //   CombinedChartData(1つのチャートに重ねて描く全データ)
 //     ├ candleData  … ローソク足
-//     ├ barData     … 棒グラフ(出来高・MACD ヒストグラム)
+//     ├ barData     … 棒グラフ(出来高)
 //     ├ lineData    … 折れ線(移動平均線など。線1本 = LineChartDataSet 1つ)
 //     └ scatterData … 点(パラボリック)
 //   各データは「X = 何本目か、Y = 値」の点(ChartDataEntry)の並び。
@@ -184,18 +184,18 @@ extension StockChartView {
     private func updateLegends() {
         // メインチャートの凡例: 「タイトル + 各線のラベル」を並べる
         //   例) 移動平均線       → 「移動平均 短期移動平均(5) 長期移動平均(25)」
-        //       ボリンジャーバンド → 「ボリンジャーバンド(20) 中心線 ±1σ ±2σ」
+        //       ボリンジャーバンド → 「ボリンジャー 移動平均(5)」(文字は既存アプリと同じ)
         // ・タイトル(legendTitle)と各線のラベル(label)は Model(ChartContentBuilder)で決めている
         // ・label が nil の線は凡例に出さない(ボリンジャーバンドの下限線、パラボリックの点など)
         // ・「なし(ローソク足のみ)」はタイトルも線もないので、凡例は空(nil)になる
-        // ・線を持たない項目(新値足の「■陰線 □陽線」など)は、各線のラベルのあとに並べる
+        // ・線を持たない項目(新値足の「新値足　■陰線　□陽線」、多重移動平均の「期間(5,75)」など)は、各線のラベルのあとに並べる
         let mainItems = self.legendItems(of: self.mainContent.series) + self.mainContent.legendItems
         self.priceLegendLabel.attributedText = self.makeLegend(title: self.mainContent.legendTitle, items: mainItems)
 
         // サブチャートの凡例: 「タイトル + 棒のラベル + 各線のラベル」の順に並べる
         //   例) 出来高 → 「出来高 出来高移動平均」(タイトルなし。棒のラベル「出来高」が先頭)
-        //       RSI    → 「RSI(14)」(タイトルなし。線のラベルだけ)
-        //       DMI    → 「DMI(14) +DI −DI ADX」
+        //       RSI    → 「ＲＳＩ 期間(14)」
+        //       DMI    → 「ＤＭＩ DI -DI」
         guard let sub = self.subContent else {
             self.subLegendLabel.attributedText = nil
             return
@@ -359,7 +359,7 @@ extension StockChartView {
         return set
     }
 
-    /// 棒グラフ(出来高・MACD ヒストグラム)のデータを作る
+    /// 棒グラフ(出来高)のデータを作る
     private func makeBarData(_ bars: ChartBars) -> BarChartData {
         // nil の位置は棒を作らない。色は棒ごとに指定する(作った棒と同じ並びにする)
         var entries: [BarChartDataEntry] = []
@@ -444,13 +444,13 @@ extension StockChartView {
     private func configureSubAxis(_ content: SubChartContent) {
         let axis = self.subChartView.rightAxis
 
-        // 基準線(RSI の 30/70 など)を破線で引く
+        // 基準線(RSI の 20/80 など)を引く
         axis.removeAllLimitLines()
         for level in content.referenceLines {
             let line = ChartLimitLine(limit: level)
             line.lineColor = self.style.referenceLineColor
             line.lineWidth = 0.8
-            line.lineDashLengths = [4, 3]  // 4pt 描いて 3pt 空ける破線
+            // 既存アプリと同じく実線(破線にしない)
             line.drawLabelEnabled = false
             axis.addLimitLine(line)
         }

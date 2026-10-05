@@ -241,6 +241,11 @@ static NSArray<StockCandle *> *XxxNewPriceCandles(SCIOhlcDataSeries *series) {
             break;
         }
         case MainChartIndicatorParabolic:
+            // 既存アプリと同じく、移動平均線(短期・長期)も一緒に描く
+            values.movingAverageShort = XxxAlignedValues([XxxChartDataUtil movingAverageWithDataArray:data key:kEnd number:periods.shortMAPeriod],
+                                                         indexByDate, count);
+            values.movingAverageLong = XxxAlignedValues([XxxChartDataUtil movingAverageWithDataArray:data key:kEnd number:periods.longMAPeriod],
+                                                        indexByDate, count);
             values.parabolicSAR = XxxAlignedValues([XxxChartDataUtil parabolicSARDotWithArray:data], indexByDate, count);
             break;
         case MainChartIndicatorCandleOnly:
@@ -274,14 +279,16 @@ static NSArray<StockCandle *> *XxxNewPriceCandles(SCIOhlcDataSeries *series) {
             values.psychological = XxxAlignedValues([XxxChartDataUtil psychologicalWtihDataArray:data intervalDay:periods.psychologicalPeriod],
                                                     indexByDate, count);
             break;
-        case SubChartIndicatorStochastics:
-            values.stochasticsK = XxxAlignedValues([XxxChartDataUtil stochasticsKPercentWithDataArray:data interval:periods.stochasticsKPeriod],
-                                                   indexByDate, count);
-            values.stochasticsD = XxxAlignedValues([XxxChartDataUtil stochasticsDPercentWithDataArray:data
-                                                                                            intervalK:periods.stochasticsKPeriod
-                                                                                             interval:periods.stochasticsDPeriod],
-                                                   indexByDate, count);
+        case SubChartIndicatorStochastics: {
+            // 既存アプリと同じく、%D と Slow%D(%D の移動平均)
+            SCIXyDataSeries *d = [XxxChartDataUtil stochasticsDPercentWithDataArray:data
+                                                                          intervalK:periods.stochasticsKPeriod
+                                                                           interval:periods.stochasticsDPeriod];
+            SCIXyDataSeries *slowD = [XxxChartDataUtil stochasticsSlowDPercentWithPointDataSeries:d interval:periods.stochasticsDPeriod];
+            values.stochasticsD = XxxAlignedValues(d, indexByDate, count);
+            values.stochasticsSlowD = XxxAlignedValues(slowD, indexByDate, count);
             break;
+        }
         case SubChartIndicatorMacd: {
             SCIXyDataSeries *macd = [XxxChartDataUtil macdLineWithDataArray:data
                                                               shortInterval:periods.macdShortPeriod
@@ -292,7 +299,7 @@ static NSArray<StockCandle *> *XxxNewPriceCandles(SCIOhlcDataSeries *series) {
             break;
         }
         case SubChartIndicatorDmi:
-            // 既存の計算には ADX がないので、+DI・−DI だけ(チャートも ADX を出さない)
+            // 既存アプリと同じく +DI・−DI だけ(ADX は描かない)
             values.dmiPlus = XxxAlignedValues([XxxChartDataUtil plusDIWtihDataArray:data interval:periods.dmiPeriod], indexByDate, count);
             values.dmiMinus = XxxAlignedValues([XxxChartDataUtil minusDIWtihDataArray:data interval:periods.dmiPeriod], indexByDate, count);
             break;

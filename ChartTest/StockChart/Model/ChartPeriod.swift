@@ -14,6 +14,15 @@
 //  | 週足   | 13 / 26             | 2025/9      | 直近 55 本     | 出来高(平均)    |
 //  | 月足   | 5 / 25              | 2023/9      | 全件           | 出来高(平均)    |
 //
+//  指標の期間は既存アプリ(初期値の設定ファイル)と同じ。日足の値が IndicatorParameters の初期値で、
+//  週足・月足は次の値だけ違う(indicatorParameters)。
+//
+//  | 足種 | 移動平均 | 多重移動平均(最短〜最長) | ボリンジャー | 出来高移動平均 | 移動平均乖離率 |
+//  |------|----------|--------------------------|--------------|----------------|----------------|
+//  | 日足 | 5 / 25   | 5〜75                    | 5            | 5              | 5 / 25         |
+//  | 週足 | 13 / 26  | 13〜52                   | 13           | 13             | 13 / 26        |
+//  | 月足 | 5 / 25   | 5〜75                    | 25           | 5              | 5 / 25         |
+//
 //  指数の種類(国内/海外)によって、選べる足種が変わる(IndexMarket)。
 //
 
@@ -44,17 +53,37 @@ import Foundation
         }
     }
 
-    /// 指標の計算パラメータ(移動平均の期間・出来高の凡例名)
+    /// 指標の計算パラメータ(期間・出来高の凡例名)。
+    /// 既存アプリ(初期値の設定ファイル)の足種ごとの値。日足の値は IndicatorParameters の初期値なので、違うものだけ上書きする
     var indicatorParameters: IndicatorParameters {
         var parameters = IndicatorParameters()
         switch self {
         case .weekly:
-            // 週足は 13週(約3か月)・26週(約半年)
+            // 週足は 13週(約3か月)・26週(約半年)など
             parameters.shortMAPeriod = 13
             parameters.longMAPeriod = 26
-        case .oneMinute, .intraday, .daily, .monthly:
-            parameters.shortMAPeriod = 5
-            parameters.longMAPeriod = 25
+            parameters.multipleMAShortestPeriod = 13
+            parameters.multipleMALongestPeriod = 52
+            parameters.bollingerPeriod = 13
+            parameters.volumeMAPeriod = 13
+            parameters.deviationShortPeriod = 13
+            parameters.deviationLongPeriod = 26
+        case .monthly:
+            parameters.bollingerPeriod = 25
+        case .oneMinute, .intraday, .daily:
+            break
+        }
+
+        // 凡例の「5日移動平均」などの単位(既存アプリと同じ)
+        switch self {
+        case .oneMinute, .intraday:
+            parameters.periodUnit = "分"
+        case .daily:
+            parameters.periodUnit = "日"
+        case .weekly:
+            parameters.periodUnit = "週"
+        case .monthly:
+            parameters.periodUnit = "月"
         }
 
         switch self {

@@ -869,10 +869,13 @@ chartView.increasingColor = UIColor.systemRedColor;
 
 | 変えたいもの | 項目 | 既定値 |
 |---|---|---|
-| 陽線・陰線の色 | `increasingColor` / `decreasingColor` | 赤 / 青 |
-| 指標の線の色(移動平均など) | `lineColors`(0 = 1本目、1 = 2本目、…) | 黄緑・オレンジ・紫・水色・ピンク |
+| 陽線・陰線の色 | `increasingColor` / `decreasingColor` | 赤 `e5003e` / 青 `157efb` |
+| 指標の線の色(移動平均など) | `lineColors`(0 = 1本目、1 = 2本目、…) | 黄緑 `94cb10`・オレンジ `ff8a00`・青 `157efb`・水色 `00a2ff`・濃い青 `006cff` |
 | 出来高の棒・出来高移動平均の色 | `volumeColor` / `volumeAverageColor` | 黄緑 / 青 |
-| 一目均衡表の線の色 | `ichimokuTenkanColor` など `ichimoku〜Color` | ― |
+| 一目均衡表の線の色 | `ichimokuTenkanColor` など `ichimoku〜Color` | 転換線 `005bd8`・基準線 / 先行1 黄緑・先行2 オレンジ・遅行 `666666` |
+| パラボリック(SAR)の点の色 | `parabolicColor` | グレー `666666` |
+| 一目均衡表の雲の不透明度 | `cloudAlpha` | 0.25 |
+| オシレーターの基準線(RSI の 20/80 など)の色 | `referenceLineColor` | 赤 `e5003e`(実線) |
 | VWAP・新値足・折線チャートの色 | `vwapColor` / `newPriceColor` / `lineChartColor` | 赤 / 青 / 青 |
 | 現在値の破線の色(新値足・折線チャート) | `currentPriceLineColor` | 濃いグレー |
 | 外枠・区切り線・横グリッド線の色 | `borderColor` / `dividerColor` / `gridColor` | 黒 / グレー / 薄いグレー |
@@ -1205,6 +1208,9 @@ landscape.onPeriodSelect = ^(ChartPeriod period) {
 | 海外指数 | 既存アプリ(`終値だけのチェック処理`)と同じく、終値だけを読む。始値・高値・安値は終値と同じ値になるので、ローソク足にすると横線だけの足になる |
 | 日中足 | `dataArrayFromResponse:…` が5分ごとにまとめた結果を、そのまま日中足として描く |
 | VWAP | 既存アプリと同じく、API の値(`kVWAP`)で描く(指数の日中足のように出来高が 0 でも描ける)。`kVWAP` がないデータの場合だけ、出来高から計算する |
+| 指標の期間・基準線 | 既存アプリ(`初期値の設定ファイル`)と同じ初期値。例: ボリンジャー 5(週足 13・月足 25)・±3σ、一目均衡表 転換線 3・基準線 26・スパン 26、出来高移動平均 5(週足 13)、RSI 14(20% / 80%)、ストキャス 高安期間 14・D期間 3(30% / 70%)、MACD 5 / 25 / 9。足種ごとの値は `ChartPeriod.indicatorParameters` |
+| 描く線 | 既存アプリと同じ。ストキャスは %D・Slow%D、パラボリックは移動平均線 2本 + SAR の点、多重移動平均線は 1色(5〜75 を 15本)、MACD はヒストグラムなし、DMI は ADX なし、移動平均乖離率・MACD に 0 の線は引かない |
+| 凡例・色 | 既存アプリ(`XxxChartView` の `凡例の設定処理`)と同じ文字と色。例:「多重平均 期間(5,75)」「ボリンジャー 移動平均(5)」「一目均衡 転換線(3) 基準線(26) 先行スパン2(52)」「パラボリック 5日移動平均 25日移動平均」「ＲＳＩ 期間(14)」「ストキャス %D(14,3) Slow%D」。基準線は赤の実線 |
 | 足が1本だけのとき | 寄り付き直後の1分足・日中足や、過去分がない新規上場の銘柄などで起きる。ローソク足・出来高は1本だけ描かれる。移動平均などの指標は期間に足りないので線が出ない(凡例だけ出る)。折線チャートは線を引けないので現在値の破線だけになり、新値足は線ができないので「表示できる情報はありません」になる |
 
 #### 既存アプリの計算でチャートを描く(XxxChartIndicatorBuilder)
@@ -1240,13 +1246,13 @@ NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response cha
 | 移動平均線・多重移動平均線 | `movingAverageWithDataArray:key:kEnd number:` | |
 | ボリンジャーバンド | `bollingerBandsWithDataArray:number:deviation:` | 中心線は `deviation:0`、上限・下限は `±σ`(整数) |
 | 一目均衡表 | `iChiMoKuBaseLineWithArray:` / `iChiMoKuBeforeLinesWithArray:…` / `iChiMoKuDelayLineWithArray:…` | `delay` は `ichimokuShift − 1`(既存アプリの呼び出しと違う場合は合わせる) |
-| パラボリック | `parabolicSARDotWithArray:` | 点の色は、SAR が終値以下なら上昇、上なら下降 |
+| パラボリック | `parabolicSARDotWithArray:`・`movingAverageWithDataArray:key:kEnd number:` | 既存アプリと同じく、移動平均線(短期・長期)も一緒に描く |
 | 新値足 | `newPriceWithDataArray:` | 値のない仮の足(250本分の埋め草)は除く |
 | 出来高移動平均 | `movingAverageWithDataArray:key:kTurnover number:` | 棒はローソク足の出来高 |
 | 移動平均乖離率・RSI・サイコロジカル | `movingAverageBaisWithDataArray:` / `rsiWtihDataArray:` / `psychologicalWtihDataArray:` | |
-| ストキャス | `stochasticsKPercentWithDataArray:` / `stochasticsDPercentWithDataArray:…` | %K・%D(Slow%D は使わない) |
-| MACD | `macdLineWithDataArray:…` / `signalLineWithMACDPointDataSeries:` | ヒストグラムは MACD − シグナル |
-| DMI | `plusDIWtihDataArray:` / `minusDIWtihDataArray:` | 既存の計算に ADX はないので、ADX の線と凡例は出さない |
+| ストキャス | `stochasticsDPercentWithDataArray:…` / `stochasticsSlowDPercentWithPointDataSeries:` | 既存アプリと同じく %D・Slow%D(%K は描かない) |
+| MACD | `macdLineWithDataArray:…` / `signalLineWithMACDPointDataSeries:` | 既存アプリと同じく、ヒストグラムは描かない |
+| DMI | `plusDIWtihDataArray:` / `minusDIWtihDataArray:` | 既存アプリと同じく、ADX は描かない |
 | VWAP | (計算しない) | API の値(`kVWAP`。`StockCandle.vwap`)で描く |
 
 - 指標の値だけを自分で用意して渡すこともできます(`ChartIndicatorValues` に配列を入れて `setCandles:indicatorValues:`)。値を入れなかった指標は、チャートが計算します

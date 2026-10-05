@@ -60,7 +60,7 @@ import Foundation
     case stochastics
     /// MACD
     case macd
-    /// DMI(+DI / -DI / ADX)
+    /// DMI(+DI / -DI)
     case dmi
     /// なし(サブチャート自体を非表示にし、メインチャートを全高で表示)
     case hidden

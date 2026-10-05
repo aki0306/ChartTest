@@ -12,7 +12,7 @@
 //  ・値の配列は、渡すローソク足と同じ並び(日付の古い順・1本につき1つ)にする。値がない足は NaN
 //    (配列がローソク足より短い場合、足りない分は値なしとして扱う)
 //  ・一目均衡表の先行スパンだけは、データの右端より先の分を後ろに続けてよい(その分だけ右に伸ばして描く)
-//  ・期間などは ChartIndicatorPeriods(StockChartView.indicatorPeriods)の値で計算する(凡例の「RSI(14)」などと合わせるため)
+//  ・期間などは ChartIndicatorPeriods(StockChartView.indicatorPeriods)の値で計算する(凡例の「期間(14)」などと合わせるため)
 //
 //  使い方(Objective-C):
 //      ChartIndicatorValues *values = [[ChartIndicatorValues alloc] init];
@@ -50,7 +50,7 @@ import Foundation
     @objc var ichimokuSpanB: [NSNumber]?
     /// 一目均衡表の遅行スパン
     @objc var ichimokuChikou: [NSNumber]?
-    /// パラボリック(SAR)。点の色は、SAR が終値より下なら上昇、上なら下降の色にする
+    /// パラボリック(SAR)。パラボリックと一緒に描く移動平均線は movingAverageShort / movingAverageLong に入れる
     @objc var parabolicSAR: [NSNumber]?
     /// 新値足の線(1本 = 始値が線の始点、終値が線の終点の足。古い順)
     @objc var newPriceCandles: [StockCandle]?
@@ -67,20 +67,18 @@ import Foundation
     @objc var rsi: [NSNumber]?
     /// サイコロジカルライン
     @objc var psychological: [NSNumber]?
-    /// ストキャスティクス %K
-    @objc var stochasticsK: [NSNumber]?
     /// ストキャスティクス %D
     @objc var stochasticsD: [NSNumber]?
+    /// ストキャスティクス Slow%D(%D の移動平均)
+    @objc var stochasticsSlowD: [NSNumber]?
     /// MACD
     @objc var macd: [NSNumber]?
-    /// MACD のシグナル(ヒストグラムは MACD − シグナルで描く)
+    /// MACD のシグナル
     @objc var macdSignal: [NSNumber]?
     /// DMI の +DI
     @objc var dmiPlus: [NSNumber]?
     /// DMI の −DI
     @objc var dmiMinus: [NSNumber]?
-    /// DMI の ADX(ない場合は ADX の線と凡例を出さない)
-    @objc var dmiADX: [NSNumber]?
 
     // MARK: - 値の変換
 
@@ -103,7 +101,7 @@ import Foundation
 }
 
 /// チャートが指標の計算に使う期間など(IndicatorParameters を Objective-C から読めるようにしたもの)。
-/// チャートの外で指標を計算するときは、この値で計算する(凡例の「RSI(14)」などと合わせるため)。
+/// チャートの外で指標を計算するときは、この値で計算する(凡例の「期間(14)」などと合わせるため)。
 /// 値は読み取り専用(期間を変えるときは ChartPeriod.indicatorParameters・IndicatorParameters を直す)
 @objc final class ChartIndicatorPeriods: NSObject {
 
@@ -143,9 +141,9 @@ import Foundation
     @objc var rsiPeriod: Int { self.parameters.rsiPeriod }
     /// サイコロジカルラインの期間
     @objc var psychologicalPeriod: Int { self.parameters.psychologicalPeriod }
-    /// ストキャスティクス %K の期間
+    /// ストキャスティクスの高安期間(%D の計算で、最高値・最安値を取る期間)
     @objc var stochasticsKPeriod: Int { self.parameters.stochasticsKPeriod }
-    /// ストキャスティクス %D の期間
+    /// ストキャスティクスの D期間(%D の合計を取る期間・Slow%D の移動平均の期間)
     @objc var stochasticsDPeriod: Int { self.parameters.stochasticsDPeriod }
     /// MACD 短期EMA の期間
     @objc var macdShortPeriod: Int { self.parameters.macdShortPeriod }

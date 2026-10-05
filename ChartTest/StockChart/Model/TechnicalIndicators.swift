@@ -23,6 +23,28 @@ enum TechnicalIndicators {
         values.simpleMovingAverage(period: period)
     }
 
+    /// 値がない位置(nil)を含む配列の単純移動平均。直前 period 本の値がすべて揃っている位置だけ計算する
+    /// (ストキャスティクスの Slow%D = %D の移動平均 など)
+    static func sma(_ values: [Double?], period: Int) -> [Double?] {
+        var result = [Double?](repeating: nil, count: values.count)
+        guard period > 0 else { return result }
+        for index in values.indices where index >= period - 1 {
+            var sum = 0.0
+            var isComplete = true
+            for value in values[(index - period + 1)...index] {
+                guard let value else {
+                    isComplete = false
+                    break
+                }
+                sum += value
+            }
+            if isComplete {
+                result[index] = sum / Double(period)
+            }
+        }
+        return result
+    }
+
     /// 指数平滑移動平均(EMA)。
     /// 入力に nil を含む場合(MACD のシグナル計算など)は、連続して period 本の値が揃った位置から計算を始める。
     /// 最初の値は SMA で初期化し、以降は EMA = 前回EMA + α × (今回値 − 前回EMA)、α = 2 / (period + 1)。

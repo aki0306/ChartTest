@@ -137,7 +137,7 @@ struct ChartContentBuilder {
 
     /// 新値足の内容(新値足の1本を1つの足として並べる。サブチャートなし)
     ///
-    ///   凡例:「新値足 ■陰線 □陽線」(すべて新値足の色)
+    ///   凡例:「新値足　■陰線　□陽線」(新値足の色)
     ///   現在値(最新の足の終値)の位置に破線を引く
     private func newPriceContent() -> ChartContent {
         // 新値足の1本 = ローソク足の「始値 = 始点、終値 = 終点」として並べる(ヒゲはないので高値・安値は線の両端)。
@@ -155,11 +155,8 @@ struct ChartContentBuilder {
         }
         let main = MainChartContent(
             priceStyle: .newPrice,
-            legendItems: [
-                ChartLegendItem(text: ChartType.newPrice.title, colorRole: .newPrice),
-                ChartLegendItem(text: "■陰線", colorRole: .newPrice),
-                ChartLegendItem(text: "□陽線", colorRole: .newPrice),
-            ],
+            // 既存アプリと同じく、全角スペースで区切った1つの文字列
+            legendItems: [ChartLegendItem(text: "\(ChartType.newPrice.title)　■陰線　□陽線", colorRole: .newPrice)],
             currentPrice: self.candles.last?.close,
             fixedVisibleCount: Self.newPriceVisibleCount)
         return ChartContent(candles: lineCandles, main: main, sub: nil)
@@ -206,9 +203,17 @@ struct ChartContentBuilder {
         }
     }
 
-    /// 移動平均線: 短期・長期の2本
+    // 凡例の文字と線の色は、既存アプリ(XxxChartView の 凡例・メインチャートの設定処理)と同じ。
+    // 色は StockChartStyle.lineColors の番号(0: 黄緑、1: オレンジ、2: 青、3: 水色、4: 濃い青)
+
+    /// 移動平均線: 短期(黄緑)・長期(オレンジ)の2本
     ///   凡例:「移動平均 短期移動平均(5) 長期移動平均(25)」
     private func movingAverageContent() -> MainChartContent {
+        return MainChartContent(legendTitle: "移動平均", series: self.movingAverageSeries())
+    }
+
+    /// 移動平均線(短期・長期)の2本の線
+    private func movingAverageSeries() -> [ChartSeries] {
         let shortLine = ChartSeries(label: "短期移動平均(\(parameters.shortMAPeriod))",
                                     values: self.precomputedValues(\.movingAverageShort)
                                         ?? TechnicalIndicators.sma(self.closes, period: self.parameters.shortMAPeriod),
@@ -217,54 +222,58 @@ struct ChartContentBuilder {
                                    values: self.precomputedValues(\.movingAverageLong)
                                        ?? TechnicalIndicators.sma(self.closes, period: self.parameters.longMAPeriod),
                                    colorRole: .line(1))
-        return MainChartContent(legendTitle: "移動平均", series: [shortLine, longLine])
+        return [shortLine, longLine]
     }
 
-    /// 多重移動平均線: 設定された期間の数だけ移動平均線を引く(色は 1本目、2本目、… の順)
-    ///   凡例:「多重移動平均 5 40 75」
+    /// 多重移動平均線: 設定された期間の数だけ移動平均線を引く(すべてオレンジ)
+    ///   凡例:「多重平均 期間(5,75)」(最短・最長の期間)
     private func multipleMovingAverageContent() -> MainChartContent {
         var series: [ChartSeries] = []
         for (lineNumber, period) in self.parameters.multipleMAPeriods.enumerated() {
-            let line = ChartSeries(label: "\(period)",
+            // 線ごとの凡例は出さない(凡例は「期間(最短,最長)」だけ)
+            let line = ChartSeries(label: nil,
                                    values: self.precomputedValues(\.multipleMovingAverages, at: lineNumber)
                                        ?? TechnicalIndicators.sma(self.closes, period: period),
-                                   colorRole: .line(lineNumber))
+                                   colorRole: .line(1))
             series.append(line)
         }
-        return MainChartContent(legendTitle: "多重移動平均", series: series)
+        let periodLabel = "期間(\(self.parameters.multipleMAShortestPeriod),\(self.parameters.multipleMALongestPeriod))"
+        return MainChartContent(legendTitle: "多重平均", series: series,
+                                legendItems: [ChartLegendItem(text: periodLabel, colorRole: .line(1))])
     }
 
-    /// ボリンジャーバンド: 中心線 + σ の倍率ごとの上限・下限
-    ///   凡例:「ボリンジャーバンド(20) 中心線 ±1σ ±2σ」
-    ///   色: 中心線は 2本目の色。バンドは 1本目、3本目、4本目、… の色(中心線と同じ色を避ける)
+    /// ボリンジャーバンド: 中心線(黄緑) + σ の倍率ごとの上限・下限(±1σ 水色、±2σ 濃い青、±3σ オレンジ)
+    ///   凡例:「ボリンジャー 移動平均(5)」(中心線だけ)
     private func bollingerBandsContent() -> MainChartContent {
         let result = TechnicalIndicators.bollingerBands(
             closes: self.closes, period: self.parameters.bollingerPeriod, sigmas: self.parameters.bollingerSigmas)
 
         let middle = self.precomputedValues(\.bollingerMiddle) ?? result.middle
-        var series = [ChartSeries(label: "中心線", values: middle, colorRole: .line(1))]
+        var series = [ChartSeries(label: "移動平均(\(self.parameters.bollingerPeriod))", values: middle, colorRole: .line(0))]
         for (bandNumber, band) in result.bands.enumerated() {
-            let role = ChartColorRole.line(self.bollingerBandColorIndex(bandNumber: bandNumber))
-            let sigma = String(format: "%g", band.sigma)  // 1.0 → "1"
+            let role = ChartColorRole.line(self.bollingerBandColorIndex(sigma: band.sigma))
             let upper = self.precomputedValues(\.bollingerUppers, at: bandNumber) ?? band.upper
             let lower = self.precomputedValues(\.bollingerLowers, at: bandNumber) ?? band.lower
-            // 上限と下限は同じ色。凡例は上限側だけに表示する
-            series.append(ChartSeries(label: "±\(sigma)σ", values: upper, colorRole: role))
+            // 上限と下限は同じ色。凡例には出さない
+            series.append(ChartSeries(label: nil, values: upper, colorRole: role))
             series.append(ChartSeries(label: nil, values: lower, colorRole: role))
         }
-        return MainChartContent(legendTitle: "ボリンジャーバンド(\(self.parameters.bollingerPeriod))", series: series)
+        return MainChartContent(legendTitle: "ボリンジャー", series: series)
     }
 
-    /// ボリンジャーバンドの何組目かから、線の色の番号を決める。
-    /// 中心線が 1 番の色を使うので、バンドは 1 番を飛ばす(0, 2, 3, 4, …)
-    private func bollingerBandColorIndex(bandNumber: Int) -> Int {
-        if bandNumber == 0 {
-            return 0
+    /// ボリンジャーバンドの σ の倍率から、線の色の番号を決める(±1σ 水色、±2σ 濃い青、±3σ オレンジ)
+    private func bollingerBandColorIndex(sigma: Double) -> Int {
+        if sigma <= 1 {
+            return 3
         }
-        return bandNumber + 1
+        if sigma <= 2 {
+            return 4
+        }
+        return 1
     }
 
-    /// 一目均衡表: 転換線・基準線・先行スパン1/2・遅行スパン + 雲
+    /// 一目均衡表: 転換線(青)・基準線(黄緑)・先行スパン1(黄緑)/2(オレンジ)・遅行スパン(グレー) + 雲
+    ///   凡例:「一目均衡 転換線(3) 基準線(26) 先行スパン2(52)」
     ///   先行スパンは未来へずらして描くので、データの右端より先にも描く(futureCount)
     private func ichimokuContent() -> MainChartContent {
         let result = TechnicalIndicators.ichimoku(
@@ -288,55 +297,31 @@ struct ChartContentBuilder {
             }
         }
         return MainChartContent(
-            legendTitle: "一目均衡表",
+            legendTitle: "一目均衡",
             series: [
-                ChartSeries(label: "転換線", values: tenkan, colorRole: .ichimokuTenkan),
-                ChartSeries(label: "基準線", values: kijun, colorRole: .ichimokuKijun),
-                ChartSeries(label: "先行1", values: spanA, colorRole: .ichimokuSpanA),
-                ChartSeries(label: "先行2", values: spanB, colorRole: .ichimokuSpanB),
-                ChartSeries(label: "遅行", values: chikou, colorRole: .ichimokuChikou),
+                ChartSeries(label: "転換線(\(self.parameters.ichimokuTenkanPeriod))", values: tenkan, colorRole: .ichimokuTenkan),
+                ChartSeries(label: "基準線(\(self.parameters.ichimokuKijunPeriod))", values: kijun, colorRole: .ichimokuKijun),
+                ChartSeries(label: nil, values: spanA, colorRole: .ichimokuSpanA),
+                ChartSeries(label: "先行スパン2(\(self.parameters.ichimokuSpanBPeriod))", values: spanB, colorRole: .ichimokuSpanB),
+                ChartSeries(label: nil, values: chikou, colorRole: .ichimokuChikou),
             ],
             cloud: ChartCloud(spanA: spanA, spanB: spanB),
             futureCount: futureCount)
     }
 
-    /// パラボリック: SAR の点。上昇トレンド中と下降トレンド中で色を分ける
+    /// パラボリック: 移動平均線(短期・長期) + SAR の点(グレー)
+    ///   凡例:「パラボリック 5日移動平均 25日移動平均」(単位は足種ごと。分・日・週・月)
     private func parabolicContent() -> MainChartContent {
-        let result = self.parabolicResult()
-
-        // 同じ長さの配列を2つ用意し、各足の SAR をトレンドに応じてどちらか一方にだけ入れる
-        // (もう一方は nil = 点を描かない)
-        var uptrendValues = [Double?](repeating: nil, count: result.values.count)
-        var downtrendValues = [Double?](repeating: nil, count: result.values.count)
-        for (index, value) in result.values.enumerated() {
-            if result.isUptrend[index] {
-                uptrendValues[index] = value
-            } else {
-                downtrendValues[index] = value
-            }
-        }
-        return MainChartContent(
-            legendTitle: String(format: "パラボリック(%g, %g)", self.parameters.parabolicStep, self.parameters.parabolicMaximum),
-            series: [
-                ChartSeries(label: nil, values: uptrendValues, colorRole: .increasing, style: .dots),
-                ChartSeries(label: nil, values: downtrendValues, colorRole: .decreasing, style: .dots),
-            ])
-    }
-
-    /// パラボリックの SAR と、各足が上昇トレンドか。
-    /// チャートの外で計算した SAR がある場合は、SAR が終値以下なら上昇トレンドとする(SAR は上昇中は価格の下、下降中は上に来る)
-    private func parabolicResult() -> (values: [Double?], isUptrend: [Bool]) {
-        guard let values = self.precomputedValues(\.parabolicSAR) else {
-            return TechnicalIndicators.parabolicSAR(
+        let sar = self.precomputedValues(\.parabolicSAR)
+            ?? TechnicalIndicators.parabolicSAR(
                 highs: self.highs, lows: self.lows, closes: self.closes,
-                step: self.parameters.parabolicStep, maximum: self.parameters.parabolicMaximum)
-        }
-        var isUptrend = [Bool](repeating: true, count: values.count)
-        for (index, value) in values.enumerated() {
-            guard let value else { continue }
-            isUptrend[index] = value <= self.candles[index].close
-        }
-        return (values, isUptrend)
+                step: self.parameters.parabolicStep, maximum: self.parameters.parabolicMaximum).values
+
+        var series = self.movingAverageSeries()
+        series[0].label = "\(self.parameters.shortMAPeriod)\(self.parameters.periodUnit)移動平均"
+        series[1].label = "\(self.parameters.longMAPeriod)\(self.parameters.periodUnit)移動平均"
+        series.append(ChartSeries(label: nil, values: sar, colorRole: .parabolic, style: .dots))
+        return MainChartContent(legendTitle: "パラボリック", series: series)
     }
 
     // MARK: - サブチャート
@@ -385,129 +370,93 @@ struct ChartContentBuilder {
         return SubChartContent(series: [averageLine], bars: bars, includesZero: true)
     }
 
-    /// 移動平均乖離率: 短期・長期の移動平均からの乖離率(%)。
-    /// 0% と底値・高値ライン(既定 -10% / 10%)に基準線を引く
+    /// 移動平均乖離率: 短期(黄緑)・長期(オレンジ)の移動平均からの乖離率(%)。底値・高値ライン(既定 -10% / 10%)に基準線を引く
+    ///   凡例:「乖離率 短期移動平均(5) 長期移動平均(25)」
     private func movingAverageDeviationContent() -> SubChartContent {
         let shortPeriod = self.parameters.deviationShortPeriod
         let longPeriod = self.parameters.deviationLongPeriod
-        let shortLine = ChartSeries(label: "短期(\(shortPeriod))",
+        let shortLine = ChartSeries(label: "短期移動平均(\(shortPeriod))",
                                     values: self.precomputedValues(\.deviationShort)
                                         ?? TechnicalIndicators.movingAverageDeviation(closes: self.closes, period: shortPeriod),
                                     colorRole: .line(0))
-        let longLine = ChartSeries(label: "長期(\(longPeriod))",
+        let longLine = ChartSeries(label: "長期移動平均(\(longPeriod))",
                                    values: self.precomputedValues(\.deviationLong)
                                        ?? TechnicalIndicators.movingAverageDeviation(closes: self.closes, period: longPeriod),
                                    colorRole: .line(1))
-        let referenceLines = [Double(self.parameters.deviationLowerLine), 0, Double(self.parameters.deviationUpperLine)]
-        return SubChartContent(legendTitle: "移動平均乖離率", series: [shortLine, longLine],
+        let referenceLines = [Double(self.parameters.deviationLowerLine), Double(self.parameters.deviationUpperLine)]
+        return SubChartContent(legendTitle: "乖離率", series: [shortLine, longLine],
                                referenceLines: referenceLines,
                                includesZero: true, fractionDigits: 1, suffix: "%")
     }
 
-    /// RSI: 0〜100 の固定範囲。底値ライン(既定 30%・売られすぎ)と高値ライン(既定 70%・買われすぎ)に基準線を引く
+    /// RSI(黄緑): 0〜100 の固定範囲。底値・高値ライン(既定 20% / 80%)に基準線を引く
+    ///   凡例:「ＲＳＩ 期間(14)」
     private func rsiContent() -> SubChartContent {
-        let line = ChartSeries(label: "RSI(\(parameters.rsiPeriod))",
+        let line = ChartSeries(label: "期間(\(parameters.rsiPeriod))",
                                values: self.precomputedValues(\.rsi)
                                    ?? TechnicalIndicators.rsi(closes: self.closes, period: self.parameters.rsiPeriod),
-                               colorRole: .line(2))
+                               colorRole: .line(0))
         let referenceLines = [Double(self.parameters.rsiLowerLine), Double(self.parameters.rsiUpperLine)]
-        return SubChartContent(series: [line], referenceLines: referenceLines, fixedRange: 0...100)
+        return SubChartContent(legendTitle: "ＲＳＩ", series: [line], referenceLines: referenceLines, fixedRange: 0...100)
     }
 
-    /// サイコロジカルライン: 0〜100 の固定範囲。底値・高値ライン(既定 25% / 75%)に基準線を引く
+    /// サイコロジカルライン(青): 0〜100 の固定範囲。底値・高値ライン(既定 25% / 75%)に基準線を引く
+    ///   凡例:「サイコロ 期間(12)」
     private func psychologicalContent() -> SubChartContent {
-        let line = ChartSeries(label: "サイコロジカル(\(parameters.psychologicalPeriod))",
+        let line = ChartSeries(label: "期間(\(parameters.psychologicalPeriod))",
                                values: self.precomputedValues(\.psychological)
                                    ?? TechnicalIndicators.psychological(closes: self.closes, period: self.parameters.psychologicalPeriod),
-                               colorRole: .line(3))
+                               colorRole: .line(2))
         let referenceLines = [Double(self.parameters.psychologicalLowerLine), Double(self.parameters.psychologicalUpperLine)]
-        return SubChartContent(series: [line], referenceLines: referenceLines, fixedRange: 0...100)
+        return SubChartContent(legendTitle: "サイコロ", series: [line], referenceLines: referenceLines, fixedRange: 0...100)
     }
 
-    /// ストキャスティクス: %K と %D。0〜100 の固定範囲。底値・高値ライン(既定 20% / 80%)に基準線を引く
+    /// ストキャスティクス: %D(黄緑)と Slow%D(オレンジ。%D の移動平均)。既存アプリと同じく %K は描かない。
+    /// 0〜100 の固定範囲。底値・高値ライン(既定 30% / 70%)に基準線を引く
+    ///   凡例:「ストキャス %D(14,3) Slow%D」
     private func stochasticsContent() -> SubChartContent {
         let result = TechnicalIndicators.stochastics(
             highs: self.highs, lows: self.lows, closes: self.closes,
             kPeriod: self.parameters.stochasticsKPeriod, dPeriod: self.parameters.stochasticsDPeriod)
-        let kValues = self.precomputedValues(\.stochasticsK) ?? result.k
         let dValues = self.precomputedValues(\.stochasticsD) ?? result.d
-        let kLine = ChartSeries(label: "%K(\(parameters.stochasticsKPeriod))", values: kValues, colorRole: .line(0))
-        let dLine = ChartSeries(label: "%D(\(parameters.stochasticsDPeriod))", values: dValues, colorRole: .line(1))
+        let slowDValues = self.precomputedValues(\.stochasticsSlowD)
+            ?? TechnicalIndicators.sma(result.d, period: self.parameters.stochasticsDPeriod)
+        let dLine = ChartSeries(label: "%D(\(parameters.stochasticsKPeriod),\(self.parameters.stochasticsDPeriod))",
+                                values: dValues, colorRole: .line(0))
+        let slowDLine = ChartSeries(label: "Slow%D", values: slowDValues, colorRole: .line(1))
         let referenceLines = [Double(self.parameters.stochasticsLowerLine), Double(self.parameters.stochasticsUpperLine)]
-        return SubChartContent(legendTitle: "ストキャス", series: [kLine, dLine],
+        return SubChartContent(legendTitle: "ストキャス", series: [dLine, slowDLine],
                                referenceLines: referenceLines, fixedRange: 0...100)
     }
 
-    /// MACD: MACD・シグナルの線 + ヒストグラム(正/負で色分け)。0 に基準線を引く
+    /// MACD: MACD(オレンジ)・シグナル(黄緑)の線(既存アプリと同じく、ヒストグラム・0 の基準線は描かない)
+    ///   凡例:「ＭＡＣＤ ＭＡＣＤ(5,25) シグナル(9)」
     private func macdContent() -> SubChartContent {
         let result = TechnicalIndicators.macd(
             closes: self.closes, shortPeriod: self.parameters.macdShortPeriod,
             longPeriod: self.parameters.macdLongPeriod, signalPeriod: self.parameters.macdSignalPeriod)
+        let macdValues = self.precomputedValues(\.macd) ?? result.macd
+        let signalValues = self.precomputedValues(\.macdSignal) ?? result.signal
 
-        var macdValues = result.macd
-        var signalValues = result.signal
-        var histogramValues = result.histogram
-        // チャートの外で計算した MACD・シグナルがある場合、ヒストグラムは MACD − シグナルにする
-        if let precomputedMACD = self.precomputedValues(\.macd) {
-            if let precomputedSignal = self.precomputedValues(\.macdSignal) {
-                macdValues = precomputedMACD
-                signalValues = precomputedSignal
-                histogramValues = Self.differences(precomputedMACD, precomputedSignal)
-            }
-        }
-
-        let macdLine = ChartSeries(label: "MACD(\(parameters.macdShortPeriod),\(self.parameters.macdLongPeriod))",
-                                   values: macdValues, colorRole: .line(3))
+        let macdLine = ChartSeries(label: "ＭＡＣＤ(\(parameters.macdShortPeriod),\(self.parameters.macdLongPeriod))",
+                                   values: macdValues, colorRole: .line(1))
         let signalLine = ChartSeries(label: "シグナル(\(parameters.macdSignalPeriod))",
-                                     values: signalValues, colorRole: .line(1))
-        let histogramRoles = histogramValues.map { value in self.histogramColorRole(for: value) }
-        let histogram = ChartBars(label: nil, labelColorRole: .histogramPositive,
-                                  values: histogramValues, colorRoles: histogramRoles)
-        return SubChartContent(series: [macdLine, signalLine], bars: histogram,
-                               referenceLines: [0], includesZero: true, fractionDigits: 2)
+                                     values: signalValues, colorRole: .line(0))
+        return SubChartContent(legendTitle: "ＭＡＣＤ", series: [macdLine, signalLine], includesZero: true, fractionDigits: 2)
     }
 
-    /// 2つの配列の差(a − b)。どちらかが値なしの位置は値なし
-    private static func differences(_ a: [Double?], _ b: [Double?]) -> [Double?] {
-        var result = [Double?](repeating: nil, count: a.count)
-        for index in a.indices {
-            guard index < b.count else { continue }
-            guard let left = a[index] else { continue }
-            guard let right = b[index] else { continue }
-            result[index] = left - right
-        }
-        return result
-    }
-
-    /// MACD のヒストグラムの棒の色: 負の値は負の色、0 以上(値なしを含む)は正の色
-    private func histogramColorRole(for value: Double?) -> ChartColorRole {
-        guard let value else { return .histogramPositive }
-        if value < 0 {
-            return .histogramNegative
-        }
-        return .histogramPositive
-    }
-
-    /// DMI: +DI(上昇色)・−DI(下降色)・ADX
-    /// チャートの外で計算した +DI・−DI があり、ADX がない場合は、ADX の線と凡例を出さない
+    /// DMI: +DI(黄緑)・−DI(オレンジ)。既存アプリと同じく、ADX は描かない
+    ///   凡例:「ＤＭＩ DI -DI」
     private func dmiContent() -> SubChartContent {
         let result = TechnicalIndicators.dmi(highs: self.highs, lows: self.lows, closes: self.closes, period: self.parameters.dmiPeriod)
-        var series = [
-            ChartSeries(label: "+DI", values: result.plusDI, colorRole: .increasing),
-            ChartSeries(label: "−DI", values: result.minusDI, colorRole: .decreasing),
-            ChartSeries(label: "ADX", values: result.adx, colorRole: .line(1)),
-        ]
-        if let plusDI = self.precomputedValues(\.dmiPlus) {
-            if let minusDI = self.precomputedValues(\.dmiMinus) {
-                series = [
-                    ChartSeries(label: "+DI", values: plusDI, colorRole: .increasing),
-                    ChartSeries(label: "−DI", values: minusDI, colorRole: .decreasing),
-                ]
-                if let adx = self.precomputedValues(\.dmiADX) {
-                    series.append(ChartSeries(label: "ADX", values: adx, colorRole: .line(1)))
-                }
-            }
-        }
-        return SubChartContent(legendTitle: "DMI(\(self.parameters.dmiPeriod))", series: series, includesZero: true)
+        let plusDI = self.precomputedValues(\.dmiPlus) ?? result.plusDI
+        let minusDI = self.precomputedValues(\.dmiMinus) ?? result.minusDI
+        return SubChartContent(
+            legendTitle: "ＤＭＩ",
+            series: [
+                ChartSeries(label: "DI", values: plusDI, colorRole: .line(0)),
+                ChartSeries(label: "-DI", values: minusDI, colorRole: .line(1)),
+            ],
+            includesZero: true)
     }
 }

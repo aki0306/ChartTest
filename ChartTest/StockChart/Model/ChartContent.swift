@@ -16,9 +16,9 @@ import Foundation
 enum ChartColorRole: Hashable {
     /// 汎用の線の色(0 = 1本目、1 = 2本目、…)
     case line(Int)
-    /// 上昇(陽線・+DI・上昇トレンドの SAR など)
+    /// 上昇(陽線など)
     case increasing
-    /// 下降(陰線・−DI・下降トレンドの SAR など)
+    /// 下降(陰線など)
     case decreasing
     /// 出来高バー
     case volume
@@ -34,10 +34,8 @@ enum ChartColorRole: Hashable {
     case ichimokuSpanB
     /// 一目均衡表: 遅行スパン
     case ichimokuChikou
-    /// MACD ヒストグラム(正の値)
-    case histogramPositive
-    /// MACD ヒストグラム(負の値)
-    case histogramNegative
+    /// パラボリック(SAR)の点
+    case parabolic
     /// VWAP
     case vwap
     /// 新値足(陽線・陰線とも同じ色)
@@ -73,7 +71,7 @@ struct ChartSeries {
     var style: Style = .line
 }
 
-/// 棒グラフ(出来高・MACD ヒストグラム)
+/// 棒グラフ(出来高)
 struct ChartBars {
     /// 凡例に表示する名前。nil の場合は凡例に出さない
     var label: String?
@@ -133,7 +131,7 @@ struct SubChartContent {
     var series: [ChartSeries] = []
     /// 棒グラフ
     var bars: ChartBars?
-    /// 基準線を引く値(RSI の 30/70 など)
+    /// 基準線を引く値(RSI の 20/80 など)
     var referenceLines: [Double] = []
     /// Y軸を固定範囲にする場合の範囲(nil なら表示中の値から自動算出)
     var fixedRange: ClosedRange<Double>?
