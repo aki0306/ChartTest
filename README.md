@@ -250,7 +250,7 @@ final class MyChartViewController: UIViewController {
 | 足種(1分足〜月足)のタブを付けたい | `PortraitChartViewController` | [2. 足種のタブ付きの縦画面](#2-足種のタブ付きの縦画面portraitchartviewcontroller) |
 | テクニカル(指標)の切り替え・設定画面を付けたい | `StockChartViewController` | [4. 指標メニュー・設定画面付きのチャート](#4-指標メニュー設定画面付きのチャートstockchartviewcontroller) |
 | このアプリと同じ横画面(下の帯付き)を使いたい | `LandscapeChartViewController` | [横画面のチャートだけを使う場合](#横画面のチャートだけを使う場合) |
-| 海外指数(NYダウなど)を表示したい | `market = .overseas` | [海外指数の場合](#海外指数の場合) |
+| 海外指数(NYダウなど)を表示したい | `market = .overseasRealtime`(日次は `.overseasDaily`) | [海外指数の場合](#海外指数の場合) |
 | 色・文字の大きさを変えたい | `style` | [5. 見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
 
 > **メモリリークに注意**: 横画面の `onPeriodSelect` などのクロージャ(ブロック)の中で、画面自身や `self` を使うときは、Swift は `[weak self]`、Objective-C は `__weak` を付けた変数を使ってください。詳しくは「[横画面の下の帯](#横画面の下の帯)」。
@@ -267,7 +267,7 @@ final class MyChartViewController: UIViewController {
 | 「Empty paragraph passed to '\param' command」の警告が大量に出る | DGCharts のヘッダのコメントの書き方(動作には影響しない) | **Build Settings** の **Documentation Comments** を **No** にする |
 | チャートが何も表示されない(真っ白) | チャートの高さ・幅が 0 | 高さの制約(例: 260)を付けているか確認する。storyboard に置いた場合は、View のクラスが `StockChartView` になっているか確認する |
 | 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる。日付は読めても4本値が1件も読めなければ 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
-| 出来高(サブチャート)の棒が表示されない(凡例だけ出る・段ごとない) | `volume` がすべて 0(レスポンスに `"volume"` キーがない)、海外指数を指定している、または横画面でローソク足以外のチャートを選んでいる | レスポンスのキーを `StockCandleResponseParser` の `Key.volume` に合わせる。指数の種類・チャートの種類を確認する([サブチャート(出来高など)](#サブチャート出来高など)) |
+| 出来高(サブチャート)の棒が表示されない(凡例だけ出る・段ごとない) | `volume` がすべて 0(レスポンスに `kTurnover` キーがない)、海外指数を指定している、または横画面でローソク足以外のチャートを選んでいる | レスポンスのキーを `StockCandleResponseParser` の `Key.volume`(`kTurnover`)に合わせる。指数の種類・チャートの種類を確認する([サブチャート(出来高など)](#サブチャート出来高など)) |
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
 | 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横画面・縦画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` / `Portrait.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
@@ -343,7 +343,7 @@ final class MyChartViewController: UIViewController {
 
 枠の内側は、4本値がオンの間もチャートのスクロール(1本指)・拡大(ピンチ)に使えます(ラベルの欄からなぞったときは、十字線だけが動き、チャートはスクロールしません)。
 
-指数の種類(`StockChartViewController.market`)が海外指数(`.overseas`)の場合は、次のようになります(詳しくは「使い方 > 海外指数の場合」)。
+指数の種類(`StockChartViewController.market`)が海外指数(`.overseasRealtime`・`.overseasDaily`)の場合は、次のようになります(詳しくは「使い方 > 海外指数の場合」)。
 
 - 左のリストは「オプション」と「移動平均線」だけ
 - オプションは「Y軸(メイン)固定」「4本値」を表示する(サブチャートがないので Y軸(サブ)固定は出さない。オンになっていても効かない)
@@ -401,7 +401,7 @@ landscape.onRotate = ^{ /* 縦画面に戻す */ };
 > Objective-C は `__weak` を付けた変数を使ってください(そのまま使うと、お互いを持ち合って解放されなくなります)。
 
 このアプリの `ViewController.swift`(`setupLandscapeFooter`)では、SampleData のデータで動かしています。
-縦画面の左下にある「国内指数/海外指数」の切り替えボタンはサンプル用で、横画面では帯と重なるので表示しません。
+縦画面の左下にある「国内指数・海外(R)・海外(D)」の切り替えボタンはサンプル用で、横画面では帯と重なるので表示しません。
 
 ### 横画面のチャートの種類
 
@@ -424,7 +424,7 @@ landscape.onRotate = ^{ /* 縦画面に戻す */ };
 | 指数 | タブ |
 |---|---|
 | 国内指数(`.domestic`) | 1分足・日中足・日足・週足・月足 |
-| 海外指数(`.overseas`) | 日足・週足・月足(チャートはローソク足 + 移動平均線で、サブチャート(出来高)なし) |
+| 海外指数(`.overseasRealtime`・`.overseasDaily`) | 日足・週足・月足(チャートは折線チャート + 移動平均線で、サブチャート(出来高)なし) |
 
 足種ごとに、次の表示が変わります(`ChartPeriod`)。
 
@@ -470,14 +470,16 @@ landscape.onRotate = ^{ /* 縦画面に戻す */ };
 #### 出来高のデータ
 
 サブチャート用のデータを別に渡す必要はありません。**`StockCandle` の `volume`** をそのまま使います。
-API のレスポンスを `ChartResponseLoader` で渡す場合は、`"volume"` キーの値が入ります(キーがない場合は `0`。`StockCandleResponseParser`)。
+API のレスポンスを `ChartResponseLoader` で渡す場合は、`kTurnover` キー(既存アプリの `dataArrayFromResponse:…` が出来高を入れるキー)の値が入ります(キーがない場合は `0`。`StockCandleResponseParser`)。
+既存アプリのレスポンスでは、1分足・日中足・日足はその足の出来高、週足・月足は「1日あたり平均出来高」です。日中足は、1分足の出来高を5分ごとに合計した値です。
+海外指数は、`kTurnover` があっても常に 0 として読みます(既存アプリも海外指数の出来高は空にしている)。
 
 #### 出来高のサブチャートに描くもの
 
 | 描くもの | 値 | 色(`StockChartStyle`) |
 |---|---|---|
 | 棒(出来高) | 各足の `volume` をそのまま | `volumeColor`(黄緑) |
-| 線(出来高移動平均) | 直近 25本の `volume` の平均(`IndicatorParameters.volumeMAPeriod`) | `volumeAverageColor`(青) |
+| 線(出来高移動平均) | 直近 5本(週足は 13本)の `volume` の平均(`IndicatorParameters.volumeMAPeriod`。足種ごとの値は `ChartPeriod.indicatorParameters`) | `volumeAverageColor`(青) |
 
 - Y軸の上限は、スクロール・拡大のたびに、見えている範囲の出来高に合わせて決め直します。下限は必ず 0 です
 - 凡例は、1分足・日中足・日足は「出来高 出来高移動平均」、週足・月足は「出来高(平均) 出来高移動平均」です(`ChartPeriod.indicatorParameters`)。
@@ -504,7 +506,7 @@ SubChartContent                                 … 線(series)・棒(bars)・�
 
 | 変えたいこと | 見るところ |
 |---|---|
-| 出来高移動平均の本数(25) | `Model/IndicatorParameters.swift` の `volumeMAPeriod` |
+| 出来高移動平均の本数(5・週足 13) | `Model/IndicatorParameters.swift` の `volumeMAPeriod` |
 | 凡例の文言 | `Model/ChartContentBuilder.swift` の `volumeContent`、足種ごとの「出来高(平均)」は `Model/ChartPeriod.swift` |
 | 棒・線の色 | `StockChartStyle` の `volumeColor` / `volumeAverageColor` |
 | 縦画面のサブチャートを出来高以外にする | `View/Chart/StockChartView.swift` の `setCandles(_:period:market:)` の `subIndicator` |
@@ -626,7 +628,7 @@ NSArray<StockCandle *> *candles = [SampleData candlesForPeriod:ChartPeriodDaily]
 ```swift
 // Swift
 let viewController = PortraitChartViewController.instantiate()   // Portrait.storyboard から生成
-viewController.market = .domestic                                // 国内指数(海外指数なら .overseas)
+viewController.market = .domestic                                // 国内指数(海外指数なら .overseasRealtime / .overseasDaily)
 viewController.onPeriodSelect = { [weak viewController] period in
     // 既存アプリの通信処理で、その足種のデータを取得する(例)
     api.fetchCandles(period) { candles in
@@ -639,7 +641,7 @@ viewController.reloadChart()                                     // 選択中の
 ```objc
 // Objective-C
 PortraitChartViewController *viewController = [PortraitChartViewController instantiate];
-viewController.market = IndexMarketDomestic;                     // 国内指数(海外指数なら IndexMarketOverseas)
+viewController.market = IndexMarketDomestic;                     // 国内指数(海外指数なら IndexMarketOverseasRealtime / IndexMarketOverseasDaily)
 __weak PortraitChartViewController *weakViewController = viewController;
 viewController.onPeriodSelect = ^(ChartPeriod period) {
     // 既存アプリの通信処理で、その足種のレスポンス(辞書の配列)を取得する(例)
@@ -688,7 +690,7 @@ StockChartView *chartView = [[StockChartView alloc] initWithFrame:CGRectZero];
 
 ```objc
 // Objective-C
-chartView.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseas。サブチャートなしになる)
+chartView.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseasRealtime / IndexMarketOverseasDaily。サブチャートなしになる)
 chartView.period = ChartPeriodWeekly;       // 足種(ChartPeriodOneMinute / Intraday / Daily / Weekly / Monthly)
 chartView.visibleCount = 30;                // 足種ごとの値を変えたい場合は、period を設定したあとで変える
 chartView.chartType = ChartTypeCandlestick;                 // チャートの種類(既定はローソク足)
@@ -743,7 +745,7 @@ chartViewController.mainIndicator = .bollingerBands
 chartViewController.subIndicator = .macd
 chartViewController.isTechnicalMenuEnabled = true  // テクニカル/設定タブを表示する
 chartViewController.chartType = .candlestick       // チャートの種類(.vwapLine / .vwapDots / .newPrice / .lineChart)
-chartViewController.market = .domestic             // 指数の種類(海外指数なら .overseas)
+chartViewController.market = .domestic             // 指数の種類(海外指数なら .overseasRealtime / .overseasDaily)
 chartViewController.setCandles(candles, period: .daily)   // 足種を指定すると、足種ごとの設定で描画する(省略時は日足)
 ```
 
@@ -758,7 +760,7 @@ chartViewController.mainIndicator = MainChartIndicatorBollingerBands;
 chartViewController.subIndicator = SubChartIndicatorMacd;
 chartViewController.isTechnicalMenuEnabled = YES;  // テクニカル/設定タブを表示する
 chartViewController.chartType = ChartTypeCandlestick;  // チャートの種類
-chartViewController.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseas)
+chartViewController.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseasRealtime / IndexMarketOverseasDaily)
 [chartViewController setCandles:candles period:ChartPeriodDaily];  // 足種ごとの設定で描画する
 ```
 
@@ -776,29 +778,36 @@ LandscapeChartViewController *landscape = [LandscapeChartViewController instanti
 
 #### 海外指数の場合
 
-指数の種類(`market`)に `.overseas`(Objective-C は `IndexMarketOverseas`)を指定します。**データを渡す前に**指定してください(既定は国内指数 `.domestic`)。
+指数の種類(`market`)に、既存アプリの銘柄コードの種類(`XxxCodeType`)と同じく、次のどちらかを指定します。**データを渡す前に**指定してください(既定は国内指数 `.domestic`)。
+
+| 指数の種類 | Swift | Objective-C | 既存アプリ |
+|---|---|---|---|
+| 海外株価指数(リアルタイム) | `.overseasRealtime` | `IndexMarketOverseasRealtime` | `XxxCodeTypeOverseasRealtime` |
+| 海外株価指数(日次) | `.overseasDaily` | `IndexMarketOverseasDaily` | `XxxCodeTypeOverseasDaily` |
+
+どちらも描き方は同じです(既存アプリでも、違うのは呼ぶ API だけ)。以下の例はリアルタイムで書いています。日次の場合は `.overseasDaily` / `IndexMarketOverseasDaily` に読み替えてください。
 
 ```swift
-// Swift: 縦画面(足種のタブが 日足・週足・月足 になり、チャートはローソク足 + 移動平均線・サブチャートなし)
+// Swift: 縦画面(足種のタブが 日足・週足・月足 になり、チャートは折線チャート + 移動平均線・サブチャートなし)
 let portrait = PortraitChartViewController.instantiate()
-portrait.market = .overseas
+portrait.market = .overseasRealtime
 portrait.candleLoader = { period in loadCandles(period) }   // 実際のデータの読み込み
 portrait.reloadChart()
 
 // Swift: 横画面(テクニカルは移動平均線・なし、チャートの種類はローソク足・折線チャートだけになる)
 let landscape = LandscapeChartViewController.instantiate()
-landscape.chartViewController.market = .overseas
+landscape.chartViewController.market = .overseasRealtime
 landscape.setCandles(candles, period: .daily)
 
 // Swift: StockChartViewController を直接使う場合
-chartViewController.market = .overseas
+chartViewController.market = .overseasRealtime
 chartViewController.setCandles(candles, period: .daily)
 ```
 
 ```objc
 // Objective-C: 縦画面
 PortraitChartViewController *portrait = [PortraitChartViewController instantiate];
-portrait.market = IndexMarketOverseas;
+portrait.market = IndexMarketOverseasRealtime;
 portrait.candleLoader = ^NSArray<StockCandle *> *(ChartPeriod period) {
     return [self loadCandlesForPeriod:period];   // 実際のデータの読み込み
 };
@@ -806,20 +815,20 @@ portrait.candleLoader = ^NSArray<StockCandle *> *(ChartPeriod period) {
 
 // Objective-C: 横画面
 LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];
-landscape.chartViewController.market = IndexMarketOverseas;
+landscape.chartViewController.market = IndexMarketOverseasRealtime;
 [landscape setCandles:candles period:ChartPeriodDaily];
 
 // Objective-C: StockChartViewController を直接使う場合
-chartViewController.market = IndexMarketOverseas;
+chartViewController.market = IndexMarketOverseasRealtime;
 [chartViewController setCandles:candles period:ChartPeriodDaily];
 ```
 
 海外指数にすると、次のように変わります。
 
-| 画面 | 国内指数(`.domestic`) | 海外指数(`.overseas`) |
+| 画面 | 国内指数(`.domestic`) | 海外指数(`.overseasRealtime`・`.overseasDaily`) |
 |---|---|---|
 | 縦画面の足種のタブ | 1分足・日中足・日足・週足・月足 | 日足・週足・月足 |
-| 縦画面のチャート | ローソク足 + 移動平均線、サブチャートに出来高 | ローソク足 + 移動平均線(サブチャートなし。メインチャートを全高で表示) |
+| 縦画面のチャート | ローソク足 + 移動平均線、サブチャートに出来高 | 折線チャート(終値の線)+ 移動平均線、現在値の破線(サブチャートなし。メインチャートを全高で表示) |
 | 横画面のテクニカル | メイン・サブとも全項目 | メインは 移動平均線・なし、サブは なし のみ(サブチャートは表示しない) |
 | 横画面のチャートの種類 | ローソク足・VWAP：線・VWAP：点・新値足・折線チャート | ローソク足・折線チャート のみ |
 | 横画面の折線チャート | 終値の折れ線だけ(テクニカルは「なし」のみ) | 終値の折れ線 + 移動平均線(テクニカルで 移動平均線・なし を選べる)、現在値の破線 |
@@ -827,7 +836,11 @@ chartViewController.market = IndexMarketOverseas;
 | 設定画面のオプション | Y軸(メイン)固定・Y軸(サブ)固定・4本値 | Y軸(メイン)固定・4本値(Y軸(サブ)固定はオンでも効かない。4本値はローソク足のときだけ表示) |
 | 設定画面の足種のタブ | 1分足〜月足(移動平均線以外は 1分足・日中足がグレー) | 日足・週足・月足 の3つだけ |
 
-海外指数に切り替えたとき、選べない指標・チャートの種類を選んでいた場合は、移動平均線・サブなし・ローソク足 に切り替わります。
+海外指数に切り替えたとき、選べない指標を選んでいた場合は、メインは移動平均線、サブは なし に切り替わります。
+チャートの種類は指数の種類ごとに覚えていて、切り替えるとその指数で最後に選んでいた種類に戻ります(最初は 国内: ローソク足、海外: 折線チャート。既存アプリと同じ)。
+
+海外指数のデータは、既存アプリ(`終値だけのチェック処理`)と同じく**終値だけ**を読みます。始値・高値・安値は終値と同じ値、出来高は 0 になります(レスポンスに `kTurnover` が入っていても使いません)。
+そのため、ローソク足にすると横線だけの足になり、出来高も表示しません。
 
 国内・海外を切り替えるとき(同じ画面で別の指数を表示するとき)も、`market` を変えてからデータを渡し直します。
 
@@ -966,8 +979,8 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 | 足種(`ChartPeriod`) | 指数の種類(`IndexMarket`) |
 |---|---|
 | `.oneMinute` → `ChartPeriodOneMinute`(1分足) | `.domestic` → `IndexMarketDomestic`(国内) |
-| `.intraday` → `ChartPeriodIntraday`(日中足) | `.overseas` → `IndexMarketOverseas`(海外) |
-| `.daily` → `ChartPeriodDaily`(日足) | |
+| `.intraday` → `ChartPeriodIntraday`(日中足) | `.overseasRealtime` → `IndexMarketOverseasRealtime`(海外・リアルタイム) |
+| `.daily` → `ChartPeriodDaily`(日足) | `.overseasDaily` → `IndexMarketOverseasDaily`(海外・日次) |
 | `.weekly` → `ChartPeriodWeekly`(週足) | |
 | `.monthly` → `ChartPeriodMonthly`(月足) | |
 
@@ -1032,7 +1045,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 [ChartResponseLoader setDailyResponse:responseArray to:self.chartView];            // 縦画面(StockChartView)
 ```
 
-海外指数の場合は、描画先の `market` を先に `.overseas` にしておきます(`StockChartView` は `chartView.market`、横画面は `landscape.chartViewController.market`)。海外指数は終値だけを読むので、`.domestic` のままだと0件になります。
+海外指数の場合は、描画先の `market` を先に `.overseasRealtime` / `.overseasDaily` にしておきます(`StockChartView` は `chartView.market`、横画面は `landscape.chartViewController.market`)。海外指数は終値だけを読むので、`.domestic` のままだと0件になります。
 
 辞書 → `StockCandle` の変換は [`StockCandleResponseParser`](ChartTest/StockChart/Model/StockCandleResponseParser.swift)(Model)が行います。
 
@@ -1043,7 +1056,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 | 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
 | 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの `値がない件の穴埋め処理` / `値がない件の穴埋め処理` と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす(1分足・日中足は飛ばさずに日時だけの足にする。下の「値のない時間帯」) |
 | 国内・海外 | 国内は始値・高値・安値・終値がすべて読めた件を有効とし、出来高がなければ 0 にする。海外は終値だけを読み、始値・高値・安値は終値と同じ値、出来高は 0 にする(既存アプリの `4本値のチェック処理` / `終値だけのチェック処理` と同じ) |
-| 変換だけを使う | Swift: `StockCandleResponseParser.candles(from: array, market: .overseas)` / Objective-C: `[StockCandleResponseParser candlesFrom:array market:IndexMarketOverseas]`(`market` を省略すると国内として読む) |
+| 変換だけを使う | Swift: `StockCandleResponseParser.candles(from: array, market: .overseasRealtime)` / Objective-C: `[StockCandleResponseParser candlesFrom:array market:IndexMarketOverseasRealtime]`(`market` を省略すると国内として読む) |
 
 ※ 配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちます(Swift の `[[String: Any]]` に変換できないため)。
 
@@ -1154,8 +1167,8 @@ self.chartView.subChart = XxxSubChartMACD;
 | 既存アプリの enum | チャートの enum |
 |---|---|
 | `XxxChartDataMin` / `MidDay` / `Day` / `Week` / `Month` | `ChartPeriodOneMinute` / `Intraday` / `Daily` / `Weekly` / `Monthly` |
-| `XxxCodeTypeJapanStock`・`JapanIndex` | `IndexMarketDomestic` |
-| `XxxCodeTypeOverseasRealtime`・`OverseasDaily` | `IndexMarketOverseas` |
+| `XxxCodeTypeJapanStock`(日本株)・`JapanIndex`(日本株価指数) | `IndexMarketDomestic` |
+| `XxxCodeTypeOverseasRealtime`(海外株価指数・リアルタイム)・`OverseasDaily`(海外株価指数・日次) | `IndexMarketOverseasRealtime`(R)・`IndexMarketOverseasDaily`(D)(描き方は同じ。違うのは既存アプリ側で呼ぶ API だけ) |
 
 ```objc
 // 既存アプリ側(例: 横画面を表示する画面の .m)
@@ -1174,8 +1187,9 @@ static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
 static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
     switch (qCodeType) {
         case XxxCodeTypeOverseasRealtime:
+            return IndexMarketOverseasRealtime;
         case XxxCodeTypeOverseasDaily:
-            return IndexMarketOverseas;
+            return IndexMarketOverseasDaily;
         default:
             return IndexMarketDomestic;   // XxxCodeTypeJapanStock・XxxCodeTypeJapanIndex
     }
@@ -1292,7 +1306,7 @@ NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response cha
 ```swift
 // Swift(既存の縦画面の ViewController から)
 let landscape = LandscapeChartViewController.instantiate()
-landscape.chartViewController.market = .domestic          // 海外指数なら .overseas(データを渡す前に指定する)
+landscape.chartViewController.market = .domestic          // 海外指数なら .overseasRealtime / .overseasDaily(データを渡す前に指定する)
 landscape.setCandles(candles, period: .daily)             // 表示中の足種のデータ(古い順)
 landscape.modalPresentationStyle = .fullScreen
 present(landscape, animated: true)
@@ -1301,7 +1315,7 @@ present(landscape, animated: true)
 ```objc
 // Objective-C(既存の縦画面の ViewController から)
 LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];
-landscape.chartViewController.market = IndexMarketDomestic;   // 海外指数なら IndexMarketOverseas
+landscape.chartViewController.market = IndexMarketDomestic;   // 海外指数なら IndexMarketOverseasRealtime / IndexMarketOverseasDaily
 [landscape setCandles:candles period:ChartPeriodDaily];
 landscape.modalPresentationStyle = UIModalPresentationFullScreen;
 [self presentViewController:landscape animated:YES completion:nil];

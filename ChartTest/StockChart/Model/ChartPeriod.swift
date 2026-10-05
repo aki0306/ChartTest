@@ -164,20 +164,31 @@ import Foundation
     }
 }
 
-/// 指数の種類。種類によって選べる足種が変わる。
-/// Objective-C からも使えるよう @objc enum(Int)にしている(Objective-C での名前は IndexMarketDomestic など)
+/// 指数の種類。種類によって選べる足種・描き方が変わる。
+/// 既存アプリの銘柄コードの種類(XxxCodeType)と同じく、海外株価指数はリアルタイム(R)と日次(D)の2つに分けている。
+/// R と D の描き方は同じ(既存アプリでも、違うのは呼ぶ API だけ)
+///
+///   | IndexMarket       | Objective-C                  | 既存アプリ(XxxCodeType)                |
+///   |-------------------|------------------------------|-----------------------------------------------|
+///   | .domestic         | IndexMarketDomestic          | JapanStock(日本株)・JapanIndex(日本株価指数) |
+///   | .overseasRealtime | IndexMarketOverseasRealtime  | OverseasRealtime(海外株価指数・リアルタイム)  |
+///   | .overseasDaily    | IndexMarketOverseasDaily     | OverseasDaily(海外株価指数・日次)          |
+///
+/// Objective-C からも使えるよう @objc enum(Int)にしている
 @objc enum IndexMarket: Int {
     /// 国内指数(日経平均など)
     case domestic
-    /// 海外指数(NYダウなど)
-    case overseas
+    /// 海外株価指数・リアルタイム(既存アプリの XxxCodeTypeOverseasRealtime)
+    case overseasRealtime
+    /// 海外株価指数・日次(既存アプリの XxxCodeTypeOverseasDaily)
+    case overseasDaily
 
     /// タブに並べる足種(左から順に)
     var periods: [ChartPeriod] {
         switch self {
         case .domestic:
             return [.oneMinute, .intraday, .daily, .weekly, .monthly]
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [.daily, .weekly, .monthly]
         }
     }

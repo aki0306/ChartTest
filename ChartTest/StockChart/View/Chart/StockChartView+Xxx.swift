@@ -9,7 +9,7 @@
 //
 //    | プロパティ    | 既存アプリの enum   | StockChartView のプロパティ        |
 //    |---------------|---------------------|------------------------------------|
-//    | qCodeType     | XxxCodeType   | market(日本株・日本株価指数 → 国内 / 海外株価指数 → 海外) |
+//    | qCodeType     | XxxCodeType   | market(日本株・日本株価指数 → 国内 / 海外株価指数 R・D → 海外リアルタイム・日次) |
 //    | chartData     | XxxChartData        | period(1分足〜月足)               |
 //    | chartCategory | XxxChartCategory    | chartType(ローソク足・VWAP・新値足・折線) |
 //    | mainChart     | XxxMainChart        | mainIndicator(None → ローソク足のみ) |
@@ -117,11 +117,13 @@ extension StockChartView {
 
     // MARK: - Xxx の enum → StockChartView の enum
 
-    /// 銘柄コードの種類 → 指数の種類(日本株・日本株価指数は国内、海外株価指数は海外)
+    /// 銘柄コードの種類 → 指数の種類(日本株・日本株価指数は国内、海外株価指数はリアルタイム/日次)
     private static func market(for qCodeType: XxxCodeType) -> IndexMarket {
         switch qCodeType {
-        case XxxCodeTypeOverseasRealtime, XxxCodeTypeOverseasDaily:
-            return .overseas
+        case XxxCodeTypeOverseasRealtime:
+            return .overseasRealtime
+        case XxxCodeTypeOverseasDaily:
+            return .overseasDaily
         default:
             // XxxCodeTypeJapanStock・XxxCodeTypeJapanIndex
             return .domestic

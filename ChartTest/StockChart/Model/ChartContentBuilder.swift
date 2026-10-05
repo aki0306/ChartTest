@@ -92,7 +92,7 @@ struct ChartContentBuilder {
             switch market {
             case .domestic:
                 return self.lineChartContent()
-            case .overseas:
+            case .overseasRealtime, .overseasDaily:
                 return self.closeLineContent(with: mainIndicator, showsCurrentPrice: true)
             }
         }

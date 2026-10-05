@@ -26,7 +26,7 @@
 //
 //  使い方(Swift。A: 非同期):
 //      let viewController = PortraitChartViewController.instantiate()
-//      viewController.market = .domestic                                   // 国内指数(海外指数なら .overseas)
+//      viewController.market = .domestic                                   // 国内指数(海外指数なら .overseasRealtime / .overseasDaily)
 //      viewController.onPeriodSelect = { [weak viewController] period in
 //          api.fetchCandles(period) { candles in                           // 既存アプリの通信処理(どのスレッドで終わってもよい)
 //              viewController?.setCandles(candles, period: period)

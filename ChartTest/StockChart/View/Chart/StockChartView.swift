@@ -488,7 +488,7 @@ final class StockChartView: UIView {
 ///   |----------------------------|---------------------------------------------------------|----------------------------------------------------------|
 ///   | プロパティの設定で表示     | setCandles(candles)                                     | [chartView setCandles:candles]                           |
 ///   | 足種を指定して表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
-///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseas)  | [chartView setCandles:candles period:… market:IndexMarketOverseas] |
+///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseasRealtime)  | [chartView setCandles:candles period:… market:IndexMarketOverseasRealtime] |
 ///   | 計算済みの指標の値で表示   | setCandles(candles, indicatorValues: values)            | [chartView setCandles:candles indicatorValues:values]    |
 ///   | 指標を指定して表示         | setCandles(candles, mainIndicator: .macd, …)            | [chartView setCandles:candles mainIndicator:… subIndicator:…] |
 ///   | パラメータも指定(Swift のみ)| setCandles(candles, mainIndicator: …, subIndicator: …, parameters: …) | (IndicatorParameters は struct のため不可)     |

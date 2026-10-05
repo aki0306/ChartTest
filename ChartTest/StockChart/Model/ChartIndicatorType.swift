@@ -88,7 +88,7 @@ extension MainChartIndicator {
         switch market {
         case .domestic:
             return allCases
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [.movingAverage, .candleOnly]
         }
     }
@@ -130,7 +130,7 @@ extension SubChartIndicator {
         switch market {
         case .domestic:
             return allCases
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [.hidden]
         }
     }

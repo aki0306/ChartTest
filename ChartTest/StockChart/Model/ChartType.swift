@@ -53,7 +53,7 @@ import Foundation
             switch market {
             case .domestic:
                 return false
-            case .overseas:
+            case .overseasRealtime, .overseasDaily:
                 return true
             }
         case .vwapLine, .vwapDots, .newPrice:
@@ -96,7 +96,7 @@ extension ChartType {
         switch market {
         case .domestic:
             return allCases
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [.candlestick, .lineChart]
         }
     }
@@ -106,7 +106,7 @@ extension ChartType {
         switch market {
         case .domestic:
             return .candlestick
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return .lineChart
         }
     }

@@ -23,7 +23,7 @@
 //      ChartResponseLoader.setDailyResponse(response, to: chartView)
 //
 //  ・辞書 → StockCandle の変換(キーの名前・値の型・日付の形式・並べ替え)は StockCandleResponseParser(Model)が行う
-//  ・海外指数の場合は、描画先の market を先に .overseas にしておく
+//  ・海外指数の場合は、描画先の market を先に .overseasRealtime / .overseasDaily にしておく
 //    (レスポンスの読み方も market で変わる。海外は終値だけを読むので、.domestic のままだと0件になる)
 //  ・配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちる(Swift の [[String: Any]] に変換できないため)
 //  ・どのスレッドから呼んでもよい(通信の完了処理から直接呼んでよい)。描画はメインスレッドで行う(MainThread)

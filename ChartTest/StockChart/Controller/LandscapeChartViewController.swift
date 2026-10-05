@@ -27,7 +27,7 @@
 //
 //  使い方(Swift):
 //      let viewController = LandscapeChartViewController.instantiate()
-//      viewController.chartViewController.market = .overseas               // 海外指数(移動平均線・ローソク足/折線チャートだけ)
+//      viewController.chartViewController.market = .overseasRealtime             // 海外指数(移動平均線・ローソク足/折線チャートだけ)
 //      viewController.onPeriodSelect = { [weak viewController] period in /* その足種のデータを取得して viewController?.setCandles(_:period:) */ }
 //      viewController.onReload = { [weak self] in /* 表示中の足種(chartViewController.period)のデータを取得し直す */ }
 //      viewController.onRotate = { [weak self] in /* 縦画面に戻す */ }

@@ -10,7 +10,7 @@
 //  ・縦画面: PortraitChartViewController(Portrait.storyboard。足種のタブ + StockChartView)
 //  ・横画面: LandscapeChartViewController(Landscape.storyboard。StockChartViewController で指標メニュー付き表示)
 //  この画面は「どちらを表示するか」と「データを渡す」ことだけを担当する。
-//  縦画面の左下の切り替えボタン(marketControl)で、国内指数/海外指数を切り替えて表示を確かめられる
+//  縦画面の左下の切り替えボタン(marketControl)で、国内指数/海外指数(リアルタイム・日次)を切り替えて表示を確かめられる
 //  (横画面では下の帯と重なるので隠す。縦画面で切り替えてから横にする)。
 //  横画面の下の帯(足種・更新・縦画面に戻す)が押されたときの処理も、ここで設定している(setupLandscapeFooter)。
 //
@@ -32,10 +32,10 @@ class ViewController: UIViewController {
     // MARK: - 国内指数/海外指数の切り替え
 
     /// 国内指数/海外指数を切り替えるボタン(左下。縦画面だけに表示する)
-    private let marketControl = UISegmentedControl(items: ["国内指数", "海外指数"])
+    private let marketControl = UISegmentedControl(items: ["国内指数", "海外(R)", "海外(D)"])
 
     /// 切り替えボタンの並び順と同じ、指数の種類
-    private let marketChoices: [IndexMarket] = [.domestic, .overseas]
+    private let marketChoices: [IndexMarket] = [.domestic, .overseasRealtime, .overseasDaily]
 
     // MARK: - Lifecycle
 
@@ -113,7 +113,7 @@ class ViewController: UIViewController {
     /// 縦画面・横画面のチャートを、指定した指数の種類で表示し直す。
     /// 指数の種類は、データを渡す前に設定する(描き方・選べる足種や指標が変わるため)
     ///   ・国内指数: 縦画面は 1分足〜月足のタブ、ローソク足 + 移動平均線 + 出来高
-    ///   ・海外指数: 縦画面は 日足・週足・月足のタブ、ローソク足 + 移動平均線(サブチャートなし)。
+    ///   ・海外指数(R・D とも同じ): 縦画面は 日足・週足・月足のタブ、折線チャート + 移動平均線(サブチャートなし)。
     ///              横画面は テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
     /// (サンプルなので、海外指数でも同じダミーデータを使う)
     private func showCharts(for market: IndexMarket) {
@@ -155,8 +155,13 @@ class ViewController: UIViewController {
         // 値のある最後の足(1分足は 14:36 以降が日時だけの足なので、それより前の最後の足)
         guard let latest = SampleData.candles(for: .oneMinute).last(where: { candle in candle.hasValue }) else { return }
         var name = "日経平均"
-        if self.landscapeViewController.chartViewController.market == .overseas {
+        switch self.landscapeViewController.chartViewController.market {
+        case .domestic:
+            break
+        case .overseasRealtime:
             name = "NYダウ"
+        case .overseasDaily:
+            name = "NYダウ(日次)"
         }
         self.landscapeViewController.updatePriceInfo(name: name, price: latest.close, date: latest.date)
     }

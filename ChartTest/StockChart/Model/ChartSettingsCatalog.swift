@@ -96,7 +96,7 @@ enum ChartSettingsCatalog {
         switch market {
         case .domestic:
             return self.sections
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [
                 ChartSettingsSection(title: "表示", items: [.displayOptions]),
                 ChartSettingsSection(title: "メインチャート", items: [.main(.movingAverage)]),

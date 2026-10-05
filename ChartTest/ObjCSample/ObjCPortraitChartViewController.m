@@ -6,7 +6,7 @@
 //
 //  ・足種のタブ(1分足・日中足・日足・週足・月足)が押されるたびに candleLoader のブロックが呼ばれ、
 //    その足種のデータを返すと、足種に合った設定で描き直される
-//  ・海外指数の場合は market を IndexMarketOverseas にする(タブは日足・週足・月足になる)
+//  ・海外指数の場合は market を IndexMarketOverseasRealtime(リアルタイム)/ IndexMarketOverseasDaily(日次)にする(タブは日足・週足・月足になる)
 //
 
 #import "ObjCPortraitChartViewController.h"

@@ -93,7 +93,7 @@ enum ChartDisplayOption: CaseIterable {
         switch market {
         case .domestic:
             return [.mainYAxisFixed, .subYAxisFixed, .ohlc]
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return [.mainYAxisFixed, .ohlc]
         }
     }

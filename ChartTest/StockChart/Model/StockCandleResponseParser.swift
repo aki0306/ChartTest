@@ -14,7 +14,7 @@
 //  ・値が読めない件は、直前の足の値で埋める(既存アプリの 値がない件の穴埋め処理 と同じ)。
 //    ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす
 //    (keepsEmptyDates = true の場合は、飛ばさずに日時だけの足にする。1分足・日中足で、値のない時間帯も X軸に日付を並べるため)
-//  ・国内(IndexMarket.domestic)と海外(.overseas)で、読む値が違う(既存アプリの 値のチェック処理(国内は4本値すべて・海外は終値だけ) と同じ)
+//  ・国内(IndexMarket.domestic)と海外(.overseasRealtime・.overseasDaily)で、読む値が違う(既存アプリの 値のチェック処理(国内は4本値すべて・海外は終値だけ) と同じ)
 //
 //      | 指数     | 値が読めたとする条件          | 始値・高値・安値 | 出来高                 |
 //      |----------|-------------------------------|------------------|------------------------|
@@ -26,8 +26,8 @@
 //  ・レスポンスの並び順に関係なく、日付の古い順に並べ替えて返す
 //
 //  使い方:
-//      Swift       : let candles = StockCandleResponseParser.candles(from: response, market: .overseas)
-//      Objective-C : NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:response market:IndexMarketOverseas];
+//      Swift       : let candles = StockCandleResponseParser.candles(from: response, market: .overseasRealtime)
+//      Objective-C : NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:response market:IndexMarketOverseasRealtime];
 //      (market を省略した candles(from:) / candlesFrom: は国内として読む)
 //
 
@@ -162,7 +162,7 @@ final class StockCandleResponseParser: NSObject {
             guard let high = self.number(item[Key.high]) else { return nil }
             guard let low = self.number(item[Key.low]) else { return nil }
             return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume, vwap: vwap)
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             // 海外は終値だけが配信される。始値・高値・安値も終値にしておく(4本値がそろっていないと足を作れないため)
             return StockCandle(date: date, open: close, high: close, low: close, close: close, volume: volume, vwap: vwap)
         }
@@ -183,7 +183,7 @@ final class StockCandleResponseParser: NSObject {
         case .domestic:
             guard let volume = self.number(item[Key.volume]) else { return 0 }
             return volume
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return 0
         }
     }
@@ -197,7 +197,7 @@ final class StockCandleResponseParser: NSObject {
             guard let vwap = self.number(item[Key.vwap]) else { return nil }
             guard vwap != 0 else { return nil }
             return vwap
-        case .overseas:
+        case .overseasRealtime, .overseasDaily:
             return nil
         }
     }
