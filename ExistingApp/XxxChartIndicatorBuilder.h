@@ -34,7 +34,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// 指標の値だけを計算する(チャートが実際に描く指標の分だけ。StockChartView.effectiveMainIndicator など)
 /// @param dataArray kTimestamp を NSDate にした配列(dataArrayWithDateTimestamps: の結果)
-/// @param candles dataArray から作ったローソク足(値はこの並びにそろえる)
+/// @param candles dataArray から作ったローソク足(値はこの並びにそろえる。日時だけの足 hasValue = NO は含めない)
 /// @param chartView 描画先(描く指標・期間・足種を読む)
 + (ChartIndicatorValues *)indicatorValuesWithDataArray:(NSArray<NSDictionary *> *)dataArray
                                                candles:(NSArray<StockCandle *> *)candles

@@ -27,6 +27,7 @@
 //    ・ラベルは足に固定されるので、スクロールしてもラベルが足からずれない
 //      (何本おきかは足1本の幅・表示本数から決めるので、拡大・縮小したときだけ変わる)
 //    ・足の中心に置くと画面からはみ出すラベルは、ずらさずに表示しない(ずらすと隣のラベルと重なるため)
+//    ・最新の足より右に日付だけを並べる時間帯(1分足・日中足の、これから値が来る時間)がある場合は、右へも同じ間隔で置く
 //
 //  ※ このプロジェクトは既定のアクター分離が MainActor だが、継承元の XAxisRenderer は
 //    アクター分離なしで宣言されているため、クラスを nonisolated にして override できるようにしている
@@ -96,7 +97,24 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             indexes.append(position)
         }
         // 右から順に集めたので、左から順に並べ直す
-        return indexes.reversed()
+        indexes.reverse()
+
+        // 最新の足より右(日付だけを並べる時間帯)にも、同じ間隔で置く(日付のない位置には置かない)
+        let rightmostIndex = Int(visibleMax.rounded(.up))
+        for index in stride(from: latestIndex + step, through: rightmostIndex, by: step) {
+            let position = Double(index)
+            if position > visibleMax {
+                continue
+            }
+            if self.labelText(at: position).isEmpty {
+                continue
+            }
+            if !self.labelFitsInChart(at: position) {
+                continue
+            }
+            indexes.append(position)
+        }
+        return indexes
     }
 
     /// ラベルの位置を DGCharts に渡す(ラベルの大きさの計算もし直す)

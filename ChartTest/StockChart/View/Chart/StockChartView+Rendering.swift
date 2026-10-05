@@ -65,8 +65,12 @@ extension StockChartView {
         let dateFormatter = DateFormatter()
         dateFormatter.locale = Locale(identifier: "ja_JP")
         dateFormatter.dateFormat = self.style.dateFormat
-        let dates = self.candles.map { candle in candle.date }
-        let xAxisFormatter = DateAxisValueFormatter(dates: dates, formatter: dateFormatter)
+        // 日付だけを並べる時間帯(1分足・日中足の、値のない時間帯)は、値のある足の前後に並べる
+        //   インデックス:  -2     -1     0      1    …  n-1    n      n+1
+        //   日付        : 08:45  08:50  09:00  09:05 … 14:35  14:40  14:45
+        //                 ↑ leadingDates            値のある足  ↑ trailingDates
+        let dates = self.leadingDates + self.candles.map { candle in candle.date } + self.trailingDates
+        let xAxisFormatter = DateAxisValueFormatter(dates: dates, firstIndex: -self.leadingDates.count, formatter: dateFormatter)
 
         // 両端のローソク足/バーが半分切れないよう、X軸の範囲を前後に 0.5 本ずつ広げる(xAxisMinimum)。
         // メインとサブで範囲を揃えておかないとスクロール同期がずれるので、両方に同じ値を設定する
@@ -77,7 +81,7 @@ extension StockChartView {
         }
 
         // X軸ラベルは最新の足(データの右端)を基準に並べる。
-        // (一目均衡表の先行スパンで右に余白がある場合も、日付のある最後の足を基準にする)
+        // (一目均衡表の先行スパン・日付だけを並べる時間帯で右に余白がある場合も、値のある最後の足を基準にする)
         self.priceXAxisRenderer.latestIndex = self.candles.count - 1
         self.subXAxisRenderer.latestIndex = self.candles.count - 1
     }
@@ -139,7 +143,9 @@ extension StockChartView {
                 chart.fitScreen()
                 // 表示本数の指定があり、全体の本数より少ない場合だけ、拡大して右端に寄せる(それ以外は全件表示)
                 if let visibleCount = self.effectiveVisibleCount {
-                    if visibleCount < self.totalCount {
+                    // X軸全体の本数(日付だけを並べる時間帯を含む)
+                    let axisCount = self.totalCount + self.leadingDates.count
+                    if visibleCount < axisCount {
                         // 縮小の限界を visibleCount 本にすると、その本数まで拡大された状態になる(初期表示の拡大率)
                         chart.setVisibleXRangeMaximum(Double(visibleCount))
                         chart.moveViewToX(Double(self.totalCount))
@@ -347,7 +353,7 @@ extension StockChartView {
     /// 軸を描かせるためだけの、見えない線(X軸の左端と右端に1点ずつ)
     private func makeInvisibleAnchorSet() -> LineChartDataSet {
         let entries = [
-            ChartDataEntry(x: 0, y: 0),
+            ChartDataEntry(x: Double(-self.leadingBlankCount), y: 0),
             ChartDataEntry(x: Double(self.totalCount - 1), y: 0),
         ]
         let set = LineChartDataSet(entries: entries, label: "")

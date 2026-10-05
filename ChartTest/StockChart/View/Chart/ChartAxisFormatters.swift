@@ -21,16 +21,23 @@ final class DateAxisValueFormatter: AxisValueFormatter {
 
     /// インデックスに対応する日付の配列
     private let dates: [Date]
+    /// dates の先頭の日付のインデックス(値のある足より前に日付を並べる場合は負の値)
+    private let firstIndex: Int
     /// 日付 → 文字列の変換に使うフォーマッタ
     private let formatter: DateFormatter
 
-    init(dates: [Date], formatter: DateFormatter) {
+    /// - Parameters:
+    ///   - dates: X軸に並ぶ日付(古い順)
+    ///   - firstIndex: dates の先頭の日付のインデックス(例: 値のある足より前に2本並べる場合は -2)
+    ///   - formatter: 日付 → 文字列の変換に使うフォーマッタ
+    init(dates: [Date], firstIndex: Int = 0, formatter: DateFormatter) {
         self.dates = dates
+        self.firstIndex = firstIndex
         self.formatter = formatter
     }
 
     func stringForValue(_ value: Double, axis: AxisBase?) -> String {
-        let index = Int(value.rounded())
+        let index = Int(value.rounded()) - self.firstIndex
         // 範囲外(前後の余白部分・一目均衡表の先行スパンの先)は空文字
         guard self.dates.indices.contains(index) else { return "" }
         return self.formatter.string(from: self.dates[index])

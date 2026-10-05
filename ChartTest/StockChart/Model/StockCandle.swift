@@ -12,6 +12,10 @@ import Foundation
 /// Objective-C からも生成できるよう、struct ではなく NSObject のサブクラスにしている。
 ///   Swift:        StockCandle(date: d, open: o, high: h, low: l, close: c, volume: v)
 ///   Objective-C:  [[StockCandle alloc] initWithDate:d open:o high:h low:l close:c volume:v]
+///
+/// 値がなく日時だけの足(StockCandle(emptyDate:)。hasValue = false)も作れる。
+/// 1分足・日中足で、まだ値のない時間帯(寄り付き前・これから来る時間)の日時を X軸に並べるためのもの。
+/// チャートは、先頭側・末尾側にある日時だけの足を描かずに、日付の軸の空きとして並べる(途中にあるものは無視する)。
 @objc final class StockCandle: NSObject {
     /// 日付(X軸ラベルの表示に使う)
     @objc let date: Date
@@ -29,6 +33,8 @@ import Foundation
     /// 値がある場合、VWAP のチャートはこの値で描く(ない場合は出来高から計算する。ChartContentBuilder)。
     /// Double? は Objective-C で扱えないので Swift からだけ使う(Objective-C で作った足は nil)
     let vwap: Double?
+    /// 値がある足か。false は日時だけの足(4本値は NaN。チャートには描かず、X軸の日付だけに使う)
+    @objc let hasValue: Bool
 
     /// - Parameter vwap: API が計算した VWAP(ない場合は nil)
     init(date: Date, open: Double, high: Double, low: Double, close: Double, volume: Double, vwap: Double?) {
@@ -39,6 +45,20 @@ import Foundation
         self.close = close
         self.volume = volume
         self.vwap = vwap
+        self.hasValue = true
+        super.init()
+    }
+
+    /// 値がなく日時だけの足を作る(Objective-C: [[StockCandle alloc] initWithEmptyDate:d])
+    @objc init(emptyDate date: Date) {
+        self.date = date
+        self.open = .nan
+        self.high = .nan
+        self.low = .nan
+        self.close = .nan
+        self.volume = 0
+        self.vwap = nil
+        self.hasValue = false
         super.init()
     }
 
@@ -82,5 +102,42 @@ extension Array where Element == Double {
             }
         }
         return result
+    }
+}
+
+// MARK: - 日時だけの足を分ける
+
+/// ローソク足の配列を、先頭側の日時だけの足・値のある足・末尾側の日時だけの足に分けたもの。
+/// チャートは値のある足だけで指標を計算して描き、日時だけの足は X軸の左右の空き(日付だけ)として並べる
+///
+///   全体   : 08:45(日時だけ) 08:50(日時だけ) 09:00 09:05 … 14:35 14:40(日時だけ) … 15:30(日時だけ)
+///   分けた後: leadingDates = [08:45, 08:50]  candles = [09:00 … 14:35]  trailingDates = [14:40 … 15:30]
+///
+/// ・値のある足の間にある日時だけの足は、捨てる(パーサーは途中の値がない件を直前の足で埋めるので、通常はない)
+/// ・値のある足が1本もない場合は、すべて空(チャートは「表示できる情報はありません」を表示する)
+struct CandleSlots {
+    /// 値のある最初の足より前の日時(古い順)
+    let leadingDates: [Date]
+    /// 値のある足(古い順)
+    let candles: [StockCandle]
+    /// 値のある最後の足より後ろの日時(古い順)
+    let trailingDates: [Date]
+
+    init(_ allCandles: [StockCandle]) {
+        guard let firstIndex = allCandles.firstIndex(where: { candle in candle.hasValue }) else {
+            self.leadingDates = []
+            self.candles = []
+            self.trailingDates = []
+            return
+        }
+        guard let lastIndex = allCandles.lastIndex(where: { candle in candle.hasValue }) else {
+            self.leadingDates = []
+            self.candles = []
+            self.trailingDates = []
+            return
+        }
+        self.leadingDates = allCandles[..<firstIndex].map { candle in candle.date }
+        self.candles = allCandles[firstIndex...lastIndex].filter { candle in candle.hasValue }
+        self.trailingDates = allCandles[(lastIndex + 1)...].map { candle in candle.date }
     }
 }

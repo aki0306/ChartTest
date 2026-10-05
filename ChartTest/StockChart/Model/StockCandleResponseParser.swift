@@ -13,6 +13,7 @@
 //  ・日付が読めない件は飛ばす
 //  ・値が読めない件は、直前の足の値で埋める(既存アプリの 値がない件の穴埋め処理 と同じ)。
 //    ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす
+//    (keepsEmptyDates = true の場合は、飛ばさずに日時だけの足にする。1分足・日中足で、値のない時間帯も X軸に日付を並べるため)
 //  ・国内(IndexMarket.domestic)と海外(.overseas)で、読む値が違う(既存アプリの 値のチェック処理(国内は4本値すべて・海外は終値だけ) と同じ)
 //
 //      | 指数     | 値が読めたとする条件          | 始値・高値・安値 | 出来高                 |
@@ -89,6 +90,24 @@ final class StockCandleResponseParser: NSObject {
     /// - Returns: 日付の古い順に並べたローソク足(値が読めない件は直前の足の値で埋める)
     @objc(candlesFrom:market:)
     static func candles(from response: [[String: Any]], market: IndexMarket) -> [StockCandle] {
+        return self.candles(from: response, market: market, keepsEmptyDates: false)
+    }
+
+    /// レスポンスの配列を、日付の古い順に並べたローソク足の配列に変換する
+    ///
+    ///   値:            ""    100   ""    105   ""
+    ///   keepsEmptyDates = false: 飛ばす 100   100   105   飛ばす
+    ///   keepsEmptyDates = true : 日時だけ 100   100   105   日時だけ
+    ///                            ↑ 直前の足がない          ↑ 値が読めた最後の足より後ろ
+    ///
+    /// - Parameters:
+    ///   - response: レスポンス(辞書の配列。並び順は問わない)
+    ///   - market: 指数の種類。海外は終値だけを読む
+    ///   - keepsEmptyDates: 値が読めた最初の足より前・最後の足より後ろの件を、飛ばさずに日時だけの足(StockCandle(emptyDate:))にするか。
+    ///     1分足・日中足で、値のない時間帯も X軸に日付を並べる場合に true にする(ChartResponseLoader)
+    /// - Returns: 日付の古い順に並べたローソク足(途中の値が読めない件は直前の足の値で埋める)
+    @objc(candlesFrom:market:keepsEmptyDates:)
+    static func candles(from response: [[String: Any]], market: IndexMarket, keepsEmptyDates: Bool) -> [StockCandle] {
         // 直前の足で埋めるには並び順が決まっている必要があるので、先に日付の古い順に並べ替える
         // (チャートも日付の古い順に並べる必要がある)
         var entries: [(date: Date, item: [String: Any])] = []
@@ -98,22 +117,36 @@ final class StockCandleResponseParser: NSObject {
         }
         entries.sort { first, second in first.date < second.date }
 
-        //   値:   ""    100   ""    105   ""
-        //   結果: 飛ばす 100   100   105   飛ばす
-        //         ↑ 直前の足がない          ↑ 値が読めた最後の足より後ろ
         var candles: [StockCandle] = []
+        var lastValidCandle: StockCandle?  // 直前の足(値が読めた足か、それで埋めた足)
         var validCount = 0  // 値が読めた最後の足までの本数
         for entry in entries {
             if let candle = self.candle(date: entry.date, item: entry.item, market: market) {
                 candles.append(candle)
+                lastValidCandle = candle
                 validCount = candles.count
                 continue
             }
-            guard let previous = candles.last else { continue }  // 直前の足がない先頭側の件は飛ばす
-            candles.append(self.filledCandle(date: entry.date, item: entry.item, market: market, previous: previous))
+            guard let previous = lastValidCandle else {
+                // 直前の足がない先頭側の件
+                if keepsEmptyDates {
+                    candles.append(StockCandle(emptyDate: entry.date))
+                }
+                continue
+            }
+            let filled = self.filledCandle(date: entry.date, item: entry.item, market: market, previous: previous)
+            candles.append(filled)
+            lastValidCandle = filled
         }
-        // 値が読めた最後の足より後ろの、埋めただけの足は取り除く
-        return Array(candles.prefix(validCount))
+
+        // 値が読めた最後の足より後ろの、埋めただけの足は取り除く(日時を残す場合は、日時だけの足にする)
+        var result = Array(candles.prefix(validCount))
+        if keepsEmptyDates {
+            for candle in candles.dropFirst(validCount) {
+                result.append(StockCandle(emptyDate: candle.date))
+            }
+        }
+        return result
     }
 
     /// レスポンスの1件をローソク足に変換する

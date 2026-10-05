@@ -80,6 +80,16 @@ final class ChartResponseLoader: NSObject {
         self.setResponse(response, period: .monthly, to: target)
     }
 
+    /// 値のない時間帯の日時を残すか(1分足・日中足だけ。日足・週足・月足は値のない日を並べない)
+    private static func keepsEmptyDates(for period: ChartPeriod) -> Bool {
+        switch period {
+        case .oneMinute, .intraday:
+            return true
+        case .daily, .weekly, .monthly:
+            return false
+        }
+    }
+
     /// 足種を指定してレスポンスを渡し、描画する(Objective-C: setResponse:period:to:)。
     /// 足種を引数で切り替えたい場合はこちらを使う
     @objc static func setResponse(_ response: [[String: Any]], period: ChartPeriod, to target: StockCandleReceiving) {
@@ -88,7 +98,9 @@ final class ChartResponseLoader: NSObject {
 
         // 辞書の配列を、日付の古い順のローソク足に変換してから描く(値が読めない件は直前の足の値で埋める)。
         // 海外指数は終値だけが配信されるので、描画先の指数の種類に合わせて読み方を変える
-        let candles = StockCandleResponseParser.candles(from: response, market: target.market)
+        // 1分足・日中足は、値のない時間帯(寄り付き前・これから来る時間)も X軸に日付を並べるので、日時だけの件も残す
+        let candles = StockCandleResponseParser.candles(from: response, market: target.market,
+                                                        keepsEmptyDates: self.keepsEmptyDates(for: period))
         target.setCandles(candles, period: period)
     }
 }

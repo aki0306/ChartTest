@@ -244,10 +244,14 @@ final class StockChartView: UIView {
     var mainContent = MainChartContent()
     /// 表示中のサブチャートの内容(nil = サブチャートなし)
     var subContent: SubChartContent?
+    /// 値のある最初の足より前に、日付だけを並べる日時(1分足・日中足の、まだ値のない時間帯。古い順)
+    var leadingDates: [Date] = []
+    /// 値のある最後の足より後ろに、日付だけを並べる日時(1分足・日中足の、これから値が来る時間帯。古い順)
+    var trailingDates: [Date] = []
 
-    /// データの右端より先に描く本数(一目均衡表の先行スパン用。それ以外は 0)
+    /// データの右端より先に空ける本数(一目均衡表の先行スパン・日付だけを並べる時間帯。それ以外は 0)
     var futureCount: Int {
-        return self.mainContent.futureCount
+        return max(self.mainContent.futureCount, self.trailingDates.count)
     }
 
     /// X軸に並ぶ本数(先行スパンの先の部分を含む)
@@ -263,10 +267,11 @@ final class StockChartView: UIView {
         return self.style.visibleCount
     }
 
-    /// データの左端より前に空けておく本数(新値足の本数が表示本数より少ないとき、右寄せにするため)
+    /// データの左端より前に空けておく本数
+    /// (日付だけを並べる時間帯の本数。新値足の本数が表示本数より少ないときは、右寄せにするための本数も足す)
     var leadingBlankCount: Int {
-        guard let fixedVisibleCount = self.mainContent.fixedVisibleCount else { return 0 }
-        return max(0, fixedVisibleCount - self.totalCount)
+        guard let fixedVisibleCount = self.mainContent.fixedVisibleCount else { return self.leadingDates.count }
+        return self.leadingDates.count + max(0, fixedVisibleCount - self.totalCount)
     }
 
     /// X軸の左端の値。両端の足が半分切れないよう、前に 0.5 本広げる(右寄せの場合は空ける本数も含める)
@@ -305,17 +310,26 @@ final class StockChartView: UIView {
     ///   - main: メインチャート(ローソク足に重ねる部分)の内容
     ///   - sub: サブチャートの内容。nil の場合はサブチャートを隠し、メインチャートを全高で表示する
     ///   - keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する(指標の切り替え時など)
-    func display(candles: [StockCandle], main: MainChartContent, sub: SubChartContent?, keepsViewport: Bool = false) {
+    ///   - leadingDates: 値のある最初の足より前に、日付だけを並べる日時(CandleSlots.leadingDates)
+    ///   - trailingDates: 値のある最後の足より後ろに、日付だけを並べる日時(CandleSlots.trailingDates)
+    func display(candles: [StockCandle], main: MainChartContent, sub: SubChartContent?, keepsViewport: Bool = false,
+                 leadingDates: [Date] = [], trailingDates: [Date] = []) {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
         guard MainThread.isCurrent(orRetry: {
-            self.display(candles: candles, main: main, sub: sub, keepsViewport: keepsViewport)
+            self.display(candles: candles, main: main, sub: sub, keepsViewport: keepsViewport,
+                         leadingDates: leadingDates, trailingDates: trailingDates)
         }) else { return }
 
         // 維持する表示位置・拡大率(nil = 初期表示位置に戻す)。内容を差し替える前に取得しておく
         var keptMatrix: CGAffineTransform?
         if keepsViewport {
-            keptMatrix = self.currentMatrixIfReusable(candleCount: candles.count, futureCount: main.futureCount,
-                                                 fixedVisibleCount: main.fixedVisibleCount)
+            // 日付だけを並べる本数が変わると X軸の範囲が変わるので、同じ行列は使えない
+            if leadingDates.count == self.leadingDates.count {
+                if trailingDates.count == self.trailingDates.count {
+                    keptMatrix = self.currentMatrixIfReusable(candleCount: candles.count, futureCount: main.futureCount,
+                                                         fixedVisibleCount: main.fixedVisibleCount)
+                }
+            }
         }
 
         // サブチャートの表示/非表示が切り替わるか(今の表示状態と、新しい内容にサブがあるかを比べる)
@@ -330,6 +344,14 @@ final class StockChartView: UIView {
         self.candles = candles
         self.mainContent = main
         self.subContent = sub
+        // 値のある足がない場合は、日付だけを並べても意味がないので並べない(メッセージを表示する)
+        if candles.isEmpty {
+            self.leadingDates = []
+            self.trailingDates = []
+        } else {
+            self.leadingDates = leadingDates
+            self.trailingDates = trailingDates
+        }
         // データが0件なら、枠と凡例を残したままメッセージを表示する
         self.showsNoDataMessage = candles.isEmpty
 
@@ -346,6 +368,8 @@ final class StockChartView: UIView {
         self.candles = []
         self.mainContent = MainChartContent()
         self.subContent = nil
+        self.leadingDates = []
+        self.trailingDates = []
         self.crosshairPoint = nil
         self.showsNoDataMessage = false
         self.render(keepingMatrix: nil)
@@ -368,7 +392,7 @@ final class StockChartView: UIView {
         // データ件数が変わると X軸の範囲が変わるので、同じ行列では同じ位置にならない
         guard candleCount == self.candles.count else { return nil }
         // 先行スパンの本数(一目均衡表の有無)が変わっても X軸の範囲が変わる
-        guard newFutureCount == self.futureCount else { return nil }
+        guard newFutureCount == self.mainContent.futureCount else { return nil }
         // 表示本数の固定(新値足の右寄せ)が変わっても X軸の範囲が変わる
         guard fixedVisibleCount == self.mainContent.fixedVisibleCount else { return nil }
 
@@ -517,14 +541,31 @@ extension StockChartView {
         self.render(candles, indicatorValues: indicatorValues)
     }
 
-    /// プロパティの設定で、描画内容を組み立てて表示する
+    /// プロパティの設定で、描画内容を組み立てて表示する。
+    /// 日時だけの足(StockCandle.hasValue = false)は、先頭側・末尾側を X軸の日付だけに使い、指標の計算には使わない
     private func render(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {
+        let slots = CandleSlots(candles)
         // 選べない組み合わせ(海外指数の出来高・1分足の MACD など)は、選べるものに置き換えて描く(プロパティの値は変えない)
-        var builder = ChartContentBuilder(candles: candles, parameters: self.period.indicatorParameters)
+        var builder = ChartContentBuilder(candles: slots.candles, parameters: self.period.indicatorParameters)
         builder.precomputed = indicatorValues
-        let content = builder.content(for: self.effectiveChartType, mainIndicator: self.effectiveMainIndicator,
+        let chartType = self.effectiveChartType
+        let content = builder.content(for: chartType, mainIndicator: self.effectiveMainIndicator,
                                       subIndicator: self.effectiveSubIndicator, market: self.market)
-        self.display(candles: content.candles, main: content.main, sub: content.sub)
+        self.display(candles: content.candles, main: content.main, sub: content.sub,
+                     leadingDates: Self.leadingDates(of: slots, chartType: chartType),
+                     trailingDates: Self.trailingDates(of: slots, chartType: chartType))
+    }
+
+    /// 値のある最初の足より前に並べる日時。新値足は時間の流れと関係なく並ぶので、日付だけの時間帯は並べない
+    static func leadingDates(of slots: CandleSlots, chartType: ChartType) -> [Date] {
+        guard chartType != .newPrice else { return [] }
+        return slots.leadingDates
+    }
+
+    /// 値のある最後の足より後ろに並べる日時。新値足は時間の流れと関係なく並ぶので、日付だけの時間帯は並べない
+    static func trailingDates(of slots: CandleSlots, chartType: ChartType) -> [Date] {
+        guard chartType != .newPrice else { return [] }
+        return slots.trailingDates
     }
 
     /// 指標の計算に使う期間など(今の足種 period のもの)。チャートの外で指標を計算するときは、この値で計算する
@@ -578,11 +619,15 @@ extension StockChartView {
     ///   - parameters: 指標の計算パラメータ(期間など)
     func setCandles(_ candles: [StockCandle], mainIndicator: MainChartIndicator, subIndicator: SubChartIndicator,
                     parameters: IndicatorParameters) {
-        // データが0件でも凡例は表示するので、描画内容は組み立てる(チャートの代わりにメッセージが表示される)
-        let builder = ChartContentBuilder(candles: candles, parameters: parameters)
-        self.display(candles: candles,
+        // データが0件でも凡例は表示するので、描画内容は組み立てる(チャートの代わりにメッセージが表示される)。
+        // 日時だけの足は、先頭側・末尾側を X軸の日付だけに使う
+        let slots = CandleSlots(candles)
+        let builder = ChartContentBuilder(candles: slots.candles, parameters: parameters)
+        self.display(candles: slots.candles,
                 main: builder.mainContent(for: mainIndicator),
-                sub: builder.subContent(for: subIndicator))
+                sub: builder.subContent(for: subIndicator),
+                leadingDates: slots.leadingDates,
+                trailingDates: slots.trailingDates)
     }
 }
 

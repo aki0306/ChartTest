@@ -113,9 +113,30 @@ static NSArray<StockCandle *> *XxxNewPriceCandles(SCIOhlcDataSeries *series) {
     }
 
     NSMutableArray<NSMutableDictionary *> *dateDataArray = [self dataArrayWithDateTimestamps:dataArray];
-    // ローソク足はチャートの変換で作る(値がない件は直前の足で埋める。海外は終値だけを読む)
-    NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:dateDataArray market:chartView.market];
-    ChartIndicatorValues *values = [self indicatorValuesWithDataArray:dateDataArray candles:candles chartView:chartView];
+    // ローソク足はチャートの変換で作る(値がない件は直前の足で埋める。海外は終値だけを読む)。
+    // 1分足・日中足は、値のない時間帯(寄り付き前・これから来る時間)の日時も残す(チャートは X軸に日付だけを並べる)
+    BOOL keepsEmptyDates = NO;
+    switch (chartView.period) {
+        case ChartPeriodOneMinute:
+        case ChartPeriodIntraday:
+            keepsEmptyDates = YES;
+            break;
+        case ChartPeriodDaily:
+        case ChartPeriodWeekly:
+        case ChartPeriodMonthly:
+            break;
+    }
+    NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:dateDataArray
+                                                                      market:chartView.market
+                                                             keepsEmptyDates:keepsEmptyDates];
+    // 指標の値は、値のある足だけの並びにそろえる(チャートも値のある足だけで描く)
+    NSMutableArray<StockCandle *> *valueCandles = [NSMutableArray array];
+    for (StockCandle *candle in candles) {
+        if (candle.hasValue) {
+            [valueCandles addObject:candle];
+        }
+    }
+    ChartIndicatorValues *values = [self indicatorValuesWithDataArray:dateDataArray candles:valueCandles chartView:chartView];
     [chartView setCandles:candles indicatorValues:values];
 }
 

@@ -326,13 +326,17 @@ final class StockChartViewController: UIViewController {
             self.chartView.clear()
             return
         }
-        let builder = ChartContentBuilder(candles: self.candles, parameters: self.parameters)
+        // 日時だけの足(1分足・日中足の、値のない時間帯)は、先頭側・末尾側を X軸の日付だけに使う
+        let slots = CandleSlots(self.candles)
+        let builder = ChartContentBuilder(candles: slots.candles, parameters: self.parameters)
         let content = builder.content(for: self.chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
                                       market: self.market)
         self.chartView.display(candles: content.candles,
                           main: content.main,
                           sub: content.sub,
-                          keepsViewport: keepsViewport)
+                          keepsViewport: keepsViewport,
+                          leadingDates: StockChartView.leadingDates(of: slots, chartType: self.chartType),
+                          trailingDates: StockChartView.trailingDates(of: slots, chartType: self.chartType))
     }
 
     /// 表示オプションをチャートに反映する。
