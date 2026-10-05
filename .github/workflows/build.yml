@@ -12,18 +12,14 @@ concurrency:
 jobs:
   build:
     name: iOS Simulator build
-    runs-on: macos-26
+    # プロジェクトは Xcode 27 形式(objectVersion 110)なので、Xcode 27 が既定のランナーを使う
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      # このプロジェクトは Xcode 27 で作成されているため、ランナーにある一番新しい Xcode を使う
-      - name: Select latest Xcode
-        run: |
-          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -n 1)
-          echo "Using $XCODE"
-          sudo xcode-select -s "$XCODE"
-          xcodebuild -version
+      - name: Show Xcode version
+        run: xcodebuild -version
 
       - name: Resolve packages
         run: xcodebuild -resolvePackageDependencies -project ChartTest.xcodeproj -scheme ChartTest
