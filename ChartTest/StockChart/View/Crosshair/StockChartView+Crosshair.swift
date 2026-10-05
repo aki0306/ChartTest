@@ -51,8 +51,8 @@ extension StockChartView {
         self.wakeCrosshair()
 
         // Y軸固定: Y軸範囲を計算し直す(固定の場合は全期間、固定しない場合は表示範囲で計算される)
-        if self.priceChart.data != nil {
-            if self.priceChart.viewPortHandler.contentWidth > 0 {
+        if self.priceChartView.data != nil {
+            if self.priceChartView.viewPortHandler.contentWidth > 0 {
                 self.updateAxisRangesForVisibleCandles()
             } else {
                 // レイアウト前は表示範囲が取れないので、初期表示範囲で計算する
@@ -289,7 +289,7 @@ extension StockChartView {
         // データがない
         guard !self.candles.isEmpty else { return false }
         // レイアウト前で、描画領域の大きさが決まっていない
-        guard self.priceChart.viewPortHandler.contentWidth > 0 else { return false }
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else { return false }
         guard frameRect.width > 0 else { return false }
         return true
     }
@@ -305,20 +305,20 @@ extension StockChartView {
     /// 表示範囲内の最新の足の、終値の位置(このViewの座標)
     private func latestCandlePoint() -> CGPoint {
         // 画面の右端に見えている足(データの範囲に収める)
-        let rightEdgeIndex = Int(self.priceChart.highestVisibleX.rounded(.down))
+        let rightEdgeIndex = Int(self.priceChartView.highestVisibleX.rounded(.down))
         let latestIndex = min(max(rightEdgeIndex, 0), self.candles.count - 1)
 
         // チャートの値(X = 何本目か、Y = 終値)→ チャート上の座標 → このViewの座標
-        let transformer = self.priceChart.getTransformer(forAxis: .right)
+        let transformer = self.priceChartView.getTransformer(forAxis: .right)
         let pointInChart = transformer.pixelForValues(x: Double(latestIndex), y: self.candles[latestIndex].close)
-        return self.priceChart.convert(pointInChart, to: self)
+        return self.priceChartView.convert(pointInChart, to: self)
     }
 
     /// 指定した X(このViewの座標)に一番近い足のインデックス(データの範囲外は端の足に寄せる)
     private func nearestCandleIndex(toX x: CGFloat) -> Int {
         // このViewの座標 → チャート上の座標 → X軸の値(何本目か。小数)
-        let pointInChart = self.convert(CGPoint(x: x, y: 0), to: self.priceChart)
-        let xValue = self.priceChart.valueForTouchPoint(point: pointInChart, axis: .right).x
+        let pointInChart = self.convert(CGPoint(x: x, y: 0), to: self.priceChartView)
+        let xValue = self.priceChartView.valueForTouchPoint(point: pointInChart, axis: .right).x
         let index = Int(xValue.rounded())
         return min(max(index, 0), self.candles.count - 1)
     }
@@ -326,9 +326,9 @@ extension StockChartView {
     /// 指定した足の中心の X(このViewの座標)。外枠の外にある場合は nil
     private func candleCenterX(at index: Int, within frameRect: CGRect) -> CGFloat? {
         // X軸の値(何本目か)→ チャート上の座標 → このViewの座標
-        let transformer = self.priceChart.getTransformer(forAxis: .right)
+        let transformer = self.priceChartView.getTransformer(forAxis: .right)
         let pointInChart = transformer.pixelForValues(x: Double(index), y: 0)
-        let x = self.priceChart.convert(pointInChart, to: self).x
+        let x = self.priceChartView.convert(pointInChart, to: self).x
 
         guard (frameRect.minX...frameRect.maxX).contains(x) else { return nil }
         return x
@@ -374,17 +374,17 @@ extension StockChartView {
     /// どちらの描画領域にもない場合は nil
     private func crosshairValueText(atY y: CGFloat) -> String? {
         // メインチャートの描画領域にあるか
-        let priceArea = self.priceChart.convert(self.priceChart.viewPortHandler.contentRect, to: self)
+        let priceArea = self.priceChartView.convert(self.priceChartView.viewPortHandler.contentRect, to: self)
         if (priceArea.minY...priceArea.maxY).contains(y) {
-            let value = self.axisValue(of: self.priceChart, atY: y, area: priceArea)
+            let value = self.axisValue(of: self.priceChartView, atY: y, area: priceArea)
             return ChartNumberFormatter.price(value)
         }
 
         // サブチャートの描画領域にあるか
         if let sub = self.subContent {
-            let subArea = self.subChart.convert(self.subChart.viewPortHandler.contentRect, to: self)
+            let subArea = self.subChartView.convert(self.subChartView.viewPortHandler.contentRect, to: self)
             if (subArea.minY...subArea.maxY).contains(y) {
-                let value = self.axisValue(of: self.subChart, atY: y, area: subArea)
+                let value = self.axisValue(of: self.subChartView, atY: y, area: subArea)
                 return ChartNumberFormatter.string(value, fractionDigits: sub.fractionDigits, suffix: sub.suffix)
             }
         }

@@ -50,8 +50,8 @@ extension StockChartView {
 
     /// チャートの表示を消す(凡例は updateLegends で別に設定する)
     private func clearCharts() {
-        self.priceChart.data = nil
-        self.subChart.data = nil
+        self.priceChartView.data = nil
+        self.subChartView.data = nil
         self.priceRenderer.cloud = nil
         // 前のデータの最高値・最安値の文字が残らないようにする
         self.highPriceLabel.isHidden = true
@@ -70,7 +70,7 @@ extension StockChartView {
 
         // 両端のローソク足/バーが半分切れないよう、X軸の範囲を前後に 0.5 本ずつ広げる(xAxisMinimum)。
         // メインとサブで範囲を揃えておかないとスクロール同期がずれるので、両方に同じ値を設定する
-        for chart in [self.priceChart, self.subChart] {
+        for chart in [self.priceChartView, self.subChartView] {
             chart.xAxis.valueFormatter = xAxisFormatter
             chart.xAxis.axisMinimum = self.xAxisMinimum  // 新値足で本数が少ない場合は、左側を空けて右寄せにする
             chart.xAxis.axisMaximum = Double(self.totalCount) - 0.5
@@ -96,12 +96,12 @@ extension StockChartView {
         }
 
         self.updateCurrentPriceLine()
-        self.priceChart.data = self.makePriceData()
+        self.priceChartView.data = self.makePriceData()
     }
 
     /// 現在値の破線(新値足・折線チャート)を引く。現在値がない内容では消す
     private func updateCurrentPriceLine() {
-        let axis = self.priceChart.rightAxis
+        let axis = self.priceChartView.rightAxis
         axis.removeAllLimitLines()
         guard let price = self.mainContent.currentPrice else { return }
 
@@ -116,18 +116,18 @@ extension StockChartView {
     /// サブチャート(サブ指標・Y軸)を描く。サブなしの場合は空にする
     private func renderSubChart() {
         guard let sub = self.subContent else {
-            self.subChart.data = nil
+            self.subChartView.data = nil
             return
         }
 
-        self.subChart.data = self.makeSubData(sub)
+        self.subChartView.data = self.makeSubData(sub)
         self.configureSubAxis(sub)
     }
 
     /// 表示位置・拡大率を設定する
     /// - Parameter matrix: 維持する表示位置・拡大率。nil の場合は初期表示位置(直近 visibleCount 本・右端)にする
     private func applyViewport(_ matrix: CGAffineTransform?) {
-        for chart in [self.priceChart, self.subChart] {
+        for chart in [self.priceChartView, self.subChartView] {
             if let matrix {
                 // 指定された表示位置・拡大率(切り替え前の状態)をそのまま適用する
                 chart.notifyDataSetChanged()
@@ -442,7 +442,7 @@ extension StockChartView {
 
     /// サブチャートのY軸(基準線・ラベル間隔・書式)を内容に合わせて設定する
     private func configureSubAxis(_ content: SubChartContent) {
-        let axis = self.subChart.rightAxis
+        let axis = self.subChartView.rightAxis
 
         // 基準線(RSI の 30/70 など)を破線で引く
         axis.removeAllLimitLines()

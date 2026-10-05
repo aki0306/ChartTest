@@ -5,18 +5,21 @@
 //  【View】株価チャートの描画を担当するカスタムView。
 //
 //  ┌───────────────────────────┐
-//  │ 移動平均 短期(5) 長期(25)   │ 70,000  ← メインチャート(priceChart)
+//  │ 移動平均 短期(5) 長期(25)   │ 70,000  ← メインチャート(priceChartView)
 //  │   ローソク足 + メイン指標     │ 65,000     ローソク足 + MainChartContent
 //  │                           │ 60,000
 //  ├───────────────────────────┤ ← 区切り線(dividerView)
-//  │ 出来高 出来高移動平均         │ 4,000,000,000 ← サブチャート(subChart)
+//  │ 出来高 出来高移動平均         │ 4,000,000,000 ← サブチャート(subChartView)
 //  │   サブ指標                  │ 0                SubChartContent
 //  └───────────────────────────┘
 //   7/14   7/27   8/6 ...          ← X軸ラベル(一番下のチャートにだけ表示)
 //
 //  【使い方】外から使うのは次のものだけ(Swift・Objective-C の両方から呼べる。書き方は README を参照)
-//  ・setCandles(_:)          … データを渡すだけで描画する(移動平均線 + 出来高)
-//  ・setCandles(_:period:)   … 足種に合った設定で描画する(X軸の書式・移動平均の期間などが足種ごとに変わる)
+//  ・period / market         … 足種・指数の種類(先に設定しておく。足種を設定すると足種に合った見た目に切り替わる)
+//  ・chartType / mainIndicator / subIndicator … チャートの種類・指標(先に設定しておく。既定はローソク足・移動平均線 + 出来高)
+//  ・qCodeType / chartData / chartCategory / mainChart / subChartView … 上のプロパティを既存アプリの Xxx の enum で設定する(StockChartView+Xxx.swift)
+//  ・setCandles(_:)          … データを渡すだけで、上のプロパティの設定で描画する
+//  ・setCandles(_:period:)   … 足種を指定して描画する(period も設定される。X軸の書式・移動平均の期間などが足種ごとに変わる)
 //  ・setCandles(_:mainIndicator:subIndicator:) … 指標を指定して描画する
 //  ・display(candles:main:sub:keepsViewport:) … 描画内容を指定して描画する(StockChartViewController が使う)
 //  ・clear()                 … 表示を消す
@@ -32,6 +35,7 @@
 //  ・StockChartView+Rendering.swift      … データを DGCharts の形に変換して描画する・凡例の文字列を作る
 //  ・StockChartView+AxisRange.swift      … スクロール/ズームの同期と、表示範囲に合わせたY軸範囲の調整
 //  ・StockChartView+HighLowLabels.swift  … 表示中の範囲の最高値・最安値の文字
+//  ・StockChartView+Xxx.swift            … 既存アプリの enum(XxxChartEnum.h)で設定するプロパティ
 //  ・StockChartStyle.swift               … 見た目の設定(色・フォント・余白など)
 //  ・ChartAxisFormatters.swift           … 軸ラベル・価格などの数値の書式
 //  Chart/Renderers/(DGCharts の描き方を変える部品)
@@ -93,6 +97,42 @@ final class StockChartView: UIView {
     /// 変更しても描き直さないので、データを渡す前に設定する
     @objc var market: IndexMarket = .domestic
 
+    /// 足種。設定すると、足種に合った見た目(日付の書式・日付ラベルの数・初期表示本数。ChartPeriod)に切り替わる。
+    /// setCandles(_:) は、この足種の移動平均の期間・出来高の凡例名で描く。
+    /// 同じ足種を設定し直しても見た目は上書きしないので、足種を設定したあとで visibleCount などを変えれば、その値が使われる。
+    /// 初期値の日足は、style の初期値(初期表示 55本・日付「M/d」)と同じ
+    ///
+    ///   Objective-C:
+    ///       chartView.period = ChartPeriodWeekly;   // 週足の見た目に切り替わる
+    ///       chartView.visibleCount = 30;            // 必要なら、足種を設定したあとで変える
+    ///       [chartView setCandles:candles];         // 週足の設定(移動平均 13/26 など)で描く
+    @objc var period: ChartPeriod = .daily {
+        didSet {
+            guard self.period != oldValue else { return }
+            // style を変えると描き直される(新しいデータは、このあと setCandles で渡される)
+            self.style = self.style.applying(self.period)
+        }
+    }
+
+    /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類で選べない種類(海外指数の VWAP・新値足)は、ローソク足で描く(ChartType.choices)
+    @objc var chartType: ChartType = .candlestick
+
+    /// メインチャートの指標。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類・足種で選べない指標(1分足の一目均衡表など)は、移動平均線で描く(MainChartIndicator.choices)
+    @objc var mainIndicator: MainChartIndicator = .movingAverage
+
+    /// サブチャートの指標。setCandles(_:) / setCandles(_:period:) で使う。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 指数の種類・足種で選べない指標(1分足の MACD など)は、出来高(海外指数は なし)で描く(SubChartIndicator.choices)
+    @objc var subIndicator: SubChartIndicator = .volume
+
+    /// 既存アプリの銘柄コードの種類(XxxCodeType)の値。StockChartView+Xxx.swift の qCodeType が使う
+    /// (このファイルを Xxx の enum に依存させないよう、値だけを持っている)
+    var xxxCodeTypeRawValue: UInt32 = 0
+
     /// 表示オプション(Y軸固定・4本値)。変更すると即座に反映する
     var displayOptions = ChartDisplayOptions() {
         didSet {
@@ -112,28 +152,28 @@ final class StockChartView: UIView {
     // MARK: - 部品(サブView)
 
     /// メインチャート(ローソク足 + メイン指標)
-    let priceChart = SafePinchCombinedChartView()
+    let priceChartView = SafePinchCombinedChartView()
     /// サブチャート(サブ指標)
-    let subChart = SafePinchCombinedChartView()
+    let subChartView = SafePinchCombinedChartView()
     /// メインチャート用のレンダラー(描画処理)。一目均衡表の雲を塗るために DGCharts 標準のものから差し替えている
     lazy var priceRenderer = CloudCombinedRenderer(
-        chart: self.priceChart, animator: self.priceChart.chartAnimator, viewPortHandler: self.priceChart.viewPortHandler)
+        chart: self.priceChartView, animator: self.priceChartView.chartAnimator, viewPortHandler: self.priceChartView.viewPortHandler)
     /// メインチャートの X軸ラベルの描画処理。最新の足を基準にラベルを並べるため、DGCharts 標準のものから差し替えている
     lazy var priceXAxisRenderer = LatestAlignedXAxisRenderer(
-        viewPortHandler: self.priceChart.viewPortHandler, axis: self.priceChart.xAxis,
-        transformer: self.priceChart.getTransformer(forAxis: .left))
+        viewPortHandler: self.priceChartView.viewPortHandler, axis: self.priceChartView.xAxis,
+        transformer: self.priceChartView.getTransformer(forAxis: .left))
     /// メインチャートの Y軸ラベルの描画処理。中央揃え・枠内に収める表示に切り替えられるよう、DGCharts 標準のものから差し替えている
     lazy var priceYAxisRenderer = AlignedYAxisRenderer(
-        viewPortHandler: self.priceChart.viewPortHandler, axis: self.priceChart.rightAxis,
-        transformer: self.priceChart.getTransformer(forAxis: .right))
+        viewPortHandler: self.priceChartView.viewPortHandler, axis: self.priceChartView.rightAxis,
+        transformer: self.priceChartView.getTransformer(forAxis: .right))
     /// サブチャートの Y軸ラベルの描画処理(同上)
     lazy var subYAxisRenderer = AlignedYAxisRenderer(
-        viewPortHandler: self.subChart.viewPortHandler, axis: self.subChart.rightAxis,
-        transformer: self.subChart.getTransformer(forAxis: .right))
+        viewPortHandler: self.subChartView.viewPortHandler, axis: self.subChartView.rightAxis,
+        transformer: self.subChartView.getTransformer(forAxis: .right))
     /// サブチャートの X軸ラベルの描画処理(同上)
     lazy var subXAxisRenderer = LatestAlignedXAxisRenderer(
-        viewPortHandler: self.subChart.viewPortHandler, axis: self.subChart.xAxis,
-        transformer: self.subChart.getTransformer(forAxis: .left))
+        viewPortHandler: self.subChartView.viewPortHandler, axis: self.subChartView.xAxis,
+        transformer: self.subChartView.getTransformer(forAxis: .left))
     /// メイン・サブ全体を囲む外枠(チャートの上に重ねて表示)
     let frameView = UIView()
     /// メインとサブの間の区切り線
@@ -321,9 +361,9 @@ final class StockChartView: UIView {
     private func currentMatrixIfReusable(candleCount: Int, futureCount newFutureCount: Int,
                                          fixedVisibleCount: Int?) -> CGAffineTransform? {
         // まだ何も表示していない
-        guard self.priceChart.data != nil else { return nil }
+        guard self.priceChartView.data != nil else { return nil }
         // レイアウト前で、描画領域の幅が確定していない
-        guard self.priceChart.viewPortHandler.contentWidth > 0 else { return nil }
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else { return nil }
         // データ件数が変わると X軸の範囲が変わるので、同じ行列では同じ位置にならない
         guard candleCount == self.candles.count else { return nil }
         // 先行スパンの本数(一目均衡表の有無)が変わっても X軸の範囲が変わる
@@ -331,7 +371,7 @@ final class StockChartView: UIView {
         // 表示本数の固定(新値足の右寄せ)が変わっても X軸の範囲が変わる
         guard fixedVisibleCount == self.mainContent.fixedVisibleCount else { return nil }
 
-        return self.priceChart.viewPortHandler.touchMatrix
+        return self.priceChartView.viewPortHandler.touchMatrix
     }
 
     // MARK: - サイズ変更(画面回転など)
@@ -339,14 +379,14 @@ final class StockChartView: UIView {
     override func layoutSubviews() {
         // DGCharts はスクロール位置をピクセル単位で保持しているため、画面回転などで幅が変わると
         // 表示範囲がずれてしまう。サイズ変更前の表示範囲(X軸の値)を覚えておき、変更後に復元する
-        let oldWidth = self.priceChart.viewPortHandler.contentWidth
-        let oldHeight = self.priceChart.viewPortHandler.contentHeight
+        let oldWidth = self.priceChartView.viewPortHandler.contentWidth
+        let oldHeight = self.priceChartView.viewPortHandler.contentHeight
         let oldRange = self.currentVisibleRange()
 
         super.layoutSubviews()  // ここでチャートのサイズが変わる
 
-        let widthChanged = self.priceChart.viewPortHandler.contentWidth != oldWidth
-        let heightChanged = self.priceChart.viewPortHandler.contentHeight != oldHeight
+        let widthChanged = self.priceChartView.viewPortHandler.contentWidth != oldWidth
+        let heightChanged = self.priceChartView.viewPortHandler.contentHeight != oldHeight
 
         if widthChanged, let oldRange {
             // 幅が変わった(画面の回転など): 変更前と同じ範囲(何本目〜何本目)が見えるように戻す。
@@ -369,15 +409,15 @@ final class StockChartView: UIView {
 
     /// 今見えている X軸の範囲(何本目〜何本目)。まだ表示していない・レイアウト前なら nil
     private func currentVisibleRange() -> (low: Double, high: Double)? {
-        guard self.priceChart.data != nil else { return nil }
-        guard self.priceChart.viewPortHandler.contentWidth > 0 else { return nil }
-        return (low: self.priceChart.lowestVisibleX, high: self.priceChart.highestVisibleX)
+        guard self.priceChartView.data != nil else { return nil }
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else { return nil }
+        return (low: self.priceChartView.lowestVisibleX, high: self.priceChartView.highestVisibleX)
     }
 
     /// 高さが変わったあとに、Y軸範囲を計算し直す
     /// - Parameter isFirstLayout: 初めてサイズが決まったときか(このときはまだ表示範囲が取れないので、初期表示範囲で計算する)
     private func updateAxisRangesAfterHeightChange(isFirstLayout: Bool) {
-        guard self.priceChart.data != nil else { return }
+        guard self.priceChartView.data != nil else { return }
         if isFirstLayout {
             self.updateAxisRangesForInitialCandles()
         } else {
@@ -393,7 +433,7 @@ final class StockChartView: UIView {
         // X軸全体の幅(axisMinimum = xAxisMinimum 〜 axisMaximum = totalCount - 0.5)
         let totalWidth = Double(self.totalCount) - 0.5 - self.xAxisMinimum
 
-        for chart in [self.priceChart, self.subChart] {
+        for chart in [self.priceChartView, self.subChartView] {
             chart.fitScreen()  // 拡大率・スクロール位置をリセット(拡大・縮小の限界もリセットされる)
             self.applyZoomLimits(to: chart)  // 拡大・縮小の限界を設定し直す
             chart.zoom(scaleX: CGFloat(totalWidth / visibleWidth), scaleY: 1, x: 0, y: 0)  // 表示本数に合わせて拡大
@@ -410,20 +450,24 @@ final class StockChartView: UIView {
 ///
 ///   | やりたいこと               | Swift                                                   | Objective-C                                              |
 ///   |----------------------------|---------------------------------------------------------|----------------------------------------------------------|
-///   | 移動平均線 + 出来高で表示  | setCandles(candles)                                     | [chartView setCandles:candles]                           |
-///   | 足種に合わせて表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
+///   | プロパティの設定で表示     | setCandles(candles)                                     | [chartView setCandles:candles]                           |
+///   | 足種を指定して表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
 ///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseas)  | [chartView setCandles:candles period:… market:IndexMarketOverseas] |
 ///   | 指標を指定して表示         | setCandles(candles, mainIndicator: .macd, …)            | [chartView setCandles:candles mainIndicator:… subIndicator:…] |
 ///   | パラメータも指定(Swift のみ)| setCandles(candles, mainIndicator: …, subIndicator: …, parameters: …) | (IndicatorParameters は struct のため不可)     |
+///
+/// 「プロパティの設定で表示」は、period(足種)・market(指数の種類)・chartType(チャートの種類)・
+/// mainIndicator / subIndicator(指標)を先に設定しておき、データを渡す形(既存アプリの Xxx の enum は StockChartView+Xxx.swift)
 extension StockChartView {
 
-    /// ローソク足データを渡して、移動平均線 + 出来高で描画する
-    /// - Parameter candles: 日付の古い順に並んだローソク足データ
+    /// ローソク足データを渡して、プロパティ(period・market・chartType・mainIndicator・subIndicator)の設定で描画する。
+    /// プロパティは先に設定しておく(何も設定しなければ、日足・国内指数・ローソク足・移動平均線 + 出来高)
+    /// - Parameter candles: 日付の古い順に並んだローソク足データ(period の足種のデータ)
     @objc func setCandles(_ candles: [StockCandle]) {
-        self.setCandles(candles, mainIndicator: .movingAverage, subIndicator: .volume)
+        self.setCandles(candles, period: self.period, market: self.market)
     }
 
-    /// ローソク足データを渡して、足種に合った設定で、移動平均線 + 出来高を描画する。
+    /// ローソク足データを渡して、足種に合った設定で描画する(period もこの足種になる。チャートの種類・指標はプロパティの設定)。
     /// 足種によって、X軸の日付の書式・ラベルの個数・初期表示本数・移動平均の期間・出来高の凡例名が変わる(ChartPeriod)
     /// - Parameters:
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
@@ -433,7 +477,9 @@ extension StockChartView {
         self.setCandles(candles, period: period, market: self.market)
     }
 
-    /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する。
+    /// ローソク足データを渡して、足種・指数の種類に合った設定で描画する(period・market もこの値になる)。
+    /// チャートの種類・指標はプロパティ(chartType・mainIndicator・subIndicator)の設定。
+    /// 既定(ローソク足・移動平均線 + 出来高)の場合:
     ///   ・国内指数: ローソク足 + 移動平均線、サブチャートに出来高
     ///   ・海外指数: ローソク足 + 移動平均線(サブチャートなし。メインチャートを全高で表示)
     /// - Parameters:
@@ -445,19 +491,42 @@ extension StockChartView {
         guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period, market: market) }) else { return }
 
         self.market = market
+        // 足種が変わった場合は、足種に合わせた見た目に切り替わる(period の didSet)
+        self.period = period
 
-        // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
-        self.style = self.style.applying(period)
+        // 選べない組み合わせ(海外指数の出来高・1分足の MACD など)は、選べるものに置き換えて描く(プロパティの値は変えない)
+        let builder = ChartContentBuilder(candles: candles, parameters: period.indicatorParameters)
+        let content = builder.content(for: self.effectiveChartType, mainIndicator: self.effectiveMainIndicator,
+                                      subIndicator: self.effectiveSubIndicator, market: market)
+        self.display(candles: content.candles, main: content.main, sub: content.sub)
+    }
 
-        switch market {
-        case .domestic:
-            self.setCandles(candles, mainIndicator: .movingAverage, subIndicator: .volume,
-                       parameters: period.indicatorParameters)
-        case .overseas:
-            // サブチャート(出来高)は出さない
-            self.setCandles(candles, mainIndicator: .movingAverage, subIndicator: .hidden,
-                       parameters: period.indicatorParameters)
+    /// 描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
+    /// (横画面の StockChartViewController.applyMarket と同じ)
+    private var effectiveChartType: ChartType {
+        guard ChartType.choices(for: self.market).contains(self.chartType) else { return .candlestick }
+        return self.chartType
+    }
+
+    /// 描くメインチャートの指標。指数の種類・足種で選べない指標は移動平均線にする
+    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    private var effectiveMainIndicator: MainChartIndicator {
+        let choices = MainChartIndicator.choices(for: self.market, period: self.period)
+        guard choices.contains(self.mainIndicator) else { return .movingAverage }
+        return self.mainIndicator
+    }
+
+    /// 描くサブチャートの指標。指数の種類・足種で選べない指標は出来高(出来高も選べない海外指数は なし)にする
+    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    private var effectiveSubIndicator: SubChartIndicator {
+        let choices = SubChartIndicator.choices(for: self.market, period: self.period)
+        if choices.contains(self.subIndicator) {
+            return self.subIndicator
         }
+        if choices.contains(.volume) {
+            return .volume
+        }
+        return .hidden
     }
 
     /// ローソク足データを渡して、指定した指標で描画する(パラメータは既定値)

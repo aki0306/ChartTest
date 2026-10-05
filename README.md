@@ -64,7 +64,7 @@
    - **Action**(古い Xcode では **Copy items if needed**): 「Copy files to destination」(コピーする)を選ぶ。コピーせずに参照すると、元のフォルダを消したときに壊れるため
    - **Groups**: 「Create folders」(フォルダとして追加)のままでよい
    - **Targets**(古い Xcode では **Add to targets**): 既存アプリのターゲットにチェックを入れる
-4. **Objective-C だけのアプリの場合**: 「Would you like to configure an Objective-C bridging header?」と聞かれたら、**Don't Create** でかまいません(Objective-C から Swift を使うだけなら不要です)
+4. 「Would you like to configure an Objective-C bridging header?」と聞かれたら、**Create Bridging Header** を押します(既存アプリの enum `XxxChartEnum.h` を Swift から読むため。ステップ 4 で中身を書きます)。Xxx の enum を使わない場合は **Don't Create** でかまいません
 5. 使わないファイルは削除してかまいません
 
    | ファイル | 使わない場合は削除してよい |
@@ -72,6 +72,7 @@
    | `Controller/PortraitChartViewController.swift`・`Portrait.storyboard` | 縦画面(足種のタブ付き)を使わない |
    | `Controller/LandscapeChartViewController.swift`・`Landscape.storyboard` | 横画面(下の帯付き)を使わない |
    | `View/ChartFooterView.swift`・`View/ChartFooterView.xib` | 下の帯を使わない(横画面を使う場合は必要) |
+   | `View/Chart/StockChartView+Xxx.swift` | 既存アプリの enum(`XxxChartEnum.h`)を使わない(削除すればブリッジングヘッダも不要) |
 
    それ以外(`Model/`・`View/`・`ChartSettingsView.xib`・`StockChartViewController.swift`・`ChartResponseLoader.swift`)は、すべて必要です。
 6. ファイルがアプリのターゲットに入っているか確認する
@@ -94,6 +95,21 @@ Swift のクラスを Objective-C から使うには、Xcode が自動で作る�
 - DGCharts のヘッダから「Empty paragraph passed to '\param' command」という警告が大量に出ることがあります。エラーではないので動作には影響しません。消したい場合は **Build Settings** の **Documentation Comments**(`CLANG_WARN_DOCUMENTATION_COMMENTS`)を **No** にします
 
 Swift のアプリでは、この準備は不要です(同じターゲットの Swift のクラスはそのまま使えます)。
+
+**既存アプリの enum(`XxxChartEnum.h`)を使う場合**は、さらに次の2つを行います(`StockChartView+Xxx.swift` が Xxx の enum を使うため)。
+
+1. ブリッジングヘッダ(ステップ 3 で作った `既存アプリのモジュール名-Bridging-Header.h`)に、次の1行を書く。ステップ 3 で作らなかった場合は、ヘッダファイルを新しく作り、ターゲットの **Build Settings** の **Objective-C Bridging Header**(`SWIFT_OBJC_BRIDGING_HEADER`)にそのパスを設定する(このプロジェクトでは `ChartTest/ChartTest-Bridging-Header.h`)
+
+   ```objc
+   #import "XxxChartEnum.h"
+   ```
+
+2. `.m` ファイルでは、**`XxxChartEnum.h` を `-Swift.h` より前に** import する(`-Swift.h` の中で Xxx の enum を使っているため。逆だとビルドエラーになる)
+
+   ```objc
+   #import "XxxChartEnum.h"
+   #import "既存アプリのモジュール名-Swift.h"
+   ```
 
 **確認ポイント**: `.m` ファイルで `#import` を書いて ⌘B が成功し、`StockChartView` と入力すると補完候補に出てくる。
 
@@ -646,7 +662,7 @@ viewController.onPeriodSelect = ^(ChartPeriod period) {
 // Swift
 let chartView = StockChartView()
 
-chartView.setCandles(candles)                                            // 移動平均線 + 出来高
+chartView.setCandles(candles)                                            // 移動平均線 + 出来高(period・market の設定で描く。既定は日足・国内指数)
 chartView.setCandles(candles, period: .weekly)                           // 足種に合った設定(週足: 移動平均 13/26 など)
 chartView.setCandles(candles, mainIndicator: .bollingerBands, subIndicator: .macd)   // 指標を指定
 ```
@@ -655,12 +671,39 @@ chartView.setCandles(candles, mainIndicator: .bollingerBands, subIndicator: .mac
 // Objective-C
 StockChartView *chartView = [[StockChartView alloc] initWithFrame:CGRectZero];
 
-[chartView setCandles:candles];                                          // 移動平均線 + 出来高
+[chartView setCandles:candles];                                          // 移動平均線 + 出来高(period・market の設定で描く。既定は日足・国内指数)
 [chartView setCandles:candles period:ChartPeriodWeekly];                 // 足種に合った設定
 [chartView setCandles:candles
         mainIndicator:MainChartIndicatorBollingerBands
          subIndicator:SubChartIndicatorMacd];                            // 指標を指定
 ```
+
+足種・指数の種類は、プロパティで先に設定しておくこともできます(既存アプリで enum を設定してから呼び出す形)。
+`period` を設定すると、その足種の見た目(日付の書式・日付ラベルの数・初期表示本数)に切り替わり、`setCandles:` はその足種の設定(移動平均の期間・出来高の凡例名)で描きます。
+
+```objc
+// Objective-C
+chartView.market = IndexMarketDomestic;     // 指数の種類(海外指数なら IndexMarketOverseas。サブチャートなしになる)
+chartView.period = ChartPeriodWeekly;       // 足種(ChartPeriodOneMinute / Intraday / Daily / Weekly / Monthly)
+chartView.visibleCount = 30;                // 足種ごとの値を変えたい場合は、period を設定したあとで変える
+chartView.chartType = ChartTypeCandlestick;                 // チャートの種類(既定はローソク足)
+chartView.mainIndicator = MainChartIndicatorBollingerBands; // メインチャートの指標(既定は移動平均線)
+chartView.subIndicator = SubChartIndicatorMacd;             // サブチャートの指標(既定は出来高)
+[chartView setCandles:candles];             // 上の設定で描く(週足・初期表示は 30本)
+```
+
+既存アプリの enum(`XxxChartData` など)で設定する場合は、「[Xxx の enum をそのまま設定する](#xxx-の-enum-をそのまま設定するstockchartview)」を見てください。
+
+| 足種(`period`) | 移動平均(短期/長期) | X軸の日付 | 日付ラベルの数 | 初期表示 | 出来高の凡例 |
+|---|---|---|---|---|---|
+| `ChartPeriodOneMinute` | 5 / 25 | `HH:mm` | 約7個 | 全件 | 出来高 |
+| `ChartPeriodIntraday` | 5 / 25 | `HH:mm` | 約7個 | 全件 | 出来高 |
+| `ChartPeriodDaily`(既定) | 5 / 25 | `M/d` | 約7個 | 直近55本 | 出来高 |
+| `ChartPeriodWeekly` | 13 / 26 | `yyyy/M` | 約5個 | 直近55本 | 出来高(平均) |
+| `ChartPeriodMonthly` | 5 / 25 | `yyyy/M` | 約5個 | 全件 | 出来高(平均) |
+
+- 足種の値そのものを変えたい場合は、`Model/ChartPeriod.swift` を書き換えます
+- 同じ足種を設定し直しても(`setCandles:period:` で同じ足種を渡した場合も)、見た目は上書きしません。別の足種に変えたときだけ、その足種の値に戻ります
 
 見た目の設定は、データを渡す前に行います(設定のたびに描き直されるため)。
 
@@ -896,7 +939,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`clear`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`qCodeType`・`chartData`・`chartCategory`・`mainChart`・`subChart`(Xxx の enum)、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`onPeriodSelect`、`setCandles(_:period:)`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし)、`updatePriceInfo`、`onPeriodSelect`、`onReload`、`onRotate` | `onPanelVisibilityChange` |
@@ -1005,66 +1048,38 @@ requestDataWithCode:…(通信)
   → [ChartResponseLoader setResponse:… period:… to:…](チャートに渡す)
 ```
 
-#### enum の対応
+#### Xxx の enum をそのまま設定する(StockChartView)
 
-enum は既存アプリの Objective-C のもの(`XxxChartData`・`XxxCodeType`)をそのまま使い、チャートに渡すところだけで変換します。
+`StockChartView` は、既存アプリの enum(`XxxChartEnum.h`)を**変換せずにそのまま**プロパティに設定できます([`StockChartView+Xxx.swift`](ChartTest/StockChart/View/Chart/StockChartView+Xxx.swift))。
 
-| 既存アプリ(`XxxChartData`) | チャート(`ChartPeriod`) |
-|---|---|
-| `XxxChartDataMin` | `ChartPeriodOneMinute` |
-| `XxxChartDataMidDay` | `ChartPeriodIntraday` |
-| `XxxChartDataDay` | `ChartPeriodDaily` |
-| `XxxChartDataWeek` | `ChartPeriodWeekly` |
-| `XxxChartDataMonth` | `ChartPeriodMonthly` |
-
-| 既存アプリ(`XxxCodeType`) | チャート(`IndexMarket`) |
-|---|---|
-| `XxxCodeTypeJapanStock`・`XxxCodeTypeJapanIndex` | `IndexMarketDomestic` |
-| `XxxCodeTypeOverseasRealtime`・`XxxCodeTypeOverseasDaily` | `IndexMarketOverseas` |
-
-変換の関数は、**既存アプリ側(Objective-C)に置いてください**。`StockChart` フォルダの中で `XxxChart…` の enum を使うと、ほかのアプリに持っていけなくなるためです。
+| プロパティ | 既存アプリの enum | 内容 |
+|---|---|---|
+| `qCodeType` | `XxxCodeType` | 銘柄コードの種類。日本株・日本株価指数は国内、海外株価指数は海外として描く(`market` も切り替わる) |
+| `chartData` | `XxxChartData` | 足種(1分足〜月足)。設定すると足種に合った見た目に切り替わる(`period`) |
+| `chartCategory` | `XxxChartCategory` | チャートの種類(ローソク足・VWAP:線/点・新値足・折線チャート) |
+| `mainChart` | `XxxMainChart` | メインチャートの指標(`XxxMainChartNone` はローソク足のみ) |
+| `subChart` | `XxxSubChart` | サブチャートの指標(`XxxSubChartNone` はサブチャートなし) |
 
 ```objc
-// 既存アプリ側(例: XxxChartDataUtil を使っている画面の .m)
-#import "XxxChartDataUtil.h"
-#import "MyApp-Swift.h"   // 「既存アプリのモジュール名-Swift.h」(ステップ 4)
+#import "XxxChartEnum.h"   // 「既存アプリのモジュール名-Swift.h」より前に読み込む(ステップ 4)
+#import "MyApp-Swift.h"
 
-/// XxxChartData → ChartPeriod
-static ChartPeriod ChartPeriodFromXxxChartData(XxxChartData chartData) {
-    switch (chartData) {
-        case XxxChartDataMin:    return ChartPeriodOneMinute;
-        case XxxChartDataMidDay: return ChartPeriodIntraday;
-        case XxxChartDataDay:    return ChartPeriodDaily;
-        case XxxChartDataWeek:   return ChartPeriodWeekly;
-        case XxxChartDataMonth:  return ChartPeriodMonthly;
-    }
-}
-
-/// ChartPeriod → XxxChartData(横画面の足種のメニューで選ばれたときに、取得する足種を決める)
-static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
-    switch (period) {
-        case ChartPeriodOneMinute: return XxxChartDataMin;
-        case ChartPeriodIntraday:  return XxxChartDataMidDay;
-        case ChartPeriodDaily:     return XxxChartDataDay;
-        case ChartPeriodWeekly:    return XxxChartDataWeek;
-        case ChartPeriodMonthly:   return XxxChartDataMonth;
-    }
-}
-
-/// XxxCodeType → IndexMarket
-static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
-    switch (qCodeType) {
-        case XxxCodeTypeJapanStock:
-        case XxxCodeTypeJapanIndex:
-            return IndexMarketDomestic;
-        case XxxCodeTypeOverseasRealtime:
-        case XxxCodeTypeOverseasDaily:
-            return IndexMarketOverseas;
-    }
-}
+self.chartView.qCodeType = XxxCodeTypeJapanIndex;
+self.chartView.chartData = XxxChartDataWeek;
+self.chartView.chartCategory = XxxChartCategoryCandle;
+self.chartView.mainChart = XxxMainChartBollingerBands;
+self.chartView.subChart = XxxSubChartMACD;
+[self.chartView setCandles:candles];   // 上の設定で描く
 ```
 
-`XxxCodeType` にほかの値がある場合は、その値も `case` に加えてください。
+- どのプロパティも、変更しただけでは描き直さないので、**データを渡す前に設定**します(`chartData` だけは、設定した時点で日付の書式などの見た目が切り替わります)
+- 何も設定しなければ、日本株(国内)・日足・ローソク足・移動平均線 + 出来高です
+- 足種・指数の種類で選べない組み合わせは、横画面と同じ決まりで置き換えて描きます(プロパティの値は変えません)
+  - 海外株価指数の VWAP・新値足 → ローソク足
+  - 1分足・日中足の 移動平均線 以外のメイン指標 → 移動平均線
+  - 1分足・日中足の 出来高 以外のサブ指標 → 出来高 / 海外株価指数のサブ指標 → なし
+- 足種とチャートの種類の組み合わせ(VWAP は日中足だけ、新値足・折線チャートは 1分足以外)は、置き換えないので、呼び出し側で合わせてください(横画面の足種のメニューと同じ決まり。`ChartType.periods(in:)`)
+- Swift から `XxxChartEnum.h` を読むため、ブリッジングヘッダが必要です(「[ステップ 4](#ステップ-4-objective-c-から使う準備objective-c-のアプリだけ)」)。Xxx の enum を使わないアプリに持っていく場合は、`StockChartView+Xxx.swift` を削除すれば不要になります
 
 #### 取得して渡す(縦画面: StockChartView だけを使う)
 
@@ -1073,20 +1088,29 @@ static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
 
 ```objc
 // 既存アプリの縦画面(例)
+#import "XxxChartDataUtil.h"
+#import "XxxChartEnum.h"
+#import "MyApp-Swift.h"
+
 @property (nonatomic, weak) IBOutlet StockChartView *chartView;   // storyboard に置いた View(クラスを StockChartView にする)
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // 見た目の設定は、データを渡す前に行う(必要なものだけ)
-    self.chartView.visibleCount = 55;
-    // 先に market を設定する(海外指数は終値だけを読むので、国内のままだと0件になる)
-    self.chartView.market = IndexMarketFromQCodeType(self.qCodeType);
+    // 先に銘柄コードの種類を設定する(海外株価指数は終値だけを読むので、国内のままだと0件になる)
+    self.chartView.qCodeType = self.qCodeType;
+    // 指標・チャートの種類(必要なものだけ。設定しなければ ローソク足・移動平均線 + 出来高)
+    self.chartView.mainChart = XxxMainChartBollingerBands;
+    self.chartView.subChart = XxxSubChartMACD;
 
     [self loadChartData:XxxChartDataDay];   // 最初は日足
 }
 
 /// 既存アプリの足種のタブ・ボタンが押されたときに呼ぶ
 - (void)loadChartData:(XxxChartData)chartData {
+    // 足種を設定する(その足種の見た目に切り替わる)。足種ごとの値を変えたい場合は、このあとで変える(例: visibleCount)
+    self.chartView.chartData = chartData;
+
+    ChartPeriod period = self.chartView.period;   // chartData に対応する足種(取得が終わったときに渡す)
     NSString *qCode = self.qCode;
     XxxCodeType qCodeType = self.qCodeType;
     __weak StockChartView *weakChartView = self.chartView;
@@ -1101,29 +1125,53 @@ static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
                                                                   chartData:chartData
                                                                       qCode:qCode
                                                                   CodeType:qCodeType];
-        // 通信の完了処理から直接呼んでよい(描画はメインスレッドで行われる)
-        [ChartResponseLoader setResponse:dataArray
-                                  period:ChartPeriodFromXxxChartData(chartData)
-                                      to:weakChartView];
+        // 通信の完了処理から直接呼んでよい(描画はメインスレッドで行われる)。
+        // 指数の種類・チャートの種類・指標は、上で設定したプロパティのまま描く
+        [ChartResponseLoader setResponse:dataArray period:period to:weakChartView];
     }];
 }
 ```
 
-- **足種**: `period` を渡すと、足種に合った指標の期間・日付の書式で描く(例: 週足は移動平均 13/26、日付は `yyyy/M`)
-- **指標**: 何も指定しなければ、移動平均線 + 出来高。指標を変えたい場合は、`ChartResponseLoader` を使わずに変換して渡す(この形では足種ごとの指標の期間・日付の書式は使わない。`setCandles:` も通信の完了処理から直接呼んでよい)
-
-  ```objc
-  NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:dataArray market:self.chartView.market];
-  [self.chartView setCandles:candles mainIndicator:MainChartIndicatorBollingerBands subIndicator:SubChartIndicatorMacd];
-  ```
-
-- **海外指数**: 選べるのは日足・週足・月足だけ(既存アプリも、海外の1分足・日中足は取得しない)。足種のタブもそれに合わせる
+- **足種**: `chartData` を設定すると、足種に合った指標の期間・日付の書式で描く(例: 週足は移動平均 13/26、日付は `yyyy/M`。足種ごとの値は「[3. チャートだけを置く](#3-チャートだけを置くstockchartview)」の表)
+- **海外株価指数**: 選べるのは日足・週足・月足だけ(既存アプリも、海外の1分足・日中足は取得しない)。足種のタブもそれに合わせる
 - **コピーするファイル**: `Controller/` の縦画面・横画面(`Portrait…`・`Landscape…`)と `View/Controls/ChartFooterView` は削除してよい(「[ステップ 3](#ステップ-3-チャートの部品stockchart-フォルダをコピーする)」の表)
 
 #### 取得して渡す(横画面: LandscapeChartViewController)
 
 横画面のチャート(テクニカル・設定画面・下の帯付き)を使う場合は、`market` を `landscape.chartViewController.market` に設定し、足種のメニューで選ばれたとき(`onPeriodSelect`)に取得して渡します。
-足種は `ChartPeriod` で渡されるので、`XxxChartDataFromChartPeriod` で `XxxChartData` に変換して取得します。
+横画面の部品は Xxx の enum のプロパティを持っていないので、次の変換の関数を既存アプリ側(Objective-C)に置いて使います。enum の順番はどちらも同じです。
+
+| 既存アプリの enum | チャートの enum |
+|---|---|
+| `XxxChartDataMin` / `MidDay` / `Day` / `Week` / `Month` | `ChartPeriodOneMinute` / `Intraday` / `Daily` / `Weekly` / `Monthly` |
+| `XxxCodeTypeJapanStock`・`JapanIndex` | `IndexMarketDomestic` |
+| `XxxCodeTypeOverseasRealtime`・`OverseasDaily` | `IndexMarketOverseas` |
+
+```objc
+// 既存アプリ側(例: 横画面を表示する画面の .m)
+/// ChartPeriod → XxxChartData(足種のメニューで選ばれたときに、取得する足種を決める)
+static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
+    switch (period) {
+        case ChartPeriodOneMinute: return XxxChartDataMin;
+        case ChartPeriodIntraday:  return XxxChartDataMidDay;
+        case ChartPeriodDaily:     return XxxChartDataDay;
+        case ChartPeriodWeekly:    return XxxChartDataWeek;
+        case ChartPeriodMonthly:   return XxxChartDataMonth;
+    }
+}
+
+/// XxxCodeType → IndexMarket
+static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
+    switch (qCodeType) {
+        case XxxCodeTypeOverseasRealtime:
+        case XxxCodeTypeOverseasDaily:
+            return IndexMarketOverseas;
+        default:
+            return IndexMarketDomestic;   // XxxCodeTypeJapanStock・XxxCodeTypeJapanIndex
+    }
+}
+```
+
 
 ```objc
 landscape.chartViewController.market = IndexMarketFromQCodeType(qCodeType);   // 先に設定する
@@ -1230,6 +1278,7 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 | 項目 | このプロジェクトの設定 | 既存アプリで違う場合 |
 |---|---|---|
 | Objective-C から使う | `#import "ChartTest-Swift.h"` | ヘッダ名は `<既存アプリのモジュール名>-Swift.h` になる。Objective-C だけのアプリなら、Swift を使えるようにする設定(Bridging Header など)が必要 |
+| 既存アプリの enum(`XxxChartEnum.h`) | ブリッジングヘッダ `ChartTest/ChartTest-Bridging-Header.h` で読み込み、`.m` では `-Swift.h` より前に import | 既存アプリでも同じようにブリッジングヘッダで読み込む(ステップ 4)。使わない場合は `StockChartView+Xxx.swift` を削除する |
 | Swift の並行処理の設定 | Default Actor Isolation = **MainActor**、Swift 5 | 既存アプリで Default Actor Isolation を指定していない(nonisolated)場合も、エラー・警告なくビルドできることを確認済み。設定を変える必要はない |
 | Xcode | Xcode 27 で作成 | Xcode 26 以上が必要(Swift 6.2 の `nonisolated` を付けたクラスなどを使っているため) |
 | 対応 OS | iOS 18 以上で動作確認 | iOS 15 以降の API を使っているので、それより前の OS では使えない(iOS 18 未満は未確認) |
@@ -1247,6 +1296,8 @@ ChartTest/
 ├─ ViewController.swift                 … サンプル: 縦/横の画面を切り替える画面
 ├─ SampleData.swift                     … サンプル: 動作確認用のダミーデータ
 ├─ ObjCSample/                          … サンプル: Objective-C から使う例
+├─ XxxChartEnum.h                       … 既存アプリの enum(そのまま入れている。StockChartView+Xxx.swift が使う)
+├─ ChartTest-Bridging-Header.h          … Swift から XxxChartEnum.h を読むためのヘッダ
 │
 └─ StockChart/                          ★ チャートの部品(ほかのアプリにはこのフォルダごとコピーする)
    │
@@ -1270,6 +1321,7 @@ ChartTest/
    │   │   ├─ StockChartView+Rendering.swift    描画・凡例
    │   │   ├─ StockChartView+AxisRange.swift    スクロール/ズームと、Y軸の範囲
    │   │   ├─ StockChartView+HighLowLabels.swift 最高値・最安値の文字
+   │   │   ├─ StockChartView+Xxx.swift          既存アプリの enum(XxxChartEnum.h)で設定するプロパティ
    │   │   ├─ StockChartStyle.swift             ★ 見た目の設定(色・フォント・余白など)
    │   │   ├─ ChartAxisFormatters.swift         軸ラベル・価格などの書式
    │   │   └─ Renderers/                        DGCharts の描き方を変える部品(ふだんは触らない)
@@ -1342,6 +1394,7 @@ docs/images/                            README の画像
 | | `StockChartView+Rendering.swift` | `ChartContent` を DGCharts のデータに変換して描く・凡例を作る |
 | | `StockChartView+AxisRange.swift` | スクロール/ズームの同期と、Y軸の範囲の調整 |
 | | `StockChartView+HighLowLabels.swift` | 表示中の範囲の最高値・最安値を、その足の上・下に表示する |
+| | `StockChartView+Xxx.swift` | 既存アプリの enum(`XxxChartEnum.h`)をそのまま設定するプロパティ(`qCodeType`・`chartData`・`chartCategory`・`mainChart`・`subChart`)。Xxx の enum を使わない場合は削除してよい |
 | | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数・拡大縮小の限界) |
 | | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値)と、価格などの数値の書式(`ChartNumberFormatter`) |
 | `Chart/Renderers/` | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |

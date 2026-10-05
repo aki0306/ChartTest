@@ -12,6 +12,7 @@
 #import "ObjCPortraitChartViewController.h"
 // Swift のクラス(PortraitChartViewController / SampleData など)を Objective-C から使うための自動生成ヘッダ。
 // ファイル名は「<プロダクトモジュール名>-Swift.h」
+#import "XxxChartEnum.h"      // ChartTest-Swift.h が使う既存アプリの enum(StockChartView+Xxx.swift)。ChartTest-Swift.h より前に読み込む
 #import "ChartTest-Swift.h"
 
 @interface ObjCPortraitChartViewController ()

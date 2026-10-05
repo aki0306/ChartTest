@@ -30,10 +30,10 @@ extension StockChartView: ChartViewDelegate {
     /// 両チャートは描画領域の左右位置と幅・X軸の範囲が同じなので、行列をそのままコピーすれば表示範囲が一致する
     private func syncViewport(from source: ChartViewBase) {
         let target: CombinedChartView
-        if source === self.priceChart {
-            target = self.subChart
+        if source === self.priceChartView {
+            target = self.subChartView
         } else {
-            target = self.priceChart
+            target = self.priceChartView
         }
         let matrix = source.viewPortHandler.touchMatrix
         target.viewPortHandler.refresh(newMatrix: matrix, chart: target, invalidate: true)
@@ -49,8 +49,8 @@ extension StockChartView {
 
     /// 今画面に見えている足の範囲に合わせて、Y軸を調整する
     func updateAxisRangesForVisibleCandles() {
-        let firstIndex = Int(self.priceChart.lowestVisibleX.rounded())
-        let lastIndex = Int(self.priceChart.highestVisibleX.rounded())
+        let firstIndex = Int(self.priceChartView.lowestVisibleX.rounded())
+        let lastIndex = Int(self.priceChartView.highestVisibleX.rounded())
         self.updateAxisRanges(from: firstIndex, to: lastIndex)
     }
 
@@ -147,10 +147,10 @@ extension StockChartView {
         }
         let paddings = Self.axisPaddings(
             valueRange: range, topPoints: topPoints, bottomPoints: bottomPoints,
-            height: self.priceChart.viewPortHandler.contentHeight, minimumTopRatio: 0.2, minimumBottomRatio: 0.05)
-        self.priceChart.rightAxis.axisMaximum = high + paddings.top
-        self.priceChart.rightAxis.axisMinimum = low - paddings.bottom
-        self.priceChart.notifyDataSetChanged()
+            height: self.priceChartView.viewPortHandler.contentHeight, minimumTopRatio: 0.2, minimumBottomRatio: 0.05)
+        self.priceChartView.rightAxis.axisMaximum = high + paddings.top
+        self.priceChartView.rightAxis.axisMinimum = low - paddings.bottom
+        self.priceChartView.notifyDataSetChanged()
     }
 
     /// 上下に指定した高さ(pt)の余白を空けるための、Y軸の上側・下側の余白(値)を求める
@@ -185,20 +185,20 @@ extension StockChartView {
     ///   ・それ以外(出来高・MACD など): 見えている範囲の値に合わせて計算する
     private func updateSubAxisRange(from: Int, to: Int) {
         guard let sub = self.subContent else { return }
-        self.subChart.rightAxis.drawLabelsEnabled = true  // 値がない場合だけ、applyAutoSubAxisRange で false にする
+        self.subChartView.rightAxis.drawLabelsEnabled = true  // 値がない場合だけ、applyAutoSubAxisRange で false にする
 
         if let fixedRange = sub.fixedRange {
             self.applyFixedSubAxisRange(fixedRange)
         } else {
             self.applyAutoSubAxisRange(for: sub, from: from, to: to)
         }
-        self.subChart.notifyDataSetChanged()
+        self.subChartView.notifyDataSetChanged()
     }
 
     /// 固定範囲(0〜100 など)のサブチャートのY軸。上側は凡例用に広げる(最低 25%。その部分のラベルは非表示)
     ///   例) RSI: 0〜100 → 0〜125。100〜125 の部分に凡例(subLegendLabel)が重なる
     private func applyFixedSubAxisRange(_ fixedRange: ClosedRange<Double>) {
-        let axis = self.subChart.rightAxis
+        let axis = self.subChartView.rightAxis
         let width = fixedRange.upperBound - fixedRange.lowerBound
         axis.axisMinimum = fixedRange.lowerBound
         axis.axisMaximum = fixedRange.upperBound + self.topPaddingForSubLegend(valueRange: width, minimumRatio: 0.25)
@@ -211,7 +211,7 @@ extension StockChartView {
     ///   最小値      ┼ 余白(値幅の 5%。0 起点の出来高などは 0)
     ///   axisMinimum ┴
     private func applyAutoSubAxisRange(for sub: SubChartContent, from: Int, to: Int) {
-        let axis = self.subChart.rightAxis
+        let axis = self.subChartView.rightAxis
 
         // 範囲の計算対象: サブ指標の各線・棒
         var valueArrays: [[Double?]] = []
@@ -267,7 +267,7 @@ extension StockChartView {
     /// 縦画面などでサブチャートが低いと、5つ並べると文字同士が重なるため(2〜5 個)
     private func subAxisLabelCount() -> Int {
         let labelHeight = self.style.yAxisFont.lineHeight * 1.3
-        let fittingCount = Int(self.subChart.viewPortHandler.contentHeight / labelHeight)
+        let fittingCount = Int(self.subChartView.viewPortHandler.contentHeight / labelHeight)
         let minimumCount = 2
         let maximumCount = 5
         return min(max(fittingCount, minimumCount), maximumCount)
@@ -282,7 +282,7 @@ extension StockChartView {
     private func topPaddingForSubLegend(valueRange: Double, minimumRatio: Double) -> Double {
         // サブの描画領域の上端は区切り線の中心なので、凡例の上端までには区切り線の太さの半分が加わる
         let legendTop = self.style.subLegendTopInset + self.style.borderWidth / 2
-        return self.topPaddingForLegend(self.subLegendLabel, legendTop: legendTop, chart: self.subChart,
+        return self.topPaddingForLegend(self.subLegendLabel, legendTop: legendTop, chart: self.subChartView,
                                    valueRange: valueRange, minimumRatio: minimumRatio)
     }
 

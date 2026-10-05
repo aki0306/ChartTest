@@ -56,7 +56,7 @@ extension StockChartView {
         guard self.drawsHighLowLabels else { return nil }
         guard !self.candles.isEmpty else { return nil }
         // レイアウト前は、足の画面上の位置が決まっていない
-        guard self.priceChart.viewPortHandler.contentWidth > 0 else { return nil }
+        guard self.priceChartView.viewPortHandler.contentWidth > 0 else { return nil }
 
         // 範囲をデータの中に収める(一目均衡表の先行スパンの先など、足のない部分は除く)
         let lower = max(min(from, to), 0)
@@ -84,9 +84,9 @@ extension StockChartView {
         label.sizeToFit()
 
         // 足の位置(X = 足の中央、Y = 高値・安値)を、このViewの座標にする
-        let transformer = self.priceChart.getTransformer(forAxis: .right)
+        let transformer = self.priceChartView.getTransformer(forAxis: .right)
         let pointInChart = transformer.pixelForValues(x: Double(index), y: value)
-        let point = self.priceChart.convert(pointInChart, to: self)
+        let point = self.priceChartView.convert(pointInChart, to: self)
 
         let size = label.bounds.size
         var x = point.x - size.width / 2
