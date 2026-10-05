@@ -5,6 +5,7 @@
 
 - UIKit / iOS 18 以上 / 常にライトモード
 - Swift と Objective-C のどちらからでも呼び出せます(「使い方」に両方の書き方があります。Objective-C のサンプルは `ChartTest/ObjCSample/`)
+- 既存アプリのクラス名・enum 名は、この README では `Xxx` で始まる仮の名前(`XxxChartDataUtil`・`XxxCodeType` など)で書いています。実際の名前に読み替えてください
 
 ## 目次
 
@@ -839,7 +840,7 @@ chartViewController.market = IndexMarketOverseasRealtime;
 海外指数に切り替えたとき、選べない指標を選んでいた場合は、メインは移動平均線、サブは なし に切り替わります。
 チャートの種類は指数の種類ごとに覚えていて、切り替えるとその指数で最後に選んでいた種類に戻ります(最初は 国内: ローソク足、海外: 折線チャート。既存アプリと同じ)。
 
-海外指数のデータは、既存アプリ(`終値だけのチェック処理`)と同じく**終値だけ**を読みます。始値・高値・安値は終値と同じ値、出来高は 0 になります(レスポンスに `kTurnover` が入っていても使いません)。
+海外指数のデータは、既存アプリ(終値だけのチェック処理)と同じく**終値だけ**を読みます。始値・高値・安値は終値と同じ値、出来高は 0 になります(レスポンスに `kTurnover` が入っていても使いません)。
 そのため、ローソク足にすると横線だけの足になり、出来高も表示しません。
 
 国内・海外を切り替えるとき(同じ画面で別の指数を表示するとき)も、`market` を変えてからデータを渡し直します。
@@ -1054,15 +1055,15 @@ NSMutableArray *responseArray = [NSMutableArray array];
 | キーの名前 | `StockCandleResponseParser.Key`。既存アプリの `XxxChartDataUtil.h` の定数と同じ `kTimestamp`・`kStart`・`kHeight`・`kLow`・`kEnd`・`kTurnover`・`kVWAP`(`kVWAP` は 1分足・日中足だけ。空・0 は値なし) |
 | 日付の形式 | `StockCandleResponseParser.dateFormats`(`yyyy/MM/dd HH:mm` など。上から順に試す)。`Date`(`NSDate`)もそのまま読める |
 | 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
-| 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの `値がない件の穴埋め処理` / `値がない件の穴埋め処理` と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす(1分足・日中足は飛ばさずに日時だけの足にする。下の「値のない時間帯」) |
-| 国内・海外 | 国内は始値・高値・安値・終値がすべて読めた件を有効とし、出来高がなければ 0 にする。海外は終値だけを読み、始値・高値・安値は終値と同じ値、出来高は 0 にする(既存アプリの `4本値のチェック処理` / `終値だけのチェック処理` と同じ) |
+| 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの 値がない件の穴埋め処理 と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす(1分足・日中足は飛ばさずに日時だけの足にする。下の「値のない時間帯」) |
+| 国内・海外 | 国内は始値・高値・安値・終値がすべて読めた件を有効とし、出来高がなければ 0 にする。海外は終値だけを読み、始値・高値・安値は終値と同じ値、出来高は 0 にする(既存アプリの 値のチェック処理(国内は4本値すべて・海外は終値だけ) と同じ) |
 | 変換だけを使う | Swift: `StockCandleResponseParser.candles(from: array, market: .overseasRealtime)` / Objective-C: `[StockCandleResponseParser candlesFrom:array market:IndexMarketOverseasRealtime]`(`market` を省略すると国内として読む) |
 
 ※ 配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちます(Swift の `[[String: Any]]` に変換できないため)。
 
 ### 既存アプリ(XxxChartDataUtil)のデータを渡す
 
-既存アプリの `XxxChartDataUtil` で取得・整形したデータは、**`dataArrayFromResponse:chartData:qCode:CodeType:` の結果をそのまま** `ChartResponseLoader` に渡せます。
+既存アプリの `XxxChartDataUtil` で取得・整形したデータは、**`dataArrayFromResponse:…` の結果をそのまま** `ChartResponseLoader` に渡せます。
 辞書のキー(`kTimestamp`・`kStart` など)は、`StockCandleResponseParser.Key` を `XxxChartDataUtil.h` の定数と同じ文字列にしてあります。
 
 ```
@@ -1138,16 +1139,16 @@ self.chartView.subChart = XxxSubChartMACD;
     XxxCodeType qCodeType = self.qCodeType;
     __weak StockChartView *weakChartView = self.chartView;
     [XxxChartDataUtil requestDataWithCode:qCode
-                                           qCodeType:qCodeType
-                                           chartData:chartData
-                                       handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
+                                qCodeType:qCodeType
+                                chartData:chartData
+                            handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
         if (error != nil) {
             return;   // エラーのときの扱いは既存アプリに合わせる
         }
         NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response
                                                                   chartData:chartData
                                                                       qCode:qCode
-                                                                  CodeType:qCodeType];
+                                                                   CodeType:qCodeType];
         // 通信の完了処理から直接呼んでよい(描画はメインスレッドで行われる)。
         // 指数の種類・チャートの種類・指標は、上で設定したプロパティのまま描く
         [ChartResponseLoader setResponse:dataArray period:period to:weakChartView];
@@ -1184,7 +1185,7 @@ static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
 }
 
 /// XxxCodeType → IndexMarket
-static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
+static IndexMarket IndexMarketFromCodeType(XxxCodeType qCodeType) {
     switch (qCodeType) {
         case XxxCodeTypeOverseasRealtime:
             return IndexMarketOverseasRealtime;
@@ -1198,21 +1199,21 @@ static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
 
 
 ```objc
-landscape.chartViewController.market = IndexMarketFromQCodeType(qCodeType);   // 先に設定する
+landscape.chartViewController.market = IndexMarketFromCodeType(qCodeType);   // 先に設定する
 __weak LandscapeChartViewController *weakLandscape = landscape;
 landscape.onPeriodSelect = ^(ChartPeriod period) {
     XxxChartData chartData = XxxChartDataFromChartPeriod(period);
     [XxxChartDataUtil requestDataWithCode:qCode
-                                           qCodeType:qCodeType
-                                           chartData:chartData
-                                       handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
+                                qCodeType:qCodeType
+                                chartData:chartData
+                            handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
         if (error != nil) {
             return;
         }
         NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response
                                                                   chartData:chartData
                                                                       qCode:qCode
-                                                                  CodeType:qCodeType];
+                                                                   CodeType:qCodeType];
         [ChartResponseLoader setResponse:dataArray period:period to:weakLandscape];
     }];
 };
@@ -1223,13 +1224,13 @@ landscape.onPeriodSelect = ^(ChartPeriod period) {
 | 項目 | 内容 |
 |---|---|
 | 日付 | `dataArrayFromResponse:…` の結果(文字列 `"2026/10/02 00:00"`・`"2000/01/01 09:00"`)のままでも、呼び出し側で `NSDate` に変換したあとの配列でも読める。タイムゾーンは既存アプリ(`systemTimeZone`)と同じ端末のタイムゾーン |
-| 値がない件 | 既存アプリ(`値がない件の穴埋め処理` / `値がない件の穴埋め処理`)と同じく、直前の足の値で埋める |
-| 海外指数 | 既存アプリ(`終値だけのチェック処理`)と同じく、終値だけを読む。始値・高値・安値は終値と同じ値になるので、ローソク足にすると横線だけの足になる |
+| 値がない件 | 既存アプリ(値がない件の穴埋め処理)と同じく、直前の足の値で埋める |
+| 海外指数 | 既存アプリ(終値だけのチェック処理)と同じく、終値だけを読む。始値・高値・安値は終値と同じ値になるので、ローソク足にすると横線だけの足になる |
 | 日中足 | `dataArrayFromResponse:…` が5分ごとにまとめた結果を、そのまま日中足として描く |
 | VWAP | 既存アプリと同じく、API の値(`kVWAP`)で描く(指数の日中足のように出来高が 0 でも描ける)。`kVWAP` がないデータの場合だけ、出来高から計算する |
-| 指標の期間・基準線 | 既存アプリ(`初期値の設定ファイル`)と同じ初期値。例: ボリンジャー 5(週足 13・月足 25)・±3σ、一目均衡表 転換線 3・基準線 26・スパン 26、出来高移動平均 5(週足 13)、RSI 14(20% / 80%)、ストキャス 高安期間 14・D期間 3(30% / 70%)、MACD 5 / 25 / 9。足種ごとの値は `ChartPeriod.indicatorParameters` |
+| 指標の期間・基準線 | 既存アプリ(初期値の設定ファイル)と同じ初期値。例: ボリンジャー 5(週足 13・月足 25)・±3σ、一目均衡表 転換線 3・基準線 26・スパン 26、出来高移動平均 5(週足 13)、RSI 14(20% / 80%)、ストキャス 高安期間 14・D期間 3(30% / 70%)、MACD 5 / 25 / 9。足種ごとの値は `ChartPeriod.indicatorParameters` |
 | 描く線 | 既存アプリと同じ。ストキャスは %D・Slow%D、パラボリックは移動平均線 2本 + SAR の点、多重移動平均線は 1色(5〜75 を 15本)、MACD はヒストグラムなし、DMI は ADX なし、移動平均乖離率・MACD に 0 の線は引かない |
-| 凡例・色 | 既存アプリ(`XxxChartView` の `凡例の設定処理`)と同じ文字と色。例:「多重平均 期間(5,75)」「ボリンジャー 移動平均(5)」「一目均衡 転換線(3) 基準線(26) 先行スパン2(52)」「パラボリック 5日移動平均 25日移動平均」「ＲＳＩ 期間(14)」「ストキャス %D(14,3) Slow%D」。基準線は赤の実線 |
+| 凡例・色 | 既存アプリ(`XxxChartView` の 凡例の設定処理)と同じ文字と色。例:「多重平均 期間(5,75)」「ボリンジャー 移動平均(5)」「一目均衡 転換線(3) 基準線(26) 先行スパン2(52)」「パラボリック 5日移動平均 25日移動平均」「ＲＳＩ 期間(14)」「ストキャス %D(14,3) Slow%D」。基準線は赤の実線 |
 | 表示範囲・見た目 | 既存アプリと同じ: 初期表示は日足・週足・月足とも直近 50 本(1分足・日中足は全件)、縮小は 250 本まで、メイン : サブ = 60 : 40、Y軸ラベルの欄 65pt・文字 8pt、週足の日付 `yy/M/d`、ローソク足の幅 0.6・出来高の棒 0.55、メインのY軸の下の余白 20%、区切り線 `aaaaaa` |
 | 海外指数の既定 | 既存アプリと同じく、海外指数に切り替えると折線チャートになる(国内はローソク足)。チャートの種類は指数の種類ごとに覚えておき、切り替えるとその種類に戻る |
 | 最高値・最安値 | 既存アプリと同じく、横画面・ローソク足・国内指数のときだけ、12pt で表示する |
