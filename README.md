@@ -563,6 +563,7 @@ NSArray<StockCandle *> *candles = @[candle /* , … */];
 | `low` | 安値(その期間の一番安い値段) | `65_800` | 65,800円 |
 | `close` | 終値(その期間の最後の値段) | `66_300` | 66,300円。最新の足の終値が「現在値」になる |
 | `volume` | 出来高(その期間に売買された株数) | `2.4e9` | 2,400,000,000株(24億株)。出来高が配信されない指数の1分足・日中足などは `0` を入れる |
+| `vwap` | API が計算した VWAP(省略可・Swift のみ) | なし | 1分足・日中足で API が VWAP を配信している場合に入れる(`StockCandle(date:open:high:low:close:volume:vwap:)`)。入っていれば VWAP のチャートはこの値で描き、なければ出来高から計算する。レスポンスを `StockCandleResponseParser` で変換する場合は、`kVWAP` から自動で入る |
 
 - `66_000` の `_` は、Swift の数字の区切り(読みやすくするためだけのもの)で、`66000` と同じです。Objective-C では `66000` と書きます
 - `2.4e9` は「2.4 × 10の9乗」= 2,400,000,000 です
@@ -1028,7 +1029,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 | 項目 | 内容 |
 |---|---|
-| キーの名前 | `StockCandleResponseParser.Key`。既存アプリの `XxxChartDataUtil.h` の定数と同じ `kTimestamp`・`kStart`・`kHeight`・`kLow`・`kEnd`・`kTurnover`(`kVWAP` は読まない) |
+| キーの名前 | `StockCandleResponseParser.Key`。既存アプリの `XxxChartDataUtil.h` の定数と同じ `kTimestamp`・`kStart`・`kHeight`・`kLow`・`kEnd`・`kTurnover`・`kVWAP`(`kVWAP` は 1分足・日中足だけ。空・0 は値なし) |
 | 日付の形式 | `StockCandleResponseParser.dateFormats`(`yyyy/MM/dd HH:mm` など。上から順に試す)。`Date`(`NSDate`)もそのまま読める |
 | 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
 | 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの `値がない件の穴埋め処理` / `値がない件の穴埋め処理` と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす |
@@ -1202,7 +1203,7 @@ landscape.onPeriodSelect = ^(ChartPeriod period) {
 | 値がない件 | 既存アプリ(`値がない件の穴埋め処理` / `値がない件の穴埋め処理`)と同じく、直前の足の値で埋める |
 | 海外指数 | 既存アプリ(`終値だけのチェック処理`)と同じく、終値だけを読む。始値・高値・安値は終値と同じ値になるので、ローソク足にすると横線だけの足になる |
 | 日中足 | `dataArrayFromResponse:…` が5分ごとにまとめた結果を、そのまま日中足として描く |
-| VWAP | **違う**。既存アプリは API の値(`kVWAP`)を使うが、このチャートは出来高から計算する(`kVWAP` は読まない) |
+| VWAP | 既存アプリと同じく、API の値(`kVWAP`)で描く(指数の日中足のように出来高が 0 でも描ける)。`kVWAP` がないデータの場合だけ、出来高から計算する |
 | 足が1本だけのとき | 寄り付き直後の1分足・日中足や、過去分がない新規上場の銘柄などで起きる。ローソク足・出来高は1本だけ描かれる。移動平均などの指標は期間に足りないので線が出ない(凡例だけ出る)。折線チャートは線を引けないので現在値の破線だけになり、新値足は線ができないので「表示できる情報はありません」になる |
 
 ### 横画面のチャートだけを使う場合

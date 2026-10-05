@@ -25,15 +25,26 @@ import Foundation
     @objc let close: Double
     /// 出来高
     @objc let volume: Double
+    /// API が計算した VWAP(既存アプリのレスポンスの kVWAP。1分足・日中足だけ)。ない場合は nil。
+    /// 値がある場合、VWAP のチャートはこの値で描く(ない場合は出来高から計算する。ChartContentBuilder)。
+    /// Double? は Objective-C で扱えないので Swift からだけ使う(Objective-C で作った足は nil)
+    let vwap: Double?
 
-    @objc init(date: Date, open: Double, high: Double, low: Double, close: Double, volume: Double) {
+    /// - Parameter vwap: API が計算した VWAP(ない場合は nil)
+    init(date: Date, open: Double, high: Double, low: Double, close: Double, volume: Double, vwap: Double?) {
         self.date = date
         self.open = open
         self.high = high
         self.low = low
         self.close = close
         self.volume = volume
+        self.vwap = vwap
         super.init()
+    }
+
+    /// VWAP なしで作る(Objective-C からはこちらを使う)
+    @objc convenience init(date: Date, open: Double, high: Double, low: Double, close: Double, volume: Double) {
+        self.init(date: date, open: open, high: high, low: low, close: close, volume: volume, vwap: nil)
     }
 
     /// 値なしでの生成は不可(Objective-C の [[StockCandle alloc] init] もコンパイルエラーになる)

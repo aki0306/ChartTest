@@ -91,16 +91,22 @@ struct ChartContentBuilder {
         return ChartContent(candles: self.candles, main: main, sub: nil)
     }
 
-    /// VWAP の内容(ローソク足は描かず、VWAP の線または点だけを描く。サブチャートなし)
+    /// VWAP の内容(ローソク足は描かず、VWAP の線または点だけを描く。サブチャートなし)。
+    /// API が計算した VWAP(StockCandle.vwap。既存アプリの kVWAP)が1件でもあれば、その値で描く(既存アプリと同じ)。
+    /// 1件もなければ、出来高から計算する(TechnicalIndicators.vwap)
     private func vwapContent(title: String, style: ChartSeries.Style) -> ChartContent {
-        let values = TechnicalIndicators.vwap(
-            dates: self.candles.map { candle in candle.date }, highs: self.highs, lows: self.lows, closes: self.closes,
-            volumes: self.candles.map { candle in candle.volume })
+        var values: [Double?] = self.candles.map { candle in candle.vwap }
+        let hasAPIValue = values.contains { value in value != nil }
+        if !hasAPIValue {
+            values = TechnicalIndicators.vwap(
+                dates: self.candles.map { candle in candle.date }, highs: self.highs, lows: self.lows, closes: self.closes,
+                volumes: self.candles.map { candle in candle.volume })
+        }
         let main = MainChartContent(
             series: [ChartSeries(label: title, values: values, colorRole: .vwap, style: style)],
             priceStyle: .hidden)
 
-        // 出来高がないデータ(指数の1分足・日中足など)は VWAP を計算できないので、
+        // API の VWAP がなく、出来高もないデータは VWAP を計算できないので、
         // 凡例だけ残して「表示できる情報はありません」と表示する
         let hasValue = values.contains { value in value != nil }
         guard hasValue else {

@@ -20,6 +20,8 @@
 //      | 国内     | 始値・高値・安値・終値がすべて | レスポンスの値   | レスポンスの値(なければ 0) |
 //      | 海外     | 終値だけ                      | 終値と同じ値     | 0(既存アプリも使っていない) |
 //
+//  ・API が計算した VWAP(kVWAP。1分足・日中足だけ)は StockCandle.vwap に入れる(空・0 は nil。海外は使わない)
+//
 //  ・レスポンスの並び順に関係なく、日付の古い順に並べ替えて返す
 //
 //  使い方:
@@ -51,6 +53,8 @@ final class StockCandleResponseParser: NSObject {
         static let close = "kEnd"
         /// 出来高(kTurnover)
         static let volume = "kTurnover"
+        /// API が計算した VWAP(kVWAP。1分足・日中足だけ)
+        static let vwap = "kVWAP"
     }
 
     /// 日付の文字列の形式。上から順に試し、最初に読めた形式を使う。
@@ -117,24 +121,26 @@ final class StockCandleResponseParser: NSObject {
     private static func candle(date: Date, item: [String: Any], market: IndexMarket) -> StockCandle? {
         guard let close = self.number(item[Key.close]) else { return nil }
         let volume = self.volume(of: item, market: market)
+        let vwap = self.vwap(of: item, market: market)
 
         switch market {
         case .domestic:
             guard let open = self.number(item[Key.open]) else { return nil }
             guard let high = self.number(item[Key.high]) else { return nil }
             guard let low = self.number(item[Key.low]) else { return nil }
-            return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume)
+            return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume, vwap: vwap)
         case .overseas:
             // 海外は終値だけが配信される。始値・高値・安値も終値にしておく(4本値がそろっていないと足を作れないため)
-            return StockCandle(date: date, open: close, high: close, low: close, close: close, volume: volume)
+            return StockCandle(date: date, open: close, high: close, low: close, close: close, volume: volume, vwap: vwap)
         }
     }
 
-    /// 値が読めない件を、直前の足の4本値で埋めた足にする(日付・出来高はその件のもの)
+    /// 値が読めない件を、直前の足の4本値で埋めた足にする(日付・出来高・VWAP はその件のもの)
     private static func filledCandle(date: Date, item: [String: Any], market: IndexMarket,
                                      previous: StockCandle) -> StockCandle {
         return StockCandle(date: date, open: previous.open, high: previous.high, low: previous.low,
-                           close: previous.close, volume: self.volume(of: item, market: market))
+                           close: previous.close, volume: self.volume(of: item, market: market),
+                           vwap: self.vwap(of: item, market: market))
     }
 
     /// 出来高。国内は配信されない場合(指数の1分足・日中足など)があるので、読めなければ 0 にする。
@@ -146,6 +152,20 @@ final class StockCandleResponseParser: NSObject {
             return volume
         case .overseas:
             return 0
+        }
+    }
+
+    /// API が計算した VWAP(kVWAP)。読めない・0 の場合は nil(1分足・日中足以外のレスポンスには入っていない)。
+    /// 既存アプリも 0 の kVWAP は「値なし」として扱っている(日中足へのまとめ処理 の平均に含めない)。
+    /// 海外は既存アプリも使っていないので nil にする
+    private static func vwap(of item: [String: Any], market: IndexMarket) -> Double? {
+        switch market {
+        case .domestic:
+            guard let vwap = self.number(item[Key.vwap]) else { return nil }
+            guard vwap != 0 else { return nil }
+            return vwap
+        case .overseas:
+            return nil
         }
     }
 
