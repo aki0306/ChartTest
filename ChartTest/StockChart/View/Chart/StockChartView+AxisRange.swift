@@ -100,14 +100,14 @@ extension StockChartView {
 
     /// メインチャートのY軸範囲を調整する
     ///
-    /// 上側は凡例と重ならないよう「凡例の高さぶん」(最低でも値幅の 20%)、下側は値幅の 5% の余白を取る
+    /// 上側は凡例と重ならないよう「凡例の高さぶん」(最低でも値幅の 20%)、下側は値幅の 20% の余白を取る(既存アプリと同じ)
     ///
     ///   axisMaximum   ┬ ─────────────────   ← 凡例(priceLegendLabel)はこの余白部分に重なる
     ///                 │ 余白(凡例の高さぶん。topPadding で計算)
     ///   表示中の最高値 ┼ ─────────────────
     ///                 │ ローソク足・指標の線
     ///   表示中の最安値 ┼ ─────────────────
-    ///                 │ 余白(値幅の 5%)
+    ///                 │ 余白(値幅の 20%)
     ///   axisMinimum   ┴ ─────────────────
     ///
     /// チャートの高さが低い(縦画面など)と、値幅の 20% では凡例の高さに足りないので、
@@ -133,7 +133,7 @@ extension StockChartView {
 
         let range = Self.nonZeroRange(low: low, high: high)
 
-        // 上側: 凡例の分。下側: なし(最低でも値幅の 5%)
+        // 上側: 凡例の分。下側: なし(最低でも値幅の 20%)
         var topPoints: CGFloat = 0
         if self.priceLegendLabel.attributedText != nil {
             topPoints = self.style.legendTopInset + self.priceLegendLabel.intrinsicContentSize.height + self.style.legendBottomSpacing
@@ -147,7 +147,7 @@ extension StockChartView {
         }
         let paddings = Self.axisPaddings(
             valueRange: range, topPoints: topPoints, bottomPoints: bottomPoints,
-            height: self.priceChartView.viewPortHandler.contentHeight, minimumTopRatio: 0.2, minimumBottomRatio: 0.05)
+            height: self.priceChartView.viewPortHandler.contentHeight, minimumTopRatio: 0.2, minimumBottomRatio: 0.2)
         self.priceChartView.rightAxis.axisMaximum = high + paddings.top
         self.priceChartView.rightAxis.axisMinimum = low - paddings.bottom
         self.priceChartView.notifyDataSetChanged()

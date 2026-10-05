@@ -128,6 +128,11 @@ enum ChartNumberFormatter {
         return self.string(value, fractionDigits: 2, minimumFractionDigits: 2, usesGroupingSeparator: false)
     }
 
+    /// 3桁区切りなし・小数は必要な桁だけ(最大2桁)の値(例: 6230 → 「6230」、5519.11 → 「5519.11」)。4本値の枠に使う
+    static func plainValue(_ value: Double) -> String {
+        return self.string(value, fractionDigits: 2, usesGroupingSeparator: false)
+    }
+
     /// 指定した書式で数値を文字にする
     /// - Parameters:
     ///   - value: 文字にする値

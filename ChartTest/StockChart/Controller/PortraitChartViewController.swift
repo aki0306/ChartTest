@@ -110,23 +110,21 @@ final class PortraitChartViewController: UIViewController {
     /// 縦画面のチャートの見た目を設定する
     ///
     ///   ←5→┌──────────────────────────┐←9→70,000    ┐
-    ///      │移動平均 短期… 長期…(10pt)│   68,000    │ メイン 120pt
+    ///      │移動平均 短期… 長期…(10pt)│   68,000    │ メイン 108pt
     ///      │                          │   ...       │
     ///      ├──────────────────────────┤4,000,000,000┤
-    ///      │出来高 出来高移動平均      │      0      │ サブ 60pt
+    ///      │出来高 出来高移動平均      │      0      │ サブ 72pt
     ///      └──────────────────────────┘             ┘
     ///        7/21   7/31   8/13 ...(8pt)
-    ///      |←───── 画面の幅 - 70 ─────→|←── 70 ──→|
+    ///      |←───── 画面の幅 - 65 ─────→|←── 65 ──→|
     ///
-    /// ・Y軸ラベルは Times 8pt。一番長いラベルの幅の中で中央揃えにし、下端の「0」は枠の内側に収める
+    /// ・Y軸ラベルは 8pt(既存アプリと同じ)。一番長いラベルの幅の中で中央揃えにし、下端の「0」は枠の内側に収める
     /// ・日付ラベルは 8pt(既存アプリと同じ。1分足・日中足は 9:15 … 15:15 のように並ぶ)
     /// ・凡例は 10pt。背景を白にして、凡例の文字の後ろのグリッド線を隠す
-    /// ・高さ 208pt = 上の余白 8pt + 外枠 180pt(メイン 120 : サブ 60)+ 日付ラベル 20pt
+    /// ・高さ 208pt = 上の余白 8pt + 外枠 180pt(メイン 108 : サブ 72 = 60 : 40。既存アプリと同じ)+ 日付ラベル 20pt
     private func applyChartStyle() {
         // style は代入するたびに描き直されるので、まとめて変更してから1回で代入する
         var style = self.chartView.style
-        style.rightAxisWidth = 70
-        style.yAxisFont = UIFont(name: "TimesNewRomanPSMT", size: 8) ?? .systemFont(ofSize: 8)
         style.yAxisLabelOffset = 9
         style.centersYAxisLabels = true
         style.keepsYAxisLabelsInside = true

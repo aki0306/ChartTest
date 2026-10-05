@@ -414,7 +414,7 @@ extension StockChartView {
     /// ・上端は外枠の上端から 4pt(凡例は左上にあるので、右上に置けば重ならない)
     /// ・右端は外枠の右端から 8pt
     private func showOHLCInfo(for candle: StockCandle, frameRect: CGRect) {
-        self.ohlcInfoView.update(with: candle)
+        self.ohlcInfoView.update(with: candle, dateFormat: self.style.ohlcDateFormat)
         self.ohlcInfoView.isHidden = false
 
         let size = self.ohlcInfoView.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)

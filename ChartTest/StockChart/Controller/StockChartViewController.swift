@@ -54,14 +54,18 @@ final class StockChartViewController: UIViewController {
     ///   | 設定画面の足種のタブ     | 1分足〜月足    | 日足・週足・月足(1分足・日中足のタブは出さない)      |
     ///   | チャートの種類           | すべて         | ローソク足・折線チャート                      |
     ///
-    /// 海外指数に変えたとき、選べない指標・チャートの種類を選んでいた場合は
-    /// 移動平均線・サブなし・ローソク足 に切り替える
+    /// 既存アプリと同じく、チャートの種類は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
+    /// (最初は 国内: ローソク足、海外: 折線チャート。ChartType.defaultType)。
+    /// 選べない指標を選んでいた場合は 移動平均線・サブなし に切り替える
     @objc var market: IndexMarket = .domestic {
         didSet {
             guard self.market != oldValue else { return }
             self.applyMarket(previousMarket: oldValue)
         }
     }
+
+    /// 指数の種類ごとに覚えておくチャートの種類(market を切り替えたときに戻す)
+    private var chartTypeByMarket: [IndexMarket: ChartType] = [:]
 
     /// 足種ごとの指標の計算パラメータ。設定画面で足種ごとに変えられる。
     /// 初期値は足種に合わせたもの(週足の移動平均は 13/26 など。ChartPeriod.indicatorParameters)
@@ -629,11 +633,15 @@ final class StockChartViewController: UIViewController {
         self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
         self.applyIndicatorChoices()
 
-        // 選べないチャートの種類を選んでいた場合は、ローソク足に切り替える
+        // チャートの種類は指数の種類ごとに覚えておき、切り替えた先の種類に戻す(最初は 国内: ローソク足、海外: 折線チャート)。
+        // 選べない種類だった場合は、その指数の既定の種類にする
         // (それぞれの didSet でも描き直すが、最後にまとめて描き直す)
-        if !ChartType.choices(for: self.market).contains(self.chartType) {
-            self.chartType = .candlestick
+        self.chartTypeByMarket[previousMarket] = self.chartType
+        var nextType = self.chartTypeByMarket[self.market] ?? ChartType.defaultType(for: self.market)
+        if !ChartType.choices(for: self.market).contains(nextType) {
+            nextType = ChartType.defaultType(for: self.market)
         }
+        self.chartType = nextType
 
         self.applyDisplayOptionsToChart()
         self.reloadChart(keepsViewport: true)

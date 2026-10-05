@@ -13,12 +13,13 @@ struct StockChartStyle {
     // MARK: - 表示範囲
 
     /// 初期表示する本数。直近から数えてこの本数分を表示し、それより古いデータは右方向へのスワイプで表示する。
-    /// nil の場合は全件を表示する
-    var visibleCount: Int? = 55
+    /// nil の場合は全件を表示する(足種ごとの値は ChartPeriod.visibleCount。既定は日足の 50 本)
+    var visibleCount: Int? = 50
     /// 拡大の限界(ピンチで拡大したときに、最低でも表示する本数)。nil なら DGCharts の標準のまま
     var minimumVisibleCount: Int? = 20
     /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数)。nil なら全件まで縮小できる
-    var maximumVisibleCount: Int? = nil
+    /// (足種ごとの値は ChartPeriod.maximumVisibleCount。既定は日足の 250 本)
+    var maximumVisibleCount: Int? = 250
 
     // MARK: - 色(既存アプリ XxxChartView の色コードと同じ)
 
@@ -66,8 +67,8 @@ struct StockChartStyle {
     var gridColor = UIColor.systemGray5
     /// 外枠の色
     var borderColor = UIColor.black
-    /// メイン/サブの区切り線の色
-    var dividerColor = UIColor.systemGray
+    /// メイン/サブの区切り線の色(既存アプリと同じグレー)
+    var dividerColor = UIColor(hex: 0xaaaaaa)
     /// 軸ラベル・凡例タイトルの文字色
     var textColor = UIColor.black
 
@@ -76,17 +77,17 @@ struct StockChartStyle {
     /// X軸ラベル(日付)のフォント。既存アプリ(XxxCustomChartDateLabelsView)と同じ 8pt
     /// (1分足・日中足のラベルの並び 9:15 … 15:15 は、この大きさで既存アプリと同じになる)
     var xAxisFont = UIFont.systemFont(ofSize: 8)
-    /// Y軸ラベル(価格・指標の値)のフォント
-    var yAxisFont = UIFont.systemFont(ofSize: 10)
+    /// Y軸ラベル(価格・指標の値)のフォント。既存アプリと同じ 8pt
+    var yAxisFont = UIFont.systemFont(ofSize: 8)
     /// 凡例のフォント
     var legendFont = UIFont.systemFont(ofSize: 12)
 
     // MARK: - レイアウト(チャート全体)
 
-    /// メインチャートとサブチャートの描画領域の高さ比(メイン : サブ = priceHeightRatio : 1)
-    var priceHeightRatio: CGFloat = 2.0
-    /// 右側のY軸ラベル領域の幅
-    var rightAxisWidth: CGFloat = 90
+    /// メインチャートとサブチャートの描画領域の高さ比(メイン : サブ = priceHeightRatio : 1)。既存アプリと同じ 60 : 40
+    var priceHeightRatio: CGFloat = 1.5
+    /// 右側のY軸ラベル領域の幅。既存アプリと同じ 65pt
+    var rightAxisWidth: CGFloat = 65
     /// 下側のX軸(日付)ラベル領域の高さ
     var xAxisLabelHeight: CGFloat = 20
     /// 外枠・区切り線の線幅
@@ -133,11 +134,13 @@ struct StockChartStyle {
 
     /// 表示中の範囲の最高値・最安値を、その足の上・下に表示するか(ローソク足のときだけ。StockChartView+HighLowLabels)
     var showsHighLowLabels = false
-    /// 最高値・最安値の文字のフォント
-    var highLowLabelFont = UIFont.systemFont(ofSize: 14)
+    /// 最高値・最安値の文字のフォント。既存アプリと同じ 12pt
+    var highLowLabelFont = UIFont.systemFont(ofSize: 12)
 
     // MARK: - 4本値(十字線)
 
+    /// 4本値の枠に表示する日付の書式(足種ごとの値は ChartPeriod.ohlcDateFormat)
+    var ohlcDateFormat = "yyyy/MM/dd"
     /// 4本値(十字線・マーカー・4本値の枠)を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
     var crosshairFadeDelay: TimeInterval = 3
     /// 4本値を薄く表示するときの不透明度(0 = 見えない 〜 1 = 元の濃さ)。また動かすと元の濃さに戻る
@@ -160,13 +163,15 @@ struct StockChartStyle {
     /// 縦画面(StockChartView.setCandles(_:period:))と横画面(StockChartViewController.setCandles(_:period:))の
     /// 両方がこれを使うので、足種ごとの見た目を変えるときはここ(と ChartPeriod)だけを直せばよい
     ///
-    ///   例) 週足: 日付の書式「2025/9」・日付ラベル 約5個・初期表示 55本
+    ///   例) 週足: 日付の書式「25/9/5」・日付ラベル 約5個・初期表示 50本・縮小の限界 250本
     func applying(_ period: ChartPeriod) -> StockChartStyle {
         var style = self
         style.dateFormat = period.dateFormat
+        style.ohlcDateFormat = period.ohlcDateFormat
         style.xAxisLabelCount = period.xAxisLabelCount
         style.xAxisLabelMinuteMultiple = period.xAxisLabelMinuteMultiple
         style.visibleCount = period.visibleCount
+        style.maximumVisibleCount = period.maximumVisibleCount
         return style
     }
 

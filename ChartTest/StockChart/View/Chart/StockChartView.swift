@@ -94,14 +94,25 @@ final class StockChartView: UIView {
     }
 
     /// 指数の種類(国内/海外)。setCandles(_:period:) での描き方が変わる
-    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
-    /// 変更しても描き直さないので、データを渡す前に設定する
-    @objc var market: IndexMarket = .domestic
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: 折線チャート + 移動平均線・サブなし)。
+    /// 変更しても描き直さないので、データを渡す前に設定する。
+    /// 既存アプリと同じく、チャートの種類(chartType)は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
+    /// (最初は 国内: ローソク足、海外: 折線チャート。ChartType.defaultType)。chartType は market を設定したあとで設定する
+    @objc var market: IndexMarket = .domestic {
+        didSet {
+            guard self.market != oldValue else { return }
+            self.chartTypeByMarket[oldValue] = self.chartType
+            self.chartType = self.chartTypeByMarket[self.market] ?? ChartType.defaultType(for: self.market)
+        }
+    }
+
+    /// 指数の種類ごとに覚えておくチャートの種類(market を切り替えたときに戻す)
+    private var chartTypeByMarket: [IndexMarket: ChartType] = [:]
 
     /// 足種。設定すると、足種に合った見た目(日付の書式・日付ラベルの数・初期表示本数。ChartPeriod)に切り替わる。
     /// setCandles(_:) は、この足種の移動平均の期間・出来高の凡例名で描く。
     /// 同じ足種を設定し直しても見た目は上書きしないので、足種を設定したあとで visibleCount などを変えれば、その値が使われる。
-    /// 初期値の日足は、style の初期値(初期表示 55本・日付「M/d」)と同じ
+    /// 初期値の日足は、style の初期値(初期表示 50本・日付「M/d」)と同じ
     ///
     ///   Objective-C:
     ///       chartView.period = ChartPeriodWeekly;   // 週足の見た目に切り替わる

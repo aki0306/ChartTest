@@ -54,8 +54,8 @@ final class SampleData: NSObject {
             // 高値/安値は実体(始値〜終値)の外側にヒゲとして伸ばす
             let high = max(open, close) + Double.random(in: 0...500, using: &rng)
             let low = min(open, close) - Double.random(in: 0...500, using: &rng)
-            // 出来高は 16億〜32億株
-            let volume = Double.random(in: 1.6e9...3.2e9, using: &rng)
+            // 出来高は 1,200万〜3,500万(既存アプリの日経平均のレスポンス kTurnover と同じ桁。Y軸の欄 65pt に収まる)
+            let volume = Double.random(in: 1.2e7...3.5e7, using: &rng)
             candles.append(StockCandle(date: candleDate, open: open, high: high, low: low, close: close, volume: volume))
             previousClose = close
         }
@@ -105,7 +105,7 @@ final class SampleData: NSObject {
         }
         return self.trendCandles(dates: dates, startPrice: 38_000, endPrice: 65_500,
                             bodySize: 1_300, wickSize: 700,
-                            volumeRange: 1.6e9...3.0e9, seed: 202609)
+                            volumeRange: 1.2e7...3.5e7, seed: 202609)
     }
 
     /// 月足(2022/10〜2026/9 の4年ぶん)。毎月1日の日付で、3万円台から6万円台へ上がっていく形
@@ -119,7 +119,7 @@ final class SampleData: NSObject {
         }
         return self.trendCandles(dates: dates, startPrice: 32_000, endPrice: 65_500,
                             bodySize: 2_500, wickSize: 1_200,
-                            volumeRange: 1.2e9...2.8e9, seed: 20269)
+                            volumeRange: 1.0e7...2.5e7, seed: 20269)
     }
 
     /// 開始値から終了値へ向かう、ランダムな値動きのローソク足を作る

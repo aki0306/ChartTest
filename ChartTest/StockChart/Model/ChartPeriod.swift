@@ -6,13 +6,15 @@
 //
 //  足種によって変わるもの:
 //
-//  | 足種   | 移動平均(短期/長期) | X軸ラベル   | 初期表示       | 出来高の凡例    |
-//  |--------|---------------------|-------------|----------------|-----------------|
-//  | 1分足  | 5 / 25              | 09:15       | 全件           | 出来高          |
-//  | 日中足 | 5 / 25              | 09:15       | 全件           | 出来高          |
-//  | 日足   | 5 / 25              | 7/16        | 直近 55 本     | 出来高          |
-//  | 週足   | 13 / 26             | 2025/9      | 直近 55 本     | 出来高(平均)    |
-//  | 月足   | 5 / 25              | 2023/9      | 全件           | 出来高(平均)    |
+//  | 足種   | 移動平均(短期/長期) | X軸ラベル   | 初期表示       | 縮小の限界 | 出来高の凡例    |
+//  |--------|---------------------|-------------|----------------|------------|-----------------|
+//  | 1分足  | 5 / 25              | 09:15       | 全件           | なし       | 出来高          |
+//  | 日中足 | 5 / 25              | 09:15       | 全件           | なし       | 出来高          |
+//  | 日足   | 5 / 25              | 7/16        | 直近 50 本     | 250 本     | 出来高          |
+//  | 週足   | 13 / 26             | 25/9/5      | 直近 50 本     | 250 本     | 出来高(平均)    |
+//  | 月足   | 5 / 25              | 2023/9      | 直近 50 本     | 250 本     | 出来高(平均)    |
+//
+//  (初期表示・縮小の限界・日付の書式は既存アプリ XxxChartView と同じ)
 //
 //  指標の期間は既存アプリ(初期値の設定ファイル)と同じ。日足の値が IndicatorParameters の初期値で、
 //  週足・月足は次の値だけ違う(indicatorParameters)。
@@ -113,7 +115,17 @@ import Foundation
         switch self {
         case .oneMinute, .intraday: return "HH:mm"
         case .daily: return "M/d"
-        case .weekly, .monthly: return "yyyy/M"
+        case .weekly: return "yy/M/d"
+        case .monthly: return "yyyy/M"
+        }
+    }
+
+    /// 4本値(十字線)の枠に表示する日付の書式(既存アプリ XxxChartView と同じ)
+    var ohlcDateFormat: String {
+        switch self {
+        case .oneMinute, .intraday: return "HH:mm"
+        case .daily, .weekly: return "yyyy/MM/dd"
+        case .monthly: return "yyyy/MM"
         }
     }
 
@@ -129,14 +141,25 @@ import Foundation
         }
     }
 
-    /// 初期表示する本数(nil = 全件)
+    /// 初期表示する本数(nil = 全件)。既存アプリと同じく、日足・週足・月足は直近 50 本
     var visibleCount: Int? {
         switch self {
-        case .oneMinute, .intraday, .monthly:
-            // 1日分・全期間をまとめて見られるよう、全件を表示する
+        case .oneMinute, .intraday:
+            // 1日分をまとめて見られるよう、全件を表示する
             return nil
-        case .daily, .weekly:
-            return 55
+        case .daily, .weekly, .monthly:
+            return 50
+        }
+    }
+
+    /// 縮小の限界(ピンチで縮小したときに、最大で表示する本数。nil = 全件まで縮小できる)。
+    /// 既存アプリと同じく、日足・週足・月足は 250 本まで
+    var maximumVisibleCount: Int? {
+        switch self {
+        case .oneMinute, .intraday:
+            return nil
+        case .daily, .weekly, .monthly:
+            return 250
         }
     }
 }

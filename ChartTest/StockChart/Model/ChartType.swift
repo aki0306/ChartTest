@@ -100,4 +100,14 @@ extension ChartType {
             return [.candlestick, .lineChart]
         }
     }
+
+    /// 指数の種類ごとの既定のチャートの種類(既存アプリ XxxChartUtil と同じ。国内はローソク足、海外は折線チャート)
+    static func defaultType(for market: IndexMarket) -> ChartType {
+        switch market {
+        case .domestic:
+            return .candlestick
+        case .overseas:
+            return .lineChart
+        }
+    }
 }

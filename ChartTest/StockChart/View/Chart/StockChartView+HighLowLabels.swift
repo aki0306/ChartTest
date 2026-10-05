@@ -14,7 +14,7 @@
 //      │
 //   60,448.9                         ← 最安値: 一番安い安値の足の、ヒゲの下端のすぐ下
 //
-//  ・style.showsHighLowLabels が true で、ローソク足のときだけ表示する
+//  ・style.showsHighLowLabels が true で、ローソク足・国内指数のときだけ表示する(既存アプリと同じ。海外指数は終値だけなので出さない)
 //  ・スクロール・ズームで表示範囲が変わるたびに、値と位置を決め直す(updateAxisRanges から呼ばれる)
 //  ・文字が足と重ならないよう、Y軸の上下に文字の高さ分の余白を空けている(updateMainAxisRange)
 //  ・数値は3桁区切り・小数は最大2桁(末尾の 0 は省く。例: 60,448.9)
@@ -28,9 +28,10 @@ extension StockChartView {
     /// 足と最高値・最安値の文字の間隔
     var highLowLabelGap: CGFloat { 2 }
 
-    /// 最高値・最安値の文字を表示するか(設定がオンで、ローソク足を描いているとき)
+    /// 最高値・最安値の文字を表示するか(設定がオンで、ローソク足を描いていて、国内指数のとき)
     var drawsHighLowLabels: Bool {
         guard self.style.showsHighLowLabels else { return false }
+        guard self.market == .domestic else { return false }
         return self.mainContent.priceStyle == .candles
     }
 

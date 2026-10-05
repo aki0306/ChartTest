@@ -121,7 +121,7 @@ final class OHLCInfoView: UIView {
     /// 「安値：… 終値：…」
     private let lowerLabel = UILabel()
 
-    /// 日付の書式(例: 2026/04/06)
+    /// 日付の書式(足種ごとに変わる。例: 日足 2026/04/06、月足 2026/04、1分足 09:15)
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ja_JP")
@@ -168,13 +168,18 @@ final class OHLCInfoView: UIView {
         ])
     }
 
-    /// 表示する足を設定する(価格は3桁区切り・小数2桁。ChartNumberFormatter.price)
-    func update(with candle: StockCandle) {
+    /// 表示する足を設定する。
+    /// 価格は既存アプリ(レスポンスの値をそのまま表示)に合わせて、3桁区切りなし・小数は必要な桁だけ(最大2桁)。例: 6230・5519.11
+    /// - Parameters:
+    ///   - candle: 表示する足
+    ///   - dateFormat: 日付の書式(StockChartStyle.ohlcDateFormat)
+    func update(with candle: StockCandle, dateFormat: String) {
+        self.dateFormatter.dateFormat = dateFormat
         self.dateLabel.text = self.dateFormatter.string(from: candle.date)
-        let open = ChartNumberFormatter.price(candle.open)
-        let high = ChartNumberFormatter.price(candle.high)
-        let low = ChartNumberFormatter.price(candle.low)
-        let close = ChartNumberFormatter.price(candle.close)
+        let open = ChartNumberFormatter.plainValue(candle.open)
+        let high = ChartNumberFormatter.plainValue(candle.high)
+        let low = ChartNumberFormatter.plainValue(candle.low)
+        let close = ChartNumberFormatter.plainValue(candle.close)
         self.upperLabel.text = "始値：\(open)  高値：\(high)"
         self.lowerLabel.text = "安値：\(low)  終値：\(close)"
     }

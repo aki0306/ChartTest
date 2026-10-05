@@ -312,7 +312,7 @@ extension StockChartView {
         candleSet.neutralColor = self.style.textColor        // 始値 = 終値(同事線)の色
         candleSet.shadowColorSameAsCandle = true        // ヒゲを実体と同じ色にする
         candleSet.shadowWidth = 1
-        candleSet.barSpace = 0.15                       // 足同士の隙間(1本分の幅に対する割合)
+        candleSet.barSpace = 0.2                        // 足同士の隙間(1本分の幅に対する割合。実体の幅は 0.6 で既存アプリと同じ)
         return candleSet
     }
 
@@ -388,7 +388,7 @@ extension StockChartView {
         barSet.colors = colors
 
         let barData = BarChartData(dataSet: barSet)
-        barData.barWidth = 0.7  // 棒の幅(1本分の幅に対する割合)
+        barData.barWidth = 0.55  // 棒の幅(1本分の幅に対する割合。既存アプリと同じ)
         return barData
     }
 
