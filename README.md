@@ -31,7 +31,7 @@
 
 | もの | バージョン | 備考 |
 |---|---|---|
-| Xcode | 26 以上(このプロジェクトは Xcode 27 で作成) | `nonisolated` を付けたクラスなど、Swift 6.2 の書き方を使っているため、Xcode 16 以前ではビルドできません |
+| Xcode | 27 以上 | プロジェクトファイルが Xcode 27 の形式のため、Xcode 26 以前では開けません |
 | iOS | 18 以上(動作確認済み) | iOS 15〜17 は未確認です |
 | DGCharts | 5.1.0 以上 | チャートを描くライブラリ。ステップ 2 で追加します |
 | Swift の言語モード | Swift 5 | Swift 6 の言語モードは未確認です |
@@ -264,7 +264,7 @@ final class MyChartViewController: UIViewController {
 | `'〇〇-Swift.h' file not found` | ヘッダの名前がモジュール名と違う | ステップ 4 のとおり、Product Module Name を確認して書き直す |
 | Objective-C で `StockChartView` などが見つからない(`Unknown type name`) | `-Swift.h` を import していない、または Swift のファイルがターゲットに入っていない | `#import "〇〇-Swift.h"` を書く。Swift のファイルの **Target Membership** にチェックが入っているか確認する |
 | `Invalid redeclaration of 'StockCandle'` など | 既存アプリに同じ名前の型がある | どちらかの名前を変える(Xcode で型名を右クリック > **Refactor > Rename** で、使っている箇所もまとめて変えられる) |
-| ビルドで `nonisolated` に関するエラーが出る | Xcode が古い | Xcode 26 以上を使う(ステップ 0) |
+| プロジェクトが開けない(future Xcode project file format)、またはビルドで `nonisolated` に関するエラーが出る | Xcode が古い | Xcode 27 以上を使う(ステップ 0) |
 | 「Empty paragraph passed to '\param' command」の警告が大量に出る | DGCharts のヘッダのコメントの書き方(動作には影響しない) | **Build Settings** の **Documentation Comments** を **No** にする |
 | チャートが何も表示されない(真っ白) | チャートの高さ・幅が 0 | 高さの制約(例: 260)を付けているか確認する。storyboard に置いた場合は、View のクラスが `StockChartView` になっているか確認する |
 | 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる。日付は読めても4本値が1件も読めなければ 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
@@ -1359,7 +1359,7 @@ chartViewController.setCandles(candles, period: .weekly) // 既存アプリの�
 | Objective-C から使う | `#import "ChartTest-Swift.h"` | ヘッダ名は `<既存アプリのモジュール名>-Swift.h` になる。Objective-C だけのアプリなら、Swift を使えるようにする設定(Bridging Header など)が必要 |
 | 既存アプリの enum(`XxxChartEnum.h`) | ブリッジングヘッダ `ChartTest/ChartTest-Bridging-Header.h` で読み込み、`.m` では `-Swift.h` より前に import | 既存アプリでも同じようにブリッジングヘッダで読み込む(ステップ 4)。使わない場合は `StockChartView+Xxx.swift` を削除する |
 | Swift の並行処理の設定 | Default Actor Isolation = **MainActor**、Swift 5 | 既存アプリで Default Actor Isolation を指定していない(nonisolated)場合も、エラー・警告なくビルドできることを確認済み。設定を変える必要はない |
-| Xcode | Xcode 27 で作成 | Xcode 26 以上が必要(Swift 6.2 の `nonisolated` を付けたクラスなどを使っているため) |
+| Xcode | Xcode 27 で作成 | Xcode 27 以上が必要(プロジェクトファイルが Xcode 27 の形式のため) |
 | 対応 OS | iOS 18 以上で動作確認 | iOS 15 以降の API を使っているので、それより前の OS では使えない(iOS 18 未満は未確認) |
 | ダークモード | ライトモード固定 | 色はライトモード前提(白背景・黒文字)。ダークモードに対応しているアプリでは、`StockChartStyle` で見た目を調整する |
 | 型の名前 | `StockCandle`・`ChartType`・`ChartPeriod` など | 既存アプリに同じ名前の型があると衝突するので、名前を変える |
