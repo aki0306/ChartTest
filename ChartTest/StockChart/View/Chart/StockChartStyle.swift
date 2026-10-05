@@ -103,7 +103,7 @@ struct StockChartStyle {
     /// 0 なら xAxisLabelCount の個数くらいで並べる
     var xAxisLabelSpacing: CGFloat = 0
     /// X軸ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
-    /// 5 なら、ラベルを 9:00・9:05・9:10 のように 5分の倍数の時刻の足に、左から詰めて置く(1分足・日中足。ChartPeriod.xAxisLabelMinuteMultiple)
+    /// 5 なら、5分の倍数のきりのいい間隔で、毎時 15分を基準にした時刻(9:15・9:45 … など)に置く(1分足・日中足。ChartPeriod.xAxisLabelMinuteMultiple)
     var xAxisLabelMinuteMultiple: Int?
 
     // MARK: - Y軸ラベル(価格・指標の値)

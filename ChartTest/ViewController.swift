@@ -152,7 +152,8 @@ class ViewController: UIViewController {
     /// 横画面の下の帯に、指数名・現在値・日時を表示する
     /// (サンプルなので、当日の分足の最後の足の終値・時刻を現在値として使う)
     private func updateLandscapePriceInfo() {
-        guard let latest = SampleData.candles(for: .oneMinute).last else { return }
+        // 値のある最後の足(1分足は 14:36 以降が日時だけの足なので、それより前の最後の足)
+        guard let latest = SampleData.candles(for: .oneMinute).last(where: { candle in candle.hasValue }) else { return }
         var name = "日経平均"
         if self.landscapeViewController.chartViewController.market == .overseas {
             name = "NYダウ"

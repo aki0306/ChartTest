@@ -97,8 +97,8 @@ import Foundation
     }
 
     /// X軸ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
-    /// 1分足・日中足は、既存アプリ(XxxCustomChartDateLabelsView)と同じく、5分の倍数の時刻の足に、
-    /// 左から詰めて置く(例: 全体を表示すると 9:15 … 15:15。LatestAlignedXAxisRenderer)
+    /// 1分足・日中足は、5分の倍数のきりのいい間隔(5・10・15・30・60分 …)で、毎時 15分を基準にした時刻に置く
+    /// (例: 全体を表示すると 9:15・9:45 … 15:15。LatestAlignedXAxisRenderer)
     var xAxisLabelMinuteMultiple: Int? {
         switch self {
         case .oneMinute, .intraday:

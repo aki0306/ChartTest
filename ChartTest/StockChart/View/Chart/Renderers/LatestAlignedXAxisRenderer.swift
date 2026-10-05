@@ -28,8 +28,8 @@
 //      (何本おきかは足1本の幅・表示本数から決めるので、拡大・縮小したときだけ変わる)
 //    ・足の中心に置くと画面からはみ出すラベルは、ずらさずに表示しない(ずらすと隣のラベルと重なるため)
 //    ・最新の足より右に日付だけを並べる時間帯(1分足・日中足の、これから値が来る時間)がある場合は、右へも同じ間隔で置く
-//    ・1分足・日中足(minuteMultiple = 5)は、最新の足を基準にせず、既存アプリ(XxxCustomChartDateLabelsView)と同じく
-//      5分の倍数の時刻の足を、画面の左から、前のラベルと 5pt 以上空くように詰めて置く(例: 9:15 … 15:15)
+//    ・1分足・日中足(minuteMultiple = 5)は、最新の足を基準にせず、きりのいい間隔(5・10・15・30・60分 …)で、
+//      毎時 15分を基準にした時刻に置く(例: 全体を表示すると 30分おきで 9:15・9:45 … 15:15。拡大したときだけ細かくする)
 //
 //  ※ このプロジェクトは既定のアクター分離が MainActor だが、継承元の XAxisRenderer は
 //    アクター分離なしで宣言されているため、クラスを nonisolated にして override できるようにしている
@@ -53,7 +53,7 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     nonisolated(unsafe) var labelSpacing: CGFloat = 0
 
     /// ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
-    /// 5 なら、9:00・9:05・9:10 のように 5分の倍数の時刻の足にだけ、左から詰めて置く(1分足・日中足)。
+    /// 5 なら、5分の倍数のきりのいい間隔で、毎時 15分を基準にした時刻(9:15・9:45 … など)の足に置く(1分足・日中足)。
     /// メインスレッドからのみ読み書きする
     nonisolated(unsafe) var minuteMultiple: Int?
 
@@ -78,7 +78,7 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             return
         }
 
-        // 1分足・日中足(時刻にそろえる場合)は、既存アプリと同じく、左から詰めて置く
+        // 1分足・日中足(時刻にそろえる場合)は、きりのいい間隔で、毎時 15分を基準にした時刻に置く
         if let minuteMultiple = self.minuteMultiple {
             let indexes = self.minuteLabelIndexes(multiple: minuteMultiple, visibleMin: visibleMin, visibleMax: visibleMax)
             self.setLabelIndexes(indexes)
@@ -143,54 +143,64 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
 
     /// 1分足・日中足のラベル同士の最小の間隔(pt)。既存アプリ(XxxCustomChartDateLabelsView)と同じ 5pt
     static let minuteLabelGap: CGFloat = 5
+    /// 1分足・日中足のラベルの時刻の基準(分)。間隔が 30分なら :15・:45、60分なら :15 に置く(全体を表示すると 9:15 … 15:15)
+    static let minuteLabelAnchor = 15
+    /// 画面にこの分数以上が入っているとき(全体表示など)は、ラベルの間隔を最低でも minuteLabelWideInterval にする
+    static let minuteLabelWideSpan = 180
+    /// 全体表示などのときの、ラベルの間隔の最小値(分)。既存アプリの1分足と同じく、必ず 9:15・9:45 … 15:15 になるようにする
+    static let minuteLabelWideInterval = 30
 
-    /// 1分足・日中足のラベルを置く足を選ぶ。既存アプリ(XxxCustomChartDateLabelsView の 5Minute モード)と同じ決め方:
+    /// 1分足・日中足のラベルを置く足を選ぶ。
     ///
-    ///   ・画面の左から順に足を見て、分が multiple の倍数の時刻(9:00・9:05・9:10 …)だけを候補にする
-    ///   ・ラベルの左端が描画領域の左端より右にあり、前のラベルとの間が minuteLabelGap 以上空く候補にだけ置く
-    ///     (ラベルの幅は、画面に出る候補の中で一番広いもので計算する)
+    ///   1. 間隔(分)を、multiple の倍数のきりのいい分数(5・10・15・30・60・120 …)のうち、
+    ///      ラベル同士が重ならない(ラベルの幅 + minuteLabelGap 以上空く)一番短いものにする。
+    ///      ただし、画面に 3時間(minuteLabelWideSpan)以上が入っているとき(全体表示など)は、最低でも 30分にする
+    ///      (既存アプリの1分足と同じく、幅の広い横画面でも 9:15・9:45 … 15:15 になる。拡大したときだけ細かくする)
+    ///   2. 時刻(0時からの分)が「基準(minuteLabelAnchor)+ 間隔の倍数」の足に置く
+    ///      例) 間隔 30分: 9:15・9:45・10:15 … 15:15 / 間隔 60分: 9:15・10:15 … 15:15 / 間隔 10分: 9:05・9:15・9:25 …
     ///
-    ///   例) 全体(9:00〜15:30)を表示: 9:00〜9:10 は左端からはみ出すので飛ばし、9:15 から間隔を空けて 15:15 まで並ぶ
-    ///
-    /// 時刻で選ぶので、昼休みのように間に足がない時間があっても、ラベルの時刻はずれない
+    /// 足の本数ではなく時刻で選ぶので、画面の幅に関係なくきりのいい時刻に並び、スクロールしてもラベルの時刻は変わらない。
+    /// 昼休みのように間に足がない時間があっても、ずれない
     /// - Returns: ラベルを置く足のインデックス(左から順)
     private func minuteLabelIndexes(multiple: Int, visibleMin: Double, visibleMax: Double) -> [Double] {
         guard multiple > 0 else { return [] }
         guard let transformer else { return [] }
-        let calendar = Calendar(identifier: .gregorian)
         let leftmostIndex = Int(visibleMin.rounded(.up))
         let rightmostIndex = Int(visibleMax.rounded(.down))
         guard leftmostIndex <= rightmostIndex else { return [] }
 
-        // 候補(分が multiple の倍数の時刻の足)を左から集める
-        var candidates: [Double] = []
+        // 画面に出る足の、0時からの分
+        var minutesByIndex: [(index: Int, minuteOfDay: Int)] = []
         for index in leftmostIndex...rightmostIndex {
-            let dateIndex = index - self.firstIndex
-            guard self.dates.indices.contains(dateIndex) else { continue }
-            let minute = calendar.component(.minute, from: self.dates[dateIndex])
-            if minute % multiple != 0 {
-                continue
-            }
-            candidates.append(Double(index))
+            guard let minuteOfDay = self.minuteOfDay(at: index) else { continue }
+            minutesByIndex.append((index: index, minuteOfDay: minuteOfDay))
         }
 
-        // ラベルの幅(既存アプリは「10:10」の幅。ここでは候補の中で一番広い文字の幅)
+        // ラベルの幅(画面に出る、multiple の倍数の時刻のラベルの中で一番広いもの)
         var labelWidth: CGFloat = 0
-        for position in candidates {
-            labelWidth = max(labelWidth, self.labelWidth(at: position))
+        for item in minutesByIndex where item.minuteOfDay % multiple == 0 {
+            labelWidth = max(labelWidth, self.labelWidth(at: Double(item.index)))
         }
+        let visibleMinutes = Int((visibleMax - visibleMin) * Double(self.minutesPerCandle()))
+        let interval = self.minuteLabelInterval(multiple: multiple, labelWidth: labelWidth, visibleMinutes: visibleMinutes)
 
-        // 左から、前のラベルと重ならない候補だけに置く
         var indexes: [Double] = []
         var previousRight: CGFloat?
-        for position in candidates {
-            let centerX = transformer.pixelForValues(x: position, y: 0).x
-            let left = centerX - labelWidth / 2
-            if left < self.viewPortHandler.contentLeft {
+        for item in minutesByIndex {
+            // 基準からの分が間隔で割り切れる時刻だけ(負の数でも割り切れるかを見るため、余りを 0〜間隔 にそろえる)
+            let remainder = ((item.minuteOfDay - Self.minuteLabelAnchor) % interval + interval) % interval
+            if remainder != 0 {
                 continue
             }
+            let position = Double(item.index)
+            let centerX = transformer.pixelForValues(x: position, y: 0).x
+            // 左端からはみ出すラベルは置かない
+            if centerX - labelWidth / 2 < self.viewPortHandler.contentLeft {
+                continue
+            }
+            // 念のため、前のラベルと重なる場合も置かない
             if let previousRight {
-                if left <= previousRight + Self.minuteLabelGap {
+                if centerX - labelWidth / 2 <= previousRight + Self.minuteLabelGap {
                     continue
                 }
             }
@@ -201,6 +211,52 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             previousRight = centerX + labelWidth / 2
         }
         return indexes
+    }
+
+    /// ラベルを置く間隔(分)。multiple の倍数のきりのいい分数のうち、ラベル同士が重ならない一番短いもの
+    /// (画面に minuteLabelWideSpan 分以上が入っているときは、minuteLabelWideInterval 分より短くしない)
+    private func minuteLabelInterval(multiple: Int, labelWidth: CGFloat, visibleMinutes: Int) -> Int {
+        var candidates = [1, 2, 3, 6, 12, 24, 36, 48, 72].map { factor in factor * multiple }
+        if visibleMinutes >= Self.minuteLabelWideSpan {
+            candidates = candidates.filter { candidate in candidate >= Self.minuteLabelWideInterval }
+        }
+        // 1分あたりの幅(pt) = 足1本の幅 ÷ 足1本の分数
+        let pointsPerMinute = self.candleWidthInPoints() / CGFloat(self.minutesPerCandle())
+        guard pointsPerMinute > 0 else { return candidates[candidates.count - 1] }
+        let requiredWidth = labelWidth + Self.minuteLabelGap
+        for candidate in candidates {
+            if CGFloat(candidate) * pointsPerMinute > requiredWidth {
+                return candidate
+            }
+        }
+        return candidates[candidates.count - 1]
+    }
+
+    /// 足1本の分数(1分足は 1、日中足は 5)。隣り合う日時の差のうち一番小さいもの(分からない場合は 1)
+    private func minutesPerCandle() -> Int {
+        var smallest: Int?
+        for index in self.dates.indices.dropFirst() {
+            let seconds = self.dates[index].timeIntervalSince(self.dates[index - 1])
+            let minutes = Int((seconds / 60).rounded())
+            guard minutes > 0 else { continue }
+            if let current = smallest {
+                smallest = min(current, minutes)
+            } else {
+                smallest = minutes
+            }
+        }
+        guard let smallest else { return 1 }
+        return smallest
+    }
+
+    /// 指定した足の、0時からの分。日時がない位置は nil
+    private func minuteOfDay(at index: Int) -> Int? {
+        let dateIndex = index - self.firstIndex
+        guard self.dates.indices.contains(dateIndex) else { return nil }
+        let components = Calendar(identifier: .gregorian).dateComponents([.hour, .minute], from: self.dates[dateIndex])
+        guard let hour = components.hour else { return nil }
+        guard let minute = components.minute else { return nil }
+        return hour * 60 + minute
     }
 
     /// ラベルの位置を DGCharts に渡す(ラベルの大きさの計算もし直す)
