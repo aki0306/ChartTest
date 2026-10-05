@@ -9,8 +9,10 @@
 //
 //  ・キーの名前は、既存アプリの XxxChartDataUtil.h の定数(kTimestamp など)と同じ。日付の形式は dateFormats にまとめている
 //  ・値は 数値(NSNumber)・文字列("66,000" のようなカンマ付きも可)のどちらでも読める
+//    (NaN・無限大("nan"・"inf" など)は読めない値として扱う。チャートの軸の計算が壊れるため)
 //  ・日付は Date・文字列(dateFormats のどれかの形式)のどちらでも読める
 //  ・日付が読めない件は飛ばす
+//  ・辞書でない要素(NSNull など)は飛ばす
 //  ・値が読めない件は、直前の足の値で埋める(既存アプリの 値がない件の穴埋め処理 と同じ)。
 //    ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす
 //    (keepsEmptyDates = true の場合は、飛ばさずに日時だけの足にする。1分足・日中足で、値のない時間帯も X軸に日付を並べるため)
@@ -77,9 +79,9 @@ final class StockCandleResponseParser: NSObject {
     // MARK: - 変換
 
     /// レスポンスの配列を、国内指数として、日付の古い順に並べたローソク足の配列に変換する
-    /// - Parameter response: レスポンス(辞書の配列。並び順は問わない)
+    /// - Parameter response: レスポンス(辞書の配列。並び順は問わない。辞書でない要素は飛ばす)
     @objc(candlesFrom:)
-    static func candles(from response: [[String: Any]]) -> [StockCandle] {
+    static func candles(from response: [Any]) -> [StockCandle] {
         return self.candles(from: response, market: .domestic)
     }
 
@@ -89,7 +91,7 @@ final class StockCandleResponseParser: NSObject {
     ///   - market: 指数の種類。海外は終値だけを読む
     /// - Returns: 日付の古い順に並べたローソク足(値が読めない件は直前の足の値で埋める)
     @objc(candlesFrom:market:)
-    static func candles(from response: [[String: Any]], market: IndexMarket) -> [StockCandle] {
+    static func candles(from response: [Any], market: IndexMarket) -> [StockCandle] {
         return self.candles(from: response, market: market, keepsEmptyDates: false)
     }
 
@@ -107,11 +109,14 @@ final class StockCandleResponseParser: NSObject {
     ///     1分足・日中足で、値のない時間帯も X軸に日付を並べる場合に true にする(ChartResponseLoader)
     /// - Returns: 日付の古い順に並べたローソク足(途中の値が読めない件は直前の足の値で埋める)
     @objc(candlesFrom:market:keepsEmptyDates:)
-    static func candles(from response: [[String: Any]], market: IndexMarket, keepsEmptyDates: Bool) -> [StockCandle] {
+    static func candles(from response: [Any], market: IndexMarket, keepsEmptyDates: Bool) -> [StockCandle] {
         // 直前の足で埋めるには並び順が決まっている必要があるので、先に日付の古い順に並べ替える
         // (チャートも日付の古い順に並べる必要がある)
         var entries: [(date: Date, item: [String: Any])] = []
-        for item in response {
+        for element in response {
+            // 辞書でない要素(Objective-C の配列に入った NSNull など)は飛ばす。
+            // 引数を [[String: Any]] にすると、Objective-C から渡された時点で変換できずにアプリが落ちるため、[Any] で受けてここで確かめる
+            guard let item = element as? [String: Any] else { continue }
             guard let date = self.date(item[Key.date]) else { continue }  // 日付が読めない件は飛ばす
             entries.append((date: date, item: item))
         }
@@ -204,15 +209,21 @@ final class StockCandleResponseParser: NSObject {
 
     // MARK: - 値の読み取り
 
-    /// 数値(NSNumber)・文字列("66,000" などカンマ付きも可)を Double にする。読めない場合は nil
+    /// 数値(NSNumber)・文字列("66,000" などカンマ付きも可)を Double にする。読めない場合は nil。
+    /// NaN・無限大も nil にする("nan"・"inf"・"1e999" などの文字列や NSDecimalNumber.notANumber が来ても、
+    /// チャートの軸の範囲や移動平均の合計に入り込まないようにする)
     private static func number(_ value: Any?) -> Double? {
+        var parsed: Double?
         if let number = value as? NSNumber {
-            return number.doubleValue
+            parsed = number.doubleValue
+        } else if let text = value as? String {
+            // 3桁区切りのカンマと前後の空白を取り除いてから読む("-" や空文字は読めないので nil)
+            let cleaned = text.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
+            parsed = Double(cleaned)
         }
-        guard let text = value as? String else { return nil }
-        // 3桁区切りのカンマと前後の空白を取り除いてから読む("-" や空文字は読めないので nil)
-        let cleaned = text.replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
-        return Double(cleaned)
+        guard let result = parsed else { return nil }
+        guard result.isFinite else { return nil }
+        return result
     }
 
     /// Date・文字列(dateFormats のどれかの形式)を Date にする。読めない場合は nil

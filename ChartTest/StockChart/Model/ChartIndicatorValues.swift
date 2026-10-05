@@ -84,12 +84,12 @@ import Foundation
 
     /// NSNumber の配列を、チャートで使う値の配列(値なし = nil)にする
     /// - Parameters:
-    ///   - values: 値の配列(NaN は値なし)
+    ///   - values: 値の配列(NaN・無限大は値なし)
     ///   - count: 揃える長さ。短い場合は後ろを値なしで埋め、長い場合は切り詰める。nil ならそのままの長さ
     static func doubles(_ values: [NSNumber], count: Int?) -> [Double?] {
         var result: [Double?] = values.map { number in
             let value = number.doubleValue
-            guard !value.isNaN else { return nil }
+            guard value.isFinite else { return nil }  // NaN・無限大は値なし(軸の範囲が壊れないように)
             return value
         }
         guard let count else { return result }

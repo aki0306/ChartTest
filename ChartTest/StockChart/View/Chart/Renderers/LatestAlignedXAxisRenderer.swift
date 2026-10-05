@@ -78,6 +78,11 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
             super.computeAxisValues(min: visibleMin, max: visibleMax)
             return
         }
+        // 座標の変換ができない場合(NaN・無限大)は、足のインデックス(Int)にできないのでラベルを置かない
+        guard visibleMin.isFinite, visibleMax.isFinite else {
+            self.setLabelIndexes([])
+            return
+        }
 
         // 1分足・日中足(時刻にそろえる場合)は、きりのいい間隔で、毎時 15分を基準にした時刻に置く
         if let minuteMultiple = self.minuteMultiple {

@@ -62,6 +62,13 @@ import Foundation
         super.init()
     }
 
+    /// チャートに描ける足か(値があり、4本値がすべて NaN・無限大でない)。
+    /// Objective-C で NAN を入れて作った足などは、描けないので日時だけの足と同じに扱う(CandleSlots)
+    var isDrawable: Bool {
+        guard self.hasValue else { return false }
+        return self.open.isFinite && self.high.isFinite && self.low.isFinite && self.close.isFinite
+    }
+
     /// VWAP なしで作る(Objective-C からはこちらを使う)
     @objc convenience init(date: Date, open: Double, high: Double, low: Double, close: Double, volume: Double) {
         self.init(date: date, open: open, high: high, low: low, close: close, volume: volume, vwap: nil)
@@ -115,6 +122,7 @@ extension Array where Element == Double {
 ///
 /// ・値のある足の間にある日時だけの足は、捨てる(パーサーは途中の値がない件を直前の足で埋めるので、通常はない)
 /// ・値のある足が1本もない場合は、すべて空(チャートは「表示できる情報はありません」を表示する)
+/// ・4本値に NaN・無限大が入った足(isDrawable = false)も、値のない足として扱う(軸の範囲・指標の計算が壊れないように)
 struct CandleSlots {
     /// 値のある最初の足より前の日時(古い順)
     let leadingDates: [Date]
@@ -124,20 +132,20 @@ struct CandleSlots {
     let trailingDates: [Date]
 
     init(_ allCandles: [StockCandle]) {
-        guard let firstIndex = allCandles.firstIndex(where: { candle in candle.hasValue }) else {
+        guard let firstIndex = allCandles.firstIndex(where: { candle in candle.isDrawable }) else {
             self.leadingDates = []
             self.candles = []
             self.trailingDates = []
             return
         }
-        guard let lastIndex = allCandles.lastIndex(where: { candle in candle.hasValue }) else {
+        guard let lastIndex = allCandles.lastIndex(where: { candle in candle.isDrawable }) else {
             self.leadingDates = []
             self.candles = []
             self.trailingDates = []
             return
         }
         self.leadingDates = allCandles[..<firstIndex].map { candle in candle.date }
-        self.candles = allCandles[firstIndex...lastIndex].filter { candle in candle.hasValue }
+        self.candles = allCandles[firstIndex...lastIndex].filter { candle in candle.isDrawable }
         self.trailingDates = allCandles[(lastIndex + 1)...].map { candle in candle.date }
     }
 }

@@ -25,7 +25,7 @@
 //  ・辞書 → StockCandle の変換(キーの名前・値の型・日付の形式・並べ替え)は StockCandleResponseParser(Model)が行う
 //  ・海外指数の場合は、描画先の market を先に .overseasRealtime / .overseasDaily にしておく
 //    (レスポンスの読み方も market で変わる。海外は終値だけを読むので、.domestic のままだと0件になる)
-//  ・配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちる(Swift の [[String: Any]] に変換できないため)
+//  ・配列に辞書以外の要素(NSNull など)が入っていても落ちない(その要素は飛ばす。StockCandleResponseParser)
 //  ・どのスレッドから呼んでもよい(通信の完了処理から直接呼んでよい)。描画はメインスレッドで行う(MainThread)
 //
 
@@ -56,27 +56,27 @@ final class ChartResponseLoader: NSObject {
     }
 
     /// 1分足のレスポンスを渡して描画する(Objective-C: setOneMinuteResponse:to:)
-    @objc static func setOneMinuteResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
+    @objc static func setOneMinuteResponse(_ response: [Any], to target: StockCandleReceiving) {
         self.setResponse(response, period: .oneMinute, to: target)
     }
 
     /// 日中足のレスポンスを渡して描画する(Objective-C: setIntradayResponse:to:)
-    @objc static func setIntradayResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
+    @objc static func setIntradayResponse(_ response: [Any], to target: StockCandleReceiving) {
         self.setResponse(response, period: .intraday, to: target)
     }
 
     /// 日足のレスポンスを渡して描画する(Objective-C: setDailyResponse:to:)
-    @objc static func setDailyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
+    @objc static func setDailyResponse(_ response: [Any], to target: StockCandleReceiving) {
         self.setResponse(response, period: .daily, to: target)
     }
 
     /// 週足のレスポンスを渡して描画する(Objective-C: setWeeklyResponse:to:)
-    @objc static func setWeeklyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
+    @objc static func setWeeklyResponse(_ response: [Any], to target: StockCandleReceiving) {
         self.setResponse(response, period: .weekly, to: target)
     }
 
     /// 月足のレスポンスを渡して描画する(Objective-C: setMonthlyResponse:to:)
-    @objc static func setMonthlyResponse(_ response: [[String: Any]], to target: StockCandleReceiving) {
+    @objc static func setMonthlyResponse(_ response: [Any], to target: StockCandleReceiving) {
         self.setResponse(response, period: .monthly, to: target)
     }
 
@@ -92,7 +92,7 @@ final class ChartResponseLoader: NSObject {
 
     /// 足種を指定してレスポンスを渡し、描画する(Objective-C: setResponse:period:to:)。
     /// 足種を引数で切り替えたい場合はこちらを使う
-    @objc static func setResponse(_ response: [[String: Any]], period: ChartPeriod, to target: StockCandleReceiving) {
+    @objc static func setResponse(_ response: [Any], period: ChartPeriod, to target: StockCandleReceiving) {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
         guard MainThread.isCurrent(orRetry: { self.setResponse(response, period: period, to: target) }) else { return }
 

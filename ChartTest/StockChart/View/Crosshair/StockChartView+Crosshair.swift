@@ -318,9 +318,12 @@ extension StockChartView {
     private func nearestCandleIndex(toX x: CGFloat) -> Int {
         // このViewの座標 → チャート上の座標 → X軸の値(何本目か。小数)
         let pointInChart = self.convert(CGPoint(x: x, y: 0), to: self.priceChartView)
-        let xValue = self.priceChartView.valueForTouchPoint(point: pointInChart, axis: .right).x
-        let index = Int(xValue.rounded())
-        return min(max(index, 0), self.candles.count - 1)
+        let xValue = Double(self.priceChartView.valueForTouchPoint(point: pointInChart, axis: .right).x)
+        // 座標の変換ができない場合(NaN・無限大)に Int にすると落ちるので、最新の足にする。
+        // 範囲外の大きな値も Int にできないので、先にデータの範囲に収めてから Int にする
+        guard xValue.isFinite else { return self.candles.count - 1 }
+        let clamped = min(max(xValue.rounded(), 0), Double(self.candles.count - 1))
+        return Int(clamped)
     }
 
     /// 指定した足の中心の X(このViewの座標)。外枠の外にある場合は nil
