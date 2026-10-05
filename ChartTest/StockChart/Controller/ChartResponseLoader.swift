@@ -24,6 +24,7 @@
 //
 //  ・辞書 → StockCandle の変換(キーの名前・値の型・日付の形式・並べ替え)は StockCandleResponseParser(Model)が行う
 //  ・海外指数の場合は、描画先の market を先に .overseas にしておく
+//    (レスポンスの読み方も market で変わる。海外は終値だけを読むので、.domestic のままだと0件になる)
 //  ・配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちる(Swift の [[String: Any]] に変換できないため)
 //  ・どのスレッドから呼んでもよい(通信の完了処理から直接呼んでよい)。描画はメインスレッドで行う(MainThread)
 //
@@ -32,8 +33,10 @@ import Foundation
 
 /// 足種を指定してローソク足を受け取り、描画できるもの。
 /// StockChartView・StockChartViewController が対応している。
-/// ほかの画面(このアプリの LandscapeChartViewController など)も、setCandles(_:period:) を持っていれば対応させられる
+/// ほかの画面(このアプリの LandscapeChartViewController など)も、market と setCandles(_:period:) を持っていれば対応させられる
 @objc protocol StockCandleReceiving: AnyObject {
+    /// 指数の種類。レスポンスの読み方(海外は終値だけを読む)を決めるのに使う
+    var market: IndexMarket { get }
     /// 足種を指定してローソク足(日付の古い順)を渡し、描画する
     func setCandles(_ candles: [StockCandle], period: ChartPeriod)
 }
@@ -83,8 +86,9 @@ final class ChartResponseLoader: NSObject {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
         guard MainThread.isCurrent(orRetry: { self.setResponse(response, period: period, to: target) }) else { return }
 
-        // 辞書の配列を、日付の古い順のローソク足に変換してから描く(読めない件は飛ばす)
-        let candles = StockCandleResponseParser.candles(from: response)
+        // 辞書の配列を、日付の古い順のローソク足に変換してから描く(値が読めない件は直前の足の値で埋める)。
+        // 海外指数は終値だけが配信されるので、描画先の指数の種類に合わせて読み方を変える
+        let candles = StockCandleResponseParser.candles(from: response, market: target.market)
         target.setCandles(candles, period: period)
     }
 }

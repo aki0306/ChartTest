@@ -10,12 +10,22 @@
 //  ・キーの名前と日付の形式は、下の Key / dateFormats にまとめている(仮の値。既存アプリのレスポンスに合わせて直す)
 //  ・値は 数値(NSNumber)・文字列("66,000" のようなカンマ付きも可)のどちらでも読める
 //  ・日付は Date・文字列(dateFormats のどれかの形式)のどちらでも読める
-//  ・日付・始値・高値・安値・終値のどれかが読めない件(空・"-" など)は飛ばす。出来高がない件は 0 にする
+//  ・日付が読めない件は飛ばす
+//  ・値が読めない件は、直前の足の値で埋める(既存アプリの 値がない件の穴埋め処理 と同じ)。
+//    ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす
+//  ・国内(IndexMarket.domestic)と海外(.overseas)で、読む値が違う(既存アプリの 値のチェック処理(国内は4本値すべて・海外は終値だけ) と同じ)
+//
+//      | 指数     | 値が読めたとする条件          | 始値・高値・安値 | 出来高                 |
+//      |----------|-------------------------------|------------------|------------------------|
+//      | 国内     | 始値・高値・安値・終値がすべて | レスポンスの値   | レスポンスの値(なければ 0) |
+//      | 海外     | 終値だけ                      | 終値と同じ値     | 0(既存アプリも使っていない) |
+//
 //  ・レスポンスの並び順に関係なく、日付の古い順に並べ替えて返す
 //
 //  使い方:
-//      Swift       : let candles = StockCandleResponseParser.candles(from: response)
-//      Objective-C : NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:response];
+//      Swift       : let candles = StockCandleResponseParser.candles(from: response, market: .overseas)
+//      Objective-C : NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:response market:IndexMarketOverseas];
+//      (market を省略した candles(from:) / candlesFrom: は国内として読む)
 //
 
 import Foundation
@@ -60,35 +70,82 @@ final class StockCandleResponseParser: NSObject {
 
     // MARK: - 変換
 
-    /// レスポンスの配列を、日付の古い順に並べたローソク足の配列に変換する
+    /// レスポンスの配列を、国内指数として、日付の古い順に並べたローソク足の配列に変換する
     /// - Parameter response: レスポンス(辞書の配列。並び順は問わない)
-    /// - Returns: 日付の古い順に並べたローソク足(読めない件は含まない)
     @objc(candlesFrom:)
     static func candles(from response: [[String: Any]]) -> [StockCandle] {
-        var candles: [StockCandle] = []
+        return self.candles(from: response, market: .domestic)
+    }
+
+    /// レスポンスの配列を、日付の古い順に並べたローソク足の配列に変換する
+    /// - Parameters:
+    ///   - response: レスポンス(辞書の配列。並び順は問わない)
+    ///   - market: 指数の種類。海外は終値だけを読む
+    /// - Returns: 日付の古い順に並べたローソク足(値が読めない件は直前の足の値で埋める)
+    @objc(candlesFrom:market:)
+    static func candles(from response: [[String: Any]], market: IndexMarket) -> [StockCandle] {
+        // 直前の足で埋めるには並び順が決まっている必要があるので、先に日付の古い順に並べ替える
+        // (チャートも日付の古い順に並べる必要がある)
+        var entries: [(date: Date, item: [String: Any])] = []
         for item in response {
-            guard let candle = self.candle(from: item) else { continue }  // 読めない件は飛ばす
-            candles.append(candle)
+            guard let date = self.date(item[Key.date]) else { continue }  // 日付が読めない件は飛ばす
+            entries.append((date: date, item: item))
         }
-        // チャートは日付の古い順に並べる必要があるので、レスポンスの並び順に関係なく並べ替える
-        return candles.sorted { first, second in first.date < second.date }
+        entries.sort { first, second in first.date < second.date }
+
+        //   値:   ""    100   ""    105   ""
+        //   結果: 飛ばす 100   100   105   飛ばす
+        //         ↑ 直前の足がない          ↑ 値が読めた最後の足より後ろ
+        var candles: [StockCandle] = []
+        var validCount = 0  // 値が読めた最後の足までの本数
+        for entry in entries {
+            if let candle = self.candle(date: entry.date, item: entry.item, market: market) {
+                candles.append(candle)
+                validCount = candles.count
+                continue
+            }
+            guard let previous = candles.last else { continue }  // 直前の足がない先頭側の件は飛ばす
+            candles.append(self.filledCandle(date: entry.date, item: entry.item, market: market, previous: previous))
+        }
+        // 値が読めた最後の足より後ろの、埋めただけの足は取り除く
+        return Array(candles.prefix(validCount))
     }
 
     /// レスポンスの1件をローソク足に変換する
-    /// - Returns: 日付・始値・高値・安値・終値のどれかが読めない場合は nil
-    static func candle(from item: [String: Any]) -> StockCandle? {
-        guard let date = self.date(item[Key.date]) else { return nil }
-        guard let open = self.number(item[Key.open]) else { return nil }
-        guard let high = self.number(item[Key.high]) else { return nil }
-        guard let low = self.number(item[Key.low]) else { return nil }
+    /// - Returns: 値が読めない場合は nil(国内は4本値のどれか、海外は終値)
+    private static func candle(date: Date, item: [String: Any], market: IndexMarket) -> StockCandle? {
         guard let close = self.number(item[Key.close]) else { return nil }
+        let volume = self.volume(of: item, market: market)
 
-        // 出来高は配信されない場合(指数の1分足・日中足など)があるので、読めなければ 0 にする
-        var volume = 0.0
-        if let value = self.number(item[Key.volume]) {
-            volume = value
+        switch market {
+        case .domestic:
+            guard let open = self.number(item[Key.open]) else { return nil }
+            guard let high = self.number(item[Key.high]) else { return nil }
+            guard let low = self.number(item[Key.low]) else { return nil }
+            return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume)
+        case .overseas:
+            // 海外は終値だけが配信される。始値・高値・安値も終値にしておく(4本値がそろっていないと足を作れないため)
+            return StockCandle(date: date, open: close, high: close, low: close, close: close, volume: volume)
         }
-        return StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume)
+    }
+
+    /// 値が読めない件を、直前の足の4本値で埋めた足にする(日付・出来高はその件のもの)
+    private static func filledCandle(date: Date, item: [String: Any], market: IndexMarket,
+                                     previous: StockCandle) -> StockCandle {
+        return StockCandle(date: date, open: previous.open, high: previous.high, low: previous.low,
+                           close: previous.close, volume: self.volume(of: item, market: market))
+    }
+
+    /// 出来高。国内は配信されない場合(指数の1分足・日中足など)があるので、読めなければ 0 にする。
+    /// 海外は既存アプリも使っていない(空にしている)ので 0 にする
+    private static func volume(of item: [String: Any], market: IndexMarket) -> Double {
+        switch market {
+        case .domestic:
+            guard let volume = self.number(item[Key.volume]) else { return 0 }
+            return volume
+        case .overseas:
+            return 0
+        }
     }
 
     // MARK: - 値の読み取り

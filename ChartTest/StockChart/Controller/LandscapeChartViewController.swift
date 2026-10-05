@@ -299,4 +299,10 @@ final class LandscapeChartViewController: UIViewController {
 // MARK: - API のレスポンスの描画先にする
 
 /// ChartResponseLoader の描画先にできるようにする(setCandles(_:period:) は上で定義済み)
-extension LandscapeChartViewController: StockCandleReceiving {}
+extension LandscapeChartViewController: StockCandleReceiving {
+
+    /// 指数の種類(共通チャート部品の market。設定は chartViewController.market で行う)
+    var market: IndexMarket {
+        return self.chartViewController.market
+    }
+}
