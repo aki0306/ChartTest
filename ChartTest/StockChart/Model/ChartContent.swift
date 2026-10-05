@@ -16,10 +16,6 @@ import Foundation
 enum ChartColorRole: Hashable {
     /// 汎用の線の色(0 = 1本目、1 = 2本目、…)
     case line(Int)
-    /// 上昇(陽線など)
-    case increasing
-    /// 下降(陰線など)
-    case decreasing
     /// 出来高バー
     case volume
     /// 出来高移動平均線

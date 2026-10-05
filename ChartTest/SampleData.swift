@@ -129,11 +129,11 @@ final class SampleData: NSObject {
     ///   - endPrice: 最後の足の値の目安
     ///   - bodySize: 実体(始値〜終値)の大きさの目安
     ///   - wickSize: ヒゲの長さの目安
-    ///   - volumeRange: 出来高の範囲。nil なら出来高 0(出来高のないデータ)
+    ///   - volumeRange: 出来高の範囲
     ///   - seed: 乱数のシード(同じシードなら毎回同じ形になる)
     private static func trendCandles(dates: [Date], startPrice: Double, endPrice: Double,
                                      bodySize: Double, wickSize: Double,
-                                     volumeRange: ClosedRange<Double>?, seed: UInt64) -> [StockCandle] {
+                                     volumeRange: ClosedRange<Double>, seed: UInt64) -> [StockCandle] {
         var rng = SeededGenerator(seed: seed)
         var candles: [StockCandle] = []
         var previousClose = startPrice
@@ -156,10 +156,7 @@ final class SampleData: NSObject {
             let high = max(open, close) + Double.random(in: 0...wickSize, using: &rng)
             let low = min(open, close) - Double.random(in: 0...wickSize, using: &rng)
 
-            var volume = 0.0
-            if let volumeRange {
-                volume = Double.random(in: volumeRange, using: &rng)
-            }
+            let volume = Double.random(in: volumeRange, using: &rng)
 
             candles.append(StockCandle(date: date, open: open, high: high, low: low, close: close, volume: volume))
             previousClose = close

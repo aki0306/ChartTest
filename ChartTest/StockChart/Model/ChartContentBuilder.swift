@@ -315,7 +315,7 @@ struct ChartContentBuilder {
         let sar = self.precomputedValues(\.parabolicSAR)
             ?? TechnicalIndicators.parabolicSAR(
                 highs: self.highs, lows: self.lows, closes: self.closes,
-                step: self.parameters.parabolicStep, maximum: self.parameters.parabolicMaximum).values
+                step: self.parameters.parabolicStep, maximum: self.parameters.parabolicMaximum)
 
         var series = self.movingAverageSeries()
         series[0].label = "\(self.parameters.shortMAPeriod)\(self.parameters.periodUnit)移動平均"
@@ -415,12 +415,12 @@ struct ChartContentBuilder {
     /// 0〜100 の固定範囲。底値・高値ライン(既定 30% / 70%)に基準線を引く
     ///   凡例:「ストキャス %D(14,3) Slow%D」
     private func stochasticsContent() -> SubChartContent {
-        let result = TechnicalIndicators.stochastics(
+        let calculatedD = TechnicalIndicators.stochasticsD(
             highs: self.highs, lows: self.lows, closes: self.closes,
             kPeriod: self.parameters.stochasticsKPeriod, dPeriod: self.parameters.stochasticsDPeriod)
-        let dValues = self.precomputedValues(\.stochasticsD) ?? result.d
+        let dValues = self.precomputedValues(\.stochasticsD) ?? calculatedD
         let slowDValues = self.precomputedValues(\.stochasticsSlowD)
-            ?? TechnicalIndicators.sma(result.d, period: self.parameters.stochasticsDPeriod)
+            ?? TechnicalIndicators.sma(calculatedD, period: self.parameters.stochasticsDPeriod)
         let dLine = ChartSeries(label: "%D(\(parameters.stochasticsKPeriod),\(self.parameters.stochasticsDPeriod))",
                                 values: dValues, colorRole: .line(0))
         let slowDLine = ChartSeries(label: "Slow%D", values: slowDValues, colorRole: .line(1))

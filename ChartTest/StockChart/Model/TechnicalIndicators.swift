@@ -201,13 +201,12 @@ enum TechnicalIndicators {
     ///   AF: 加速因子。step から始まり、EP 更新ごとに step ずつ増える(上限 maximum)
     /// 価格が SAR を割り込んだ(上抜けた)らトレンド転換し、SAR を直前の EP に置き換える。
     ///
-    /// - Returns: 各位置の SAR 値と、その時点が上昇トレンドかどうか
+    /// - Returns: 各位置の SAR 値
     static func parabolicSAR(highs: [Double], lows: [Double], closes: [Double],
-                             step: Double, maximum: Double) -> (values: [Double?], isUptrend: [Bool]) {
+                             step: Double, maximum: Double) -> [Double?] {
         let count = closes.count
         var values = [Double?](repeating: nil, count: count)
-        var isUptrend = [Bool](repeating: true, count: count)
-        guard count >= 2 else { return (values, isUptrend) }
+        guard count >= 2 else { return values }
 
         // 初期トレンドは最初の2本の終値で判定する
         var uptrend = closes[1] >= closes[0]
@@ -225,7 +224,6 @@ enum TechnicalIndicators {
             sar = max(highs[0], highs[1])
         }
         values[1] = sar
-        isUptrend[1] = uptrend
 
         for i in 2..<count {
             sar += accelerationFactor * (extremePoint - sar)
@@ -260,9 +258,8 @@ enum TechnicalIndicators {
                 }
             }
             values[i] = sar
-            isUptrend[i] = uptrend
         }
-        return (values, isUptrend)
+        return values
     }
 
     // MARK: オシレーター系
@@ -312,16 +309,17 @@ enum TechnicalIndicators {
         return result
     }
 
-    /// ストキャスティクス(%)。
-    ///   %K = (終値 − 過去 kPeriod 本の最安値) ÷ (最高値 − 最安値) × 100
-    ///   %D = (終値 − 最安値) の dPeriod 本合計 ÷ (最高値 − 最安値) の dPeriod 本合計 × 100
-    static func stochastics(highs: [Double], lows: [Double], closes: [Double],
-                            kPeriod: Int, dPeriod: Int) -> (k: [Double?], d: [Double?]) {
+    /// ストキャスティクスの %D(%)。Slow%D は、この値の dPeriod 本の移動平均(sma)。
+    ///   %D = (終値 − 過去 kPeriod 本の最安値) の dPeriod 本合計 ÷ (最高値 − 最安値) の dPeriod 本合計 × 100
+    /// - Parameters:
+    ///   - kPeriod: 最高値・最安値を取る期間(設定画面の「高安期間」)
+    ///   - dPeriod: 合計を取る期間(設定画面の「D期間」)
+    static func stochasticsD(highs: [Double], lows: [Double], closes: [Double],
+                             kPeriod: Int, dPeriod: Int) -> [Double?] {
         let count = closes.count
-        var k = [Double?](repeating: nil, count: count)
         var d = [Double?](repeating: nil, count: count)
-        guard kPeriod > 0 else { return (k, d) }
-        guard dPeriod > 0 else { return (k, d) }
+        guard kPeriod > 0 else { return d }
+        guard dPeriod > 0 else { return d }
 
         // 各位置の (終値 − 最安値) と (最高値 − 最安値)
         var numerators = [Double?](repeating: nil, count: count)
@@ -332,12 +330,6 @@ enum TechnicalIndicators {
             guard let lowest = lows[range].min() else { continue }
             numerators[i] = closes[i] - lowest
             denominators[i] = highest - lowest
-            if highest == lowest {
-                // 期間中の高値と安値が同じ(値動きなし)場合は中立の 50 とする
-                k[i] = 50
-            } else {
-                k[i] = (closes[i] - lowest) / (highest - lowest) * 100
-            }
         }
 
         for i in 0..<count where i >= kPeriod - 1 + dPeriod - 1 {
@@ -355,13 +347,13 @@ enum TechnicalIndicators {
                 d[i] = numerator / denominator * 100
             }
         }
-        return (k, d)
+        return d
     }
 
     /// MACD。
-    ///   MACD = 短期EMA − 長期EMA、シグナル = MACD の EMA、ヒストグラム = MACD − シグナル
+    ///   MACD = 短期EMA − 長期EMA、シグナル = MACD の EMA
     static func macd(closes: [Double], shortPeriod: Int, longPeriod: Int, signalPeriod: Int)
-        -> (macd: [Double?], signal: [Double?], histogram: [Double?]) {
+        -> (macd: [Double?], signal: [Double?]) {
 
         // ema は nil を含む配列を受け取るので、[Double] を [Double?] に変換して渡す
         let optionalCloses: [Double?] = closes.map { close in close }
@@ -377,14 +369,7 @@ enum TechnicalIndicators {
 
         // シグナル = MACD の EMA
         let signal = self.ema(macd, period: signalPeriod)
-
-        // ヒストグラム = MACD − シグナル
-        var histogram = [Double?](repeating: nil, count: closes.count)
-        for i in closes.indices {
-            guard let macdValue = macd[i], let signalValue = signal[i] else { continue }
-            histogram[i] = macdValue - signalValue
-        }
-        return (macd, signal, histogram)
+        return (macd, signal)
     }
 
     /// DMI(Wilder 方式)。
@@ -392,24 +377,20 @@ enum TechnicalIndicators {
     ///   −DM = 前日安値 − 当日安値(+DM より大きく、かつ正の場合のみ。それ以外は 0)
     ///   TR  = max(高値 − 安値, |高値 − 前日終値|, |安値 − 前日終値|)
     ///   +DI = 平滑化した +DM ÷ 平滑化した TR × 100(−DI も同様)
-    ///   ADX = DX(= |+DI − −DI| ÷ (+DI + −DI) × 100)の平滑化
     /// 平滑化は Wilder 方式(前回値 − 前回値 ÷ period + 今回値)
     static func dmi(highs: [Double], lows: [Double], closes: [Double], period: Int)
-        -> (plusDI: [Double?], minusDI: [Double?], adx: [Double?]) {
+        -> (plusDI: [Double?], minusDI: [Double?]) {
 
         let count = closes.count
         var plusDI = [Double?](repeating: nil, count: count)
         var minusDI = [Double?](repeating: nil, count: count)
-        var adx = [Double?](repeating: nil, count: count)
-        guard period > 0 else { return (plusDI, minusDI, adx) }
+        guard period > 0 else { return (plusDI, minusDI) }
         // 初期値を作るのに period + 1 本必要(前日との差を取るため)
-        guard count > period else { return (plusDI, minusDI, adx) }
+        guard count > period else { return (plusDI, minusDI) }
 
         var smoothedTR = 0.0
         var smoothedPlusDM = 0.0
         var smoothedMinusDM = 0.0
-        var dxValues: [Double] = []  // ADX の初期値計算用
-        var previousADX: Double?
 
         for i in 1..<count {
             // 当日の +DM / −DM / TR
@@ -444,31 +425,10 @@ enum TechnicalIndicators {
             }
 
             guard smoothedTR > 0 else { continue }
-            let currentPlusDI = smoothedPlusDM / smoothedTR * 100
-            let currentMinusDI = smoothedMinusDM / smoothedTR * 100
-            plusDI[i] = currentPlusDI
-            minusDI[i] = currentMinusDI
-
-            // DX → ADX
-            var dx = 0.0
-            if currentPlusDI + currentMinusDI != 0 {
-                dx = abs(currentPlusDI - currentMinusDI) / (currentPlusDI + currentMinusDI) * 100
-            }
-            if let previous = previousADX {
-                // ADX = (前回ADX × (period − 1) + 今回DX) ÷ period
-                let current = (previous * Double(period - 1) + dx) / Double(period)
-                adx[i] = current
-                previousADX = current
-            } else {
-                dxValues.append(dx)
-                if dxValues.count == period {
-                    let initial = dxValues.reduce(0, +) / Double(period)
-                    adx[i] = initial
-                    previousADX = initial
-                }
-            }
+            plusDI[i] = smoothedPlusDM / smoothedTR * 100
+            minusDI[i] = smoothedMinusDM / smoothedTR * 100
         }
-        return (plusDI, minusDI, adx)
+        return (plusDI, minusDI)
     }
 
     // MARK: VWAP

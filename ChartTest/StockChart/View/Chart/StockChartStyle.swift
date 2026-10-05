@@ -179,8 +179,6 @@ struct StockChartStyle {
             // 色が1つも設定されていなければ文字色で代用する
             guard !self.lineColors.isEmpty else { return self.textColor }
             return self.lineColors[index % self.lineColors.count]
-        case .increasing: return self.increasingColor
-        case .decreasing: return self.decreasingColor
         case .volume: return self.volumeColor
         case .volumeAverage: return self.volumeAverageColor
         case .ichimokuTenkan: return self.ichimokuTenkanColor
