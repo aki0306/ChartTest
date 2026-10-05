@@ -17,6 +17,7 @@
 | コードの書き方(Swift / Objective-C) | [使い方](#使い方swift--objective-c) |
 | 色・文字の大きさなどを変えたい | [見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
 | API のレスポンスを渡したい | [API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す) |
+| 既存アプリの `XxxChartDataUtil` のデータを渡したい | [既存アプリ(XxxChartDataUtil)のデータを渡す](#既存アプリxxxchartdatautilのデータを渡す) |
 | ファイルの中身・仕組みを知りたい | [フォルダ構成](#フォルダ構成)・[データの流れ](#データの流れ) |
 
 ## はじめての導入ガイド
@@ -985,13 +986,127 @@ NSMutableArray *responseArray = [NSMutableArray array];
 | 項目 | 内容 |
 |---|---|
 | キーの名前 | `StockCandleResponseParser.Key`。既存アプリの `XxxChartDataUtil.h` の定数と同じ `kTimestamp`・`kStart`・`kHeight`・`kLow`・`kEnd`・`kTurnover`(`kVWAP` は読まない) |
-| 日付の形式 | `StockCandleResponseParser.dateFormats`(今は仮の形式 `yyyy/MM/dd HH:mm` など。上から順に試す) |
+| 日付の形式 | `StockCandleResponseParser.dateFormats`(`yyyy/MM/dd HH:mm` など。上から順に試す)。`Date`(`NSDate`)もそのまま読める |
 | 値の型 | 数値(`NSNumber`)・文字列(`"66,000"` のようなカンマ付きも可)のどちらでも読める |
 | 読めない件 | 日付が読めない件は飛ばす。値が読めない件は、直前の足の値で埋める(既存アプリの `値がない件の穴埋め処理` / `値がない件の穴埋め処理` と同じ)。ただし、直前の足がない先頭側の件と、値が読めた最後の足より後ろの件は飛ばす |
 | 国内・海外 | 国内は始値・高値・安値・終値がすべて読めた件を有効とし、出来高がなければ 0 にする。海外は終値だけを読み、始値・高値・安値は終値と同じ値、出来高は 0 にする(既存アプリの `4本値のチェック処理` / `終値だけのチェック処理` と同じ) |
 | 変換だけを使う | Swift: `StockCandleResponseParser.candles(from: array, market: .overseas)` / Objective-C: `[StockCandleResponseParser candlesFrom:array market:IndexMarketOverseas]`(`market` を省略すると国内として読む) |
 
 ※ 配列に辞書以外の要素が入っていると、受け取った時点でアプリが落ちます(Swift の `[[String: Any]]` に変換できないため)。
+
+### 既存アプリ(XxxChartDataUtil)のデータを渡す
+
+既存アプリの `XxxChartDataUtil` で取得・整形したデータは、**`dataArrayFromResponse:chartData:qCode:CodeType:` の結果をそのまま** `ChartResponseLoader` に渡せます。
+辞書のキー(`kTimestamp`・`kStart` など)は、`StockCandleResponseParser.Key` を `XxxChartDataUtil.h` の定数と同じ文字列にしてあります。
+
+```
+requestDataWithCode:…(通信)
+  → dataArrayFromResponse:…(辞書の配列に整形。既存のまま)
+  → [ChartResponseLoader setResponse:… period:… to:…](チャートに渡す)
+```
+
+#### enum の対応
+
+enum は既存アプリの Objective-C のもの(`XxxChartData`・`XxxCodeType`)をそのまま使い、チャートに渡すところだけで変換します。
+
+| 既存アプリ(`XxxChartData`) | チャート(`ChartPeriod`) |
+|---|---|
+| `XxxChartDataMin` | `ChartPeriodOneMinute` |
+| `XxxChartDataMidDay` | `ChartPeriodIntraday` |
+| `XxxChartDataDay` | `ChartPeriodDaily` |
+| `XxxChartDataWeek` | `ChartPeriodWeekly` |
+| `XxxChartDataMonth` | `ChartPeriodMonthly` |
+
+| 既存アプリ(`XxxCodeType`) | チャート(`IndexMarket`) |
+|---|---|
+| `XxxCodeTypeJapanStock`・`XxxCodeTypeJapanIndex` | `IndexMarketDomestic` |
+| `XxxCodeTypeOverseasRealtime`・`XxxCodeTypeOverseasDaily` | `IndexMarketOverseas` |
+
+変換の関数は、**既存アプリ側(Objective-C)に置いてください**。`StockChart` フォルダの中で `XxxChart…` の enum を使うと、ほかのアプリに持っていけなくなるためです。
+
+```objc
+// 既存アプリ側(例: XxxChartDataUtil を使っている画面の .m)
+#import "XxxChartDataUtil.h"
+#import "MyApp-Swift.h"   // 「既存アプリのモジュール名-Swift.h」(ステップ 4)
+
+/// XxxChartData → ChartPeriod
+static ChartPeriod ChartPeriodFromXxxChartData(XxxChartData chartData) {
+    switch (chartData) {
+        case XxxChartDataMin:    return ChartPeriodOneMinute;
+        case XxxChartDataMidDay: return ChartPeriodIntraday;
+        case XxxChartDataDay:    return ChartPeriodDaily;
+        case XxxChartDataWeek:   return ChartPeriodWeekly;
+        case XxxChartDataMonth:  return ChartPeriodMonthly;
+    }
+}
+
+/// ChartPeriod → XxxChartData(縦画面・横画面で足種が選ばれたときに、取得する足種を決める)
+static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
+    switch (period) {
+        case ChartPeriodOneMinute: return XxxChartDataMin;
+        case ChartPeriodIntraday:  return XxxChartDataMidDay;
+        case ChartPeriodDaily:     return XxxChartDataDay;
+        case ChartPeriodWeekly:    return XxxChartDataWeek;
+        case ChartPeriodMonthly:   return XxxChartDataMonth;
+    }
+}
+
+/// XxxCodeType → IndexMarket
+static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
+    switch (qCodeType) {
+        case XxxCodeTypeJapanStock:
+        case XxxCodeTypeJapanIndex:
+            return IndexMarketDomestic;
+        case XxxCodeTypeOverseasRealtime:
+        case XxxCodeTypeOverseasDaily:
+            return IndexMarketOverseas;
+    }
+}
+```
+
+`XxxCodeType` にほかの値がある場合は、その値も `case` に加えてください。
+
+#### 取得して渡す(縦画面の例)
+
+```objc
+// qCode・qCodeType は表示する銘柄(既存アプリの値)
+PortraitChartViewController *viewController = [PortraitChartViewController instantiate];
+// 先に market を設定する(海外指数は終値だけを読むので、国内のままだと0件になる)
+viewController.market = IndexMarketFromQCodeType(qCodeType);
+__weak PortraitChartViewController *weakViewController = viewController;
+viewController.onPeriodSelect = ^(ChartPeriod period) {
+    XxxChartData chartData = XxxChartDataFromChartPeriod(period);
+    [XxxChartDataUtil requestDataWithCode:qCode
+                                           qCodeType:qCodeType
+                                           chartData:chartData
+                                       handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
+        if (error != nil) {
+            return;   // エラーのときの扱いは既存アプリに合わせる
+        }
+        NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response
+                                                                  chartData:chartData
+                                                                      qCode:qCode
+                                                                  CodeType:qCodeType];
+        // 通信の完了処理から直接呼んでよい(描画はメインスレッドで行われる)
+        [ChartResponseLoader setResponse:dataArray period:period to:weakViewController];
+    }];
+};
+[viewController reloadChart];   // 選択中の足種(最初は日足)を読み込む
+```
+
+横画面(`LandscapeChartViewController`)の場合は、`market` を `landscape.chartViewController.market` に設定し、`onPeriodSelect` の中身は同じです。
+`StockChartView` にだけ渡す場合は、`chartView.market` を設定してから、`ChartPeriodFromXxxChartData(chartData)` で足種を変換して `setResponse:period:to:` に渡します。
+
+#### 既存アプリと同じところ・違うところ
+
+| 項目 | 内容 |
+|---|---|
+| 日付 | `dataArrayFromResponse:…` の結果(文字列 `"2026/10/02 00:00"`・`"2000/01/01 09:00"`)のままでも、呼び出し側で `NSDate` に変換したあとの配列でも読める。タイムゾーンは既存アプリ(`systemTimeZone`)と同じ端末のタイムゾーン |
+| 値がない件 | 既存アプリ(`値がない件の穴埋め処理` / `値がない件の穴埋め処理`)と同じく、直前の足の値で埋める |
+| 海外指数 | 既存アプリ(`終値だけのチェック処理`)と同じく、終値だけを読む。始値・高値・安値は終値と同じ値になるので、ローソク足にすると横線だけの足になる |
+| 日中足 | `dataArrayFromResponse:…` が5分ごとにまとめた結果を、そのまま日中足として描く |
+| VWAP | **違う**。既存アプリは API の値(`kVWAP`)を使うが、このチャートは出来高から計算する(`kVWAP` は読まない) |
+| 足が1本だけのとき | 寄り付き直後の1分足・日中足や、過去分がない新規上場の銘柄などで起きる。ローソク足・出来高は1本だけ描かれる。移動平均などの指標は期間に足りないので線が出ない(凡例だけ出る)。折線チャートは線を引けないので現在値の破線だけになり、新値足は線ができないので「表示できる情報はありません」になる |
 
 ### 横画面のチャートだけを使う場合
 
