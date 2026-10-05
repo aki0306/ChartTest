@@ -1353,6 +1353,7 @@ ChartTest/
 ├─ ViewController.swift                 … サンプル: 縦/横の画面を切り替える画面
 ├─ SampleData.swift                     … サンプル: 動作確認用のダミーデータ
 ├─ SampleResponses/oneMinute.json      … サンプル: 1分足のデータ(既存アプリの実際のレスポンス。14:35 まで値があり、15:30 まで日時がある)
+├─ SampleResponses/intraday.json       … サンプル: 日中足のデータ(既存アプリの実際のレスポンス。14:35 まで値があり、15:30 まで日時がある)
 ├─ ObjCSample/                          … サンプル: Objective-C から使う例
 ├─ XxxChartEnum.h                       … 既存アプリの enum(そのまま入れている。StockChartView+Xxx.swift が使う)
 ├─ ChartTest-Bridging-Header.h          … Swift から XxxChartEnum.h を読むためのヘッダ

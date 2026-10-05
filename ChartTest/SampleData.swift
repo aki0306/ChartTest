@@ -3,7 +3,7 @@
 //  ChartTest
 //
 //  動作確認用のダミーのローソク足データ(本来は API などから取得する想定)。
-//  1分足だけは、既存アプリの実際のレスポンス(SampleResponses/oneMinute.json。XxxChartDataUtil の
+//  1分足・日中足は、既存アプリの実際のレスポンス(SampleResponses/oneMinute.json・intraday.json。XxxChartDataUtil の
 //  dataArrayFromResponse:… の結果を JSON にしたもの)を使う。
 //
 
@@ -72,7 +72,7 @@ final class SampleData: NSObject {
         case .oneMinute:
             return self.responseCandles(fileName: "oneMinute")
         case .intraday:
-            return self.intradayCandles(intervalMinutes: 5)
+            return self.responseCandles(fileName: "intraday")
         case .daily:
             return self.nikkeiLike()
         case .weekly:
@@ -83,42 +83,15 @@ final class SampleData: NSObject {
     }
 
     /// 既存アプリのレスポンス(SampleResponses の JSON)を、ChartResponseLoader と同じ読み方でローソク足にする。
-    /// 1分足のレスポンスは 9:00〜15:30 の日時があり、値は 14:35 まで(14:36 以降は値が空)なので、
-    /// 値のない時間帯は日時だけの足になる(チャートは 14:35 で足が止まり、右側に 15:30 までの日付が並ぶ)
+    /// 1分足・日中足のレスポンスは 9:00〜15:30 の日時があり、値は 14:35 まで(それより後は値が空)なので、
+    /// 値のない時間帯は日時だけの足になる(チャートは 14:35 で足が止まり、右側に 15:30 までの日付が並ぶ)。
+    /// 日中足は、既存アプリが1分足を5分ごとにまとめた結果(出来高は 0。VWAP は API の値)
     /// - Parameter fileName: JSON のファイル名(拡張子なし)
     private static func responseCandles(fileName: String) -> [StockCandle] {
         guard let url = Bundle.main.url(forResource: fileName, withExtension: "json") else { return [] }
         guard let data = try? Data(contentsOf: url) else { return [] }
         guard let response = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
         return StockCandleResponseParser.candles(from: response, market: .domestic, keepsEmptyDates: true)
-    }
-
-    /// 当日(2026/9/29)の分足。前場 9:00〜11:30、後場 12:30〜15:30。
-    /// 指数は分足の出来高が配信されない想定なので、出来高は 0 にする
-    /// - Parameter intervalMinutes: 1本の分数(1分足なら 1、日中足なら 5)
-    private static func intradayCandles(intervalMinutes: Int) -> [StockCandle] {
-        let calendar = Calendar(identifier: .gregorian)
-        let day = DateComponents(year: 2026, month: 9, day: 29)
-
-        // 前場・後場の時間帯に、intervalMinutes 分おきの時刻を並べる
-        var dates: [Date] = []
-        let sessions = [(start: 9 * 60, end: 11 * 60 + 30), (start: 12 * 60 + 30, end: 15 * 60 + 30)]
-        for session in sessions {
-            var minuteOfDay = session.start
-            while minuteOfDay < session.end {
-                var components = day
-                components.hour = minuteOfDay / 60
-                components.minute = minuteOfDay % 60
-                dates.append(calendar.date(from: components)!)
-                minuteOfDay += intervalMinutes
-            }
-        }
-
-        // 1本の値動きの大きさは、足の長さに合わせて変える
-        let scale = Double(intervalMinutes).squareRoot()
-        return self.trendCandles(dates: dates, startPrice: 65_560, endPrice: 65_480,
-                            bodySize: 12 * scale, wickSize: 8 * scale,
-                            volumeRange: nil, seed: UInt64(20260929 + intervalMinutes))
     }
 
     /// 週足(約2年半ぶん)。毎週金曜日の日付で、4万円台から6万円台へ上がっていく形
