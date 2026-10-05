@@ -1040,7 +1040,7 @@ static ChartPeriod ChartPeriodFromXxxChartData(XxxChartData chartData) {
     }
 }
 
-/// ChartPeriod → XxxChartData(縦画面・横画面で足種が選ばれたときに、取得する足種を決める)
+/// ChartPeriod → XxxChartData(横画面の足種のメニューで選ばれたときに、取得する足種を決める)
 static XxxChartData XxxChartDataFromChartPeriod(ChartPeriod period) {
     switch (period) {
         case ChartPeriodOneMinute: return XxxChartDataMin;
@@ -1066,16 +1066,30 @@ static IndexMarket IndexMarketFromQCodeType(XxxCodeType qCodeType) {
 
 `XxxCodeType` にほかの値がある場合は、その値も `case` に加えてください。
 
-#### 取得して渡す(縦画面の例)
+#### 取得して渡す(縦画面: StockChartView だけを使う)
+
+縦画面は既存アプリの画面をそのまま使い、チャートの部分だけを `StockChartView` にする場合です。
+`StockChartView` には足種のタブがないので、足種の切り替え(タブ・ボタン)は既存アプリの画面に置き、選ばれたときに取得して渡します。
 
 ```objc
-// qCode・qCodeType は表示する銘柄(既存アプリの値)
-PortraitChartViewController *viewController = [PortraitChartViewController instantiate];
-// 先に market を設定する(海外指数は終値だけを読むので、国内のままだと0件になる)
-viewController.market = IndexMarketFromQCodeType(qCodeType);
-__weak PortraitChartViewController *weakViewController = viewController;
-viewController.onPeriodSelect = ^(ChartPeriod period) {
-    XxxChartData chartData = XxxChartDataFromChartPeriod(period);
+// 既存アプリの縦画面(例)
+@property (nonatomic, weak) IBOutlet StockChartView *chartView;   // storyboard に置いた View(クラスを StockChartView にする)
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // 見た目の設定は、データを渡す前に行う(必要なものだけ)
+    self.chartView.visibleCount = 55;
+    // 先に market を設定する(海外指数は終値だけを読むので、国内のままだと0件になる)
+    self.chartView.market = IndexMarketFromQCodeType(self.qCodeType);
+
+    [self loadChartData:XxxChartDataDay];   // 最初は日足
+}
+
+/// 既存アプリの足種のタブ・ボタンが押されたときに呼ぶ
+- (void)loadChartData:(XxxChartData)chartData {
+    NSString *qCode = self.qCode;
+    XxxCodeType qCodeType = self.qCodeType;
+    __weak StockChartView *weakChartView = self.chartView;
     [XxxChartDataUtil requestDataWithCode:qCode
                                            qCodeType:qCodeType
                                            chartData:chartData
@@ -1088,14 +1102,49 @@ viewController.onPeriodSelect = ^(ChartPeriod period) {
                                                                       qCode:qCode
                                                                   CodeType:qCodeType];
         // 通信の完了処理から直接呼んでよい(描画はメインスレッドで行われる)
-        [ChartResponseLoader setResponse:dataArray period:period to:weakViewController];
+        [ChartResponseLoader setResponse:dataArray
+                                  period:ChartPeriodFromXxxChartData(chartData)
+                                      to:weakChartView];
     }];
-};
-[viewController reloadChart];   // 選択中の足種(最初は日足)を読み込む
+}
 ```
 
-横画面(`LandscapeChartViewController`)の場合は、`market` を `landscape.chartViewController.market` に設定し、`onPeriodSelect` の中身は同じです。
-`StockChartView` にだけ渡す場合は、`chartView.market` を設定してから、`ChartPeriodFromXxxChartData(chartData)` で足種を変換して `setResponse:period:to:` に渡します。
+- **足種**: `period` を渡すと、足種に合った指標の期間・日付の書式で描く(例: 週足は移動平均 13/26、日付は `yyyy/M`)
+- **指標**: 何も指定しなければ、移動平均線 + 出来高。指標を変えたい場合は、`ChartResponseLoader` を使わずに変換して渡す(この形では足種ごとの指標の期間・日付の書式は使わない。`setCandles:` も通信の完了処理から直接呼んでよい)
+
+  ```objc
+  NSArray<StockCandle *> *candles = [StockCandleResponseParser candlesFrom:dataArray market:self.chartView.market];
+  [self.chartView setCandles:candles mainIndicator:MainChartIndicatorBollingerBands subIndicator:SubChartIndicatorMacd];
+  ```
+
+- **海外指数**: 選べるのは日足・週足・月足だけ(既存アプリも、海外の1分足・日中足は取得しない)。足種のタブもそれに合わせる
+- **コピーするファイル**: `Controller/` の縦画面・横画面(`Portrait…`・`Landscape…`)と `View/Controls/ChartFooterView` は削除してよい(「[ステップ 3](#ステップ-3-チャートの部品stockchart-フォルダをコピーする)」の表)
+
+#### 取得して渡す(横画面: LandscapeChartViewController)
+
+横画面のチャート(テクニカル・設定画面・下の帯付き)を使う場合は、`market` を `landscape.chartViewController.market` に設定し、足種のメニューで選ばれたとき(`onPeriodSelect`)に取得して渡します。
+足種は `ChartPeriod` で渡されるので、`XxxChartDataFromChartPeriod` で `XxxChartData` に変換して取得します。
+
+```objc
+landscape.chartViewController.market = IndexMarketFromQCodeType(qCodeType);   // 先に設定する
+__weak LandscapeChartViewController *weakLandscape = landscape;
+landscape.onPeriodSelect = ^(ChartPeriod period) {
+    XxxChartData chartData = XxxChartDataFromChartPeriod(period);
+    [XxxChartDataUtil requestDataWithCode:qCode
+                                           qCodeType:qCodeType
+                                           chartData:chartData
+                                       handlingBlock:^(NSInteger stateCode, NSDictionary *response, NSError *error) {
+        if (error != nil) {
+            return;
+        }
+        NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response
+                                                                  chartData:chartData
+                                                                      qCode:qCode
+                                                                  CodeType:qCodeType];
+        [ChartResponseLoader setResponse:dataArray period:period to:weakLandscape];
+    }];
+};
+```
 
 #### 既存アプリと同じところ・違うところ
 
