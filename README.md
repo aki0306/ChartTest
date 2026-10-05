@@ -18,6 +18,7 @@
 | 色・文字の大きさなどを変えたい | [見た目を変える](#5-見た目を変える色文字の位置フォントの大きさ) |
 | API のレスポンスを渡したい | [API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す) |
 | 既存アプリの `XxxChartDataUtil` のデータを渡したい | [既存アプリ(XxxChartDataUtil)のデータを渡す](#既存アプリxxxchartdatautilのデータを渡す) |
+| 指標も既存アプリの計算で描きたい | [既存アプリの計算でチャートを描く](#既存アプリの計算でチャートを描くxxxchartindicatorbuilder) |
 | ファイルの中身・仕組みを知りたい | [フォルダ構成](#フォルダ構成)・[データの流れ](#データの流れ) |
 
 ## はじめての導入ガイド
@@ -940,7 +941,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`qCodeType`・`chartData`・`chartCategory`・`mainChart`・`subChart`(Xxx の enum)、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`setCandles:indicatorValues:`、`indicatorPeriods`、`effectiveChartType`・`effectiveMainIndicator`・`effectiveSubIndicator`、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`qCodeType`・`chartData`・`chartCategory`・`mainChart`・`subChart`(Xxx の enum)、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`xAxisLabelSpacing`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `StockChartViewController` | `setCandles`(足種の指定あり/なし)、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`isTechnicalMenuEnabled`、`chartView`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onChartTypeChange` |
 | `PortraitChartViewController` | `instantiate`、`market`、`onPeriodSelect`、`setCandles(_:period:)`、`candleLoader`、`reloadChart`、`selectedPeriod`、`chartView` | ― |
 | `LandscapeChartViewController` | `instantiate`、`chartViewController`、`setCandles`(足種の指定あり/なし)、`updatePriceInfo`、`onPeriodSelect`、`onReload`、`onRotate` | `onPanelVisibilityChange` |
@@ -1206,6 +1207,52 @@ landscape.onPeriodSelect = ^(ChartPeriod period) {
 | VWAP | 既存アプリと同じく、API の値(`kVWAP`)で描く(指数の日中足のように出来高が 0 でも描ける)。`kVWAP` がないデータの場合だけ、出来高から計算する |
 | 足が1本だけのとき | 寄り付き直後の1分足・日中足や、過去分がない新規上場の銘柄などで起きる。ローソク足・出来高は1本だけ描かれる。移動平均などの指標は期間に足りないので線が出ない(凡例だけ出る)。折線チャートは線を引けないので現在値の破線だけになり、新値足は線ができないので「表示できる情報はありません」になる |
 
+#### 既存アプリの計算でチャートを描く(XxxChartIndicatorBuilder)
+
+テクニカル指標の値も、既存アプリの `XxxChartDataUtil` で計算したものを使う場合です。チャートは指標を計算せず、受け取った値で描くだけになります(凡例・色・軸の範囲は同じ)。
+
+[`ExistingApp/XxxChartIndicatorBuilder.h/.m`](ExistingApp/XxxChartIndicatorBuilder.m) を**既存アプリのターゲットに追加**し、`.m` の `#import "MyApp-Swift.h"` を既存アプリのモジュール名に書き換えて使います(`XxxChartDataUtil` は SciChart などに依存するので、このサンプルプロジェクトではビルドしていません)。
+
+```objc
+#import "XxxChartIndicatorBuilder.h"
+
+// 先に設定する(描く指標・期間・足種は、チャートのこの設定で決まる)
+self.chartView.qCodeType = qCodeType;
+self.chartView.chartData = chartData;
+self.chartView.mainChart = XxxMainChartBollingerBands;
+self.chartView.subChart = XxxSubChartMACD;
+
+// dataArrayFromResponse:… の結果をそのまま渡す(ChartResponseLoader の代わり)
+NSMutableArray *dataArray = [XxxChartDataUtil dataArrayFromResponse:response chartData:chartData qCode:qCode CodeType:qCodeType];
+[XxxChartIndicatorBuilder setDataArray:dataArray toChartView:self.chartView];
+```
+
+`setDataArray:toChartView:` の中で行っていること:
+
+1. `kTimestamp` を `NSDate` にする(`XxxChartDataUtil` の計算は日付が `NSDate` である必要がある。`dateFormatter` で読む)
+2. ローソク足を作る(`StockCandleResponseParser`。値がない件は直前の足で埋める・海外は終値だけ)
+3. チャートが実際に描く指標(`effectiveMainIndicator` / `effectiveSubIndicator` / `effectiveChartType`)だけを、チャートの期間(`indicatorPeriods`。例: RSI 14)で `XxxChartDataUtil` を呼んで計算する
+4. 結果(SciChart のデータ。日付と値の並び)を、日付でローソク足に合わせ直して `ChartIndicatorValues` にする(値がない足は NaN。一目均衡表の先行スパンは、最後の足より先の分を後ろに続ける)
+5. `[chartView setCandles:candles indicatorValues:values]` で描く
+
+| 指標 | 使う `XxxChartDataUtil` のメソッド | 備考 |
+|---|---|---|
+| 移動平均線・多重移動平均線 | `movingAverageWithDataArray:key:kEnd number:` | |
+| ボリンジャーバンド | `bollingerBandsWithDataArray:number:deviation:` | 中心線は `deviation:0`、上限・下限は `±σ`(整数) |
+| 一目均衡表 | `iChiMoKuBaseLineWithArray:` / `iChiMoKuBeforeLinesWithArray:…` / `iChiMoKuDelayLineWithArray:…` | `delay` は `ichimokuShift − 1`(既存アプリの呼び出しと違う場合は合わせる) |
+| パラボリック | `parabolicSARDotWithArray:` | 点の色は、SAR が終値以下なら上昇、上なら下降 |
+| 新値足 | `newPriceWithDataArray:` | 値のない仮の足(250本分の埋め草)は除く |
+| 出来高移動平均 | `movingAverageWithDataArray:key:kTurnover number:` | 棒はローソク足の出来高 |
+| 移動平均乖離率・RSI・サイコロジカル | `movingAverageBaisWithDataArray:` / `rsiWtihDataArray:` / `psychologicalWtihDataArray:` | |
+| ストキャス | `stochasticsKPercentWithDataArray:` / `stochasticsDPercentWithDataArray:…` | %K・%D(Slow%D は使わない) |
+| MACD | `macdLineWithDataArray:…` / `signalLineWithMACDPointDataSeries:` | ヒストグラムは MACD − シグナル |
+| DMI | `plusDIWtihDataArray:` / `minusDIWtihDataArray:` | 既存の計算に ADX はないので、ADX の線と凡例は出さない |
+| VWAP | (計算しない) | API の値(`kVWAP`。`StockCandle.vwap`)で描く |
+
+- 指標の値だけを自分で用意して渡すこともできます(`ChartIndicatorValues` に配列を入れて `setCandles:indicatorValues:`)。値を入れなかった指標は、チャートが計算します
+- 期間などはチャートの値(`chartView.indicatorPeriods`)を使います。期間を変えるときは `ChartPeriod.indicatorParameters` / `IndicatorParameters` を直します
+- チャートのプロパティを読むので、メインスレッドで呼びます(ほかのスレッドから呼んだ場合は、メインスレッドで呼び直します)
+
 ### 横画面のチャートだけを使う場合
 
 縦画面は既存アプリの画面をそのまま使い、横画面のチャート(テクニカル・設定画面・下の帯付き)だけを組み込む場合です。
@@ -1308,6 +1355,7 @@ ChartTest/
    │   ├─ ChartPeriod.swift                 足種(1分足〜月足)・指数の種類(国内/海外)
    │   ├─ ChartType.swift                   チャートの種類(ローソク足・折線チャート など)
    │   ├─ ChartIndicatorType.swift          指標の種類(移動平均線・RSI など)
+   │   ├─ ChartIndicatorValues.swift        チャートの外で計算した指標の値・計算に使う期間
    │   ├─ IndicatorParameters.swift         指標のパラメータ(期間など)
    │   ├─ TechnicalIndicators.swift         指標の計算式
    │   ├─ ChartContent.swift                「何を描くか」を表すデータ
@@ -1352,6 +1400,8 @@ ChartTest/
 docs/images/                            README の画像
 ```
 
+プロジェクトの直下の `ExistingApp/` には、既存アプリのターゲットに入れて使うファイル(`XxxChartIndicatorBuilder.h/.m`。既存アプリの `XxxChartDataUtil` で指標を計算してチャートに渡す)を置いています。SciChart などが必要なため、このサンプルプロジェクトのターゲットには入っていません。
+
 ★ は、使うとき・見た目を変えるときに、最初に見るファイルです。
 
 ### やりたいことから探す
@@ -1379,6 +1429,7 @@ docs/images/                            README の画像
 | `TechnicalIndicators.swift` | 指標の計算(移動平均・ボリンジャーバンド・一目均衡表・RSI・MACD・VWAP・新値足 など) |
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
+| `ChartIndicatorValues.swift` | チャートの外(既存アプリなど)で計算した指標の値(`ChartIndicatorValues`)と、計算に使う期間(`ChartIndicatorPeriods`)。値がある指標はチャートが計算しない |
 | `ChartPeriod.swift` | 足種(1分足〜月足)と足種ごとの表示の違い、指数の種類(国内/海外)ごとに選べる足種 |
 | `IndicatorParameters.swift` | 指標の計算パラメータ(期間など) |
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |

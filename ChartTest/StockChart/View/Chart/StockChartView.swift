@@ -19,6 +19,7 @@
 //  ・chartType / mainIndicator / subIndicator … チャートの種類・指標(先に設定しておく。既定はローソク足・移動平均線 + 出来高)
 //  ・qCodeType / chartData / chartCategory / mainChart / subChartView … 上のプロパティを既存アプリの Xxx の enum で設定する(StockChartView+Xxx.swift)
 //  ・setCandles(_:)          … データを渡すだけで、上のプロパティの設定で描画する
+//  ・setCandles(_:indicatorValues:) … チャートの外で計算した指標の値も渡して描画する(ChartIndicatorValues)
 //  ・setCandles(_:period:)   … 足種を指定して描画する(period も設定される。X軸の書式・移動平均の期間などが足種ごとに変わる)
 //  ・setCandles(_:mainIndicator:subIndicator:) … 指標を指定して描画する
 //  ・display(candles:main:sub:keepsViewport:) … 描画内容を指定して描画する(StockChartViewController が使う)
@@ -453,6 +454,7 @@ final class StockChartView: UIView {
 ///   | プロパティの設定で表示     | setCandles(candles)                                     | [chartView setCandles:candles]                           |
 ///   | 足種を指定して表示         | setCandles(candles, period: .weekly)                    | [chartView setCandles:candles period:ChartPeriodWeekly]  |
 ///   | 海外指数として表示         | setCandles(candles, period: .daily, market: .overseas)  | [chartView setCandles:candles period:… market:IndexMarketOverseas] |
+///   | 計算済みの指標の値で表示   | setCandles(candles, indicatorValues: values)            | [chartView setCandles:candles indicatorValues:values]    |
 ///   | 指標を指定して表示         | setCandles(candles, mainIndicator: .macd, …)            | [chartView setCandles:candles mainIndicator:… subIndicator:…] |
 ///   | パラメータも指定(Swift のみ)| setCandles(candles, mainIndicator: …, subIndicator: …, parameters: …) | (IndicatorParameters は struct のため不可)     |
 ///
@@ -493,32 +495,61 @@ extension StockChartView {
         self.market = market
         // 足種が変わった場合は、足種に合わせた見た目に切り替わる(period の didSet)
         self.period = period
+        self.render(candles, indicatorValues: nil)
+    }
 
+    /// ローソク足データと、チャートの外(既存アプリの Objective-C など)で計算した指標の値を渡して描画する。
+    /// 値が入っている指標は計算せずにその値で描き、入っていない指標はチャートが計算する(ChartIndicatorValues)。
+    /// 足種・指数の種類・チャートの種類・指標は、プロパティ(period・market・chartType・mainIndicator・subIndicator)の設定。
+    ///
+    ///   指標の値は、次の値で計算しておく(凡例・描く指標と合わせるため)
+    ///     ・期間など          : indicatorPeriods
+    ///     ・描くチャートの種類 : effectiveChartType
+    ///     ・描く指標          : effectiveMainIndicator / effectiveSubIndicator
+    ///
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(period の足種のデータ)
+    ///   - indicatorValues: チャートの外で計算した指標の値(candles と同じ並び)。nil ならすべてチャートが計算する
+    @objc func setCandles(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {
+        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, indicatorValues: indicatorValues) }) else { return }
+
+        self.render(candles, indicatorValues: indicatorValues)
+    }
+
+    /// プロパティの設定で、描画内容を組み立てて表示する
+    private func render(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {
         // 選べない組み合わせ(海外指数の出来高・1分足の MACD など)は、選べるものに置き換えて描く(プロパティの値は変えない)
-        let builder = ChartContentBuilder(candles: candles, parameters: period.indicatorParameters)
+        var builder = ChartContentBuilder(candles: candles, parameters: self.period.indicatorParameters)
+        builder.precomputed = indicatorValues
         let content = builder.content(for: self.effectiveChartType, mainIndicator: self.effectiveMainIndicator,
-                                      subIndicator: self.effectiveSubIndicator, market: market)
+                                      subIndicator: self.effectiveSubIndicator, market: self.market)
         self.display(candles: content.candles, main: content.main, sub: content.sub)
     }
 
-    /// 描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
+    /// 指標の計算に使う期間など(今の足種 period のもの)。チャートの外で指標を計算するときは、この値で計算する
+    @objc var indicatorPeriods: ChartIndicatorPeriods {
+        return ChartIndicatorPeriods(parameters: self.period.indicatorParameters)
+    }
+
+    /// 実際に描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
     /// (横画面の StockChartViewController.applyMarket と同じ)
-    private var effectiveChartType: ChartType {
+    @objc var effectiveChartType: ChartType {
         guard ChartType.choices(for: self.market).contains(self.chartType) else { return .candlestick }
         return self.chartType
     }
 
-    /// 描くメインチャートの指標。指数の種類・足種で選べない指標は移動平均線にする
+    /// 実際に描くメインチャートの指標。指数の種類・足種で選べない指標は移動平均線にする
     /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
-    private var effectiveMainIndicator: MainChartIndicator {
+    @objc var effectiveMainIndicator: MainChartIndicator {
         let choices = MainChartIndicator.choices(for: self.market, period: self.period)
         guard choices.contains(self.mainIndicator) else { return .movingAverage }
         return self.mainIndicator
     }
 
-    /// 描くサブチャートの指標。指数の種類・足種で選べない指標は出来高(出来高も選べない海外指数は なし)にする
+    /// 実際に描くサブチャートの指標。指数の種類・足種で選べない指標は出来高(出来高も選べない海外指数は なし)にする
     /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
-    private var effectiveSubIndicator: SubChartIndicator {
+    @objc var effectiveSubIndicator: SubChartIndicator {
         let choices = SubChartIndicator.choices(for: self.market, period: self.period)
         if choices.contains(self.subIndicator) {
             return self.subIndicator

@@ -1,0 +1,158 @@
+//
+//  ChartIndicatorValues.swift
+//  ChartTest
+//
+//  【Model】チャートの外(既存アプリの Objective-C など)で計算したテクニカル指標の値と、
+//  その計算に使う期間。
+//
+//  チャートは、ここに値が入っている指標は計算せずにその値で描く(ChartContentBuilder)。
+//  値が入っていない指標は、今までどおりチャートが計算する(TechnicalIndicators)。
+//  凡例・色・軸の範囲などの見た目は、どちらの場合も同じ(ChartContentBuilder が決める)。
+//
+//  ・値の配列は、渡すローソク足と同じ並び(日付の古い順・1本につき1つ)にする。値がない足は NaN
+//    (配列がローソク足より短い場合、足りない分は値なしとして扱う)
+//  ・一目均衡表の先行スパンだけは、データの右端より先の分を後ろに続けてよい(その分だけ右に伸ばして描く)
+//  ・期間などは ChartIndicatorPeriods(StockChartView.indicatorPeriods)の値で計算する(凡例の「RSI(14)」などと合わせるため)
+//
+//  使い方(Objective-C):
+//      ChartIndicatorValues *values = [[ChartIndicatorValues alloc] init];
+//      values.rsi = rsiValues;   // NSArray<NSNumber *> *(値がない足は @(NAN))
+//      [chartView setCandles:candles indicatorValues:values];
+//
+
+import Foundation
+
+/// チャートの外で計算したテクニカル指標の値。
+/// Objective-C からも使えるよう NSObject を継承したクラスにしている
+@objc final class ChartIndicatorValues: NSObject {
+
+    // MARK: - メインチャート
+
+    /// 移動平均線(短期)
+    @objc var movingAverageShort: [NSNumber]?
+    /// 移動平均線(長期)
+    @objc var movingAverageLong: [NSNumber]?
+    /// 多重移動平均線(ChartIndicatorPeriods.multipleMAPeriods の順)
+    @objc var multipleMovingAverages: [[NSNumber]]?
+    /// ボリンジャーバンドの中心線
+    @objc var bollingerMiddle: [NSNumber]?
+    /// ボリンジャーバンドの上限(ChartIndicatorPeriods.bollingerSigmas の順。例: +1σ, +2σ)
+    @objc var bollingerUppers: [[NSNumber]]?
+    /// ボリンジャーバンドの下限(ChartIndicatorPeriods.bollingerSigmas の順。例: −1σ, −2σ)
+    @objc var bollingerLowers: [[NSNumber]]?
+    /// 一目均衡表の転換線
+    @objc var ichimokuTenkan: [NSNumber]?
+    /// 一目均衡表の基準線
+    @objc var ichimokuKijun: [NSNumber]?
+    /// 一目均衡表の先行スパン1(データの右端より先の分を後ろに続けてよい)
+    @objc var ichimokuSpanA: [NSNumber]?
+    /// 一目均衡表の先行スパン2(データの右端より先の分を後ろに続けてよい)
+    @objc var ichimokuSpanB: [NSNumber]?
+    /// 一目均衡表の遅行スパン
+    @objc var ichimokuChikou: [NSNumber]?
+    /// パラボリック(SAR)。点の色は、SAR が終値より下なら上昇、上なら下降の色にする
+    @objc var parabolicSAR: [NSNumber]?
+    /// 新値足の線(1本 = 始値が線の始点、終値が線の終点の足。古い順)
+    @objc var newPriceCandles: [StockCandle]?
+
+    // MARK: - サブチャート
+
+    /// 出来高移動平均
+    @objc var volumeAverage: [NSNumber]?
+    /// 移動平均乖離率(短期)
+    @objc var deviationShort: [NSNumber]?
+    /// 移動平均乖離率(長期)
+    @objc var deviationLong: [NSNumber]?
+    /// RSI
+    @objc var rsi: [NSNumber]?
+    /// サイコロジカルライン
+    @objc var psychological: [NSNumber]?
+    /// ストキャスティクス %K
+    @objc var stochasticsK: [NSNumber]?
+    /// ストキャスティクス %D
+    @objc var stochasticsD: [NSNumber]?
+    /// MACD
+    @objc var macd: [NSNumber]?
+    /// MACD のシグナル(ヒストグラムは MACD − シグナルで描く)
+    @objc var macdSignal: [NSNumber]?
+    /// DMI の +DI
+    @objc var dmiPlus: [NSNumber]?
+    /// DMI の −DI
+    @objc var dmiMinus: [NSNumber]?
+    /// DMI の ADX(ない場合は ADX の線と凡例を出さない)
+    @objc var dmiADX: [NSNumber]?
+
+    // MARK: - 値の変換
+
+    /// NSNumber の配列を、チャートで使う値の配列(値なし = nil)にする
+    /// - Parameters:
+    ///   - values: 値の配列(NaN は値なし)
+    ///   - count: 揃える長さ。短い場合は後ろを値なしで埋め、長い場合は切り詰める。nil ならそのままの長さ
+    static func doubles(_ values: [NSNumber], count: Int?) -> [Double?] {
+        var result: [Double?] = values.map { number in
+            let value = number.doubleValue
+            guard !value.isNaN else { return nil }
+            return value
+        }
+        guard let count else { return result }
+        if result.count < count {
+            result += [Double?](repeating: nil, count: count - result.count)
+        }
+        return Array(result.prefix(count))
+    }
+}
+
+/// チャートが指標の計算に使う期間など(IndicatorParameters を Objective-C から読めるようにしたもの)。
+/// チャートの外で指標を計算するときは、この値で計算する(凡例の「RSI(14)」などと合わせるため)。
+/// 値は読み取り専用(期間を変えるときは ChartPeriod.indicatorParameters・IndicatorParameters を直す)
+@objc final class ChartIndicatorPeriods: NSObject {
+
+    /// 元のパラメータ
+    let parameters: IndicatorParameters
+
+    init(parameters: IndicatorParameters) {
+        self.parameters = parameters
+        super.init()
+    }
+
+    /// 移動平均線(短期)の期間
+    @objc var shortMAPeriod: Int { self.parameters.shortMAPeriod }
+    /// 移動平均線(長期)の期間
+    @objc var longMAPeriod: Int { self.parameters.longMAPeriod }
+    /// 出来高移動平均の期間
+    @objc var volumeMAPeriod: Int { self.parameters.volumeMAPeriod }
+    /// 多重移動平均線の期間の一覧(短い順)
+    @objc var multipleMAPeriods: [NSNumber] { self.parameters.multipleMAPeriods.map { period in NSNumber(value: period) } }
+    /// ボリンジャーバンドの期間
+    @objc var bollingerPeriod: Int { self.parameters.bollingerPeriod }
+    /// ボリンジャーバンドの σ の倍率の一覧(例: 1, 2)
+    @objc var bollingerSigmas: [NSNumber] { self.parameters.bollingerSigmas.map { sigma in NSNumber(value: sigma) } }
+    /// 一目均衡表の転換線の期間
+    @objc var ichimokuTenkanPeriod: Int { self.parameters.ichimokuTenkanPeriod }
+    /// 一目均衡表の基準線の期間
+    @objc var ichimokuKijunPeriod: Int { self.parameters.ichimokuKijunPeriod }
+    /// 一目均衡表の先行スパン2 の期間
+    @objc var ichimokuSpanBPeriod: Int { self.parameters.ichimokuSpanBPeriod }
+    /// 一目均衡表の先行・遅行させる本数(当日を1本目と数える。実際のずらし幅は この値 − 1)
+    @objc var ichimokuShift: Int { self.parameters.ichimokuShift }
+    /// 移動平均乖離率(短期)の期間
+    @objc var deviationShortPeriod: Int { self.parameters.deviationShortPeriod }
+    /// 移動平均乖離率(長期)の期間
+    @objc var deviationLongPeriod: Int { self.parameters.deviationLongPeriod }
+    /// RSI の期間
+    @objc var rsiPeriod: Int { self.parameters.rsiPeriod }
+    /// サイコロジカルラインの期間
+    @objc var psychologicalPeriod: Int { self.parameters.psychologicalPeriod }
+    /// ストキャスティクス %K の期間
+    @objc var stochasticsKPeriod: Int { self.parameters.stochasticsKPeriod }
+    /// ストキャスティクス %D の期間
+    @objc var stochasticsDPeriod: Int { self.parameters.stochasticsDPeriod }
+    /// MACD 短期EMA の期間
+    @objc var macdShortPeriod: Int { self.parameters.macdShortPeriod }
+    /// MACD 長期EMA の期間
+    @objc var macdLongPeriod: Int { self.parameters.macdLongPeriod }
+    /// MACD シグナルの期間
+    @objc var macdSignalPeriod: Int { self.parameters.macdSignalPeriod }
+    /// DMI の期間
+    @objc var dmiPeriod: Int { self.parameters.dmiPeriod }
+}
