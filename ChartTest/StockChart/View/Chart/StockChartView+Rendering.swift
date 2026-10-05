@@ -84,6 +84,11 @@ extension StockChartView {
         // (一目均衡表の先行スパン・日付だけを並べる時間帯で右に余白がある場合も、値のある最後の足を基準にする)
         self.priceXAxisRenderer.latestIndex = self.candles.count - 1
         self.subXAxisRenderer.latestIndex = self.candles.count - 1
+        // 時刻にそろえてラベルを置く場合(1分足)に、インデックス → 日時を調べるのに使う
+        for renderer in [self.priceXAxisRenderer, self.subXAxisRenderer] {
+            renderer.dates = dates
+            renderer.firstIndex = -self.leadingDates.count
+        }
     }
 
     /// メインチャート(ローソク足 + メイン指標・雲・凡例)を描く

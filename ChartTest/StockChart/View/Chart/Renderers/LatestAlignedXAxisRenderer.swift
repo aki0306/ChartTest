@@ -28,6 +28,8 @@
 //      (何本おきかは足1本の幅・表示本数から決めるので、拡大・縮小したときだけ変わる)
 //    ・足の中心に置くと画面からはみ出すラベルは、ずらさずに表示しない(ずらすと隣のラベルと重なるため)
 //    ・最新の足より右に日付だけを並べる時間帯(1分足・日中足の、これから値が来る時間)がある場合は、右へも同じ間隔で置く
+//    ・1分足・日中足(minuteMultiple = 5)は、最新の足を基準にせず、既存アプリ(XxxCustomChartDateLabelsView)と同じく
+//      5分の倍数の時刻の足を、画面の左から、前のラベルと 5pt 以上空くように詰めて置く(例: 9:15 … 15:15)
 //
 //  ※ このプロジェクトは既定のアクター分離が MainActor だが、継承元の XAxisRenderer は
 //    アクター分離なしで宣言されているため、クラスを nonisolated にして override できるようにしている
@@ -50,6 +52,19 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
     /// メインスレッドからのみ読み書きする
     nonisolated(unsafe) var labelSpacing: CGFloat = 0
 
+    /// ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
+    /// 5 なら、9:00・9:05・9:10 のように 5分の倍数の時刻の足にだけ、左から詰めて置く(1分足・日中足)。
+    /// メインスレッドからのみ読み書きする
+    nonisolated(unsafe) var minuteMultiple: Int?
+
+    /// X軸に並ぶ日時(古い順。minuteMultiple を使うときに、足の時刻を調べる)。
+    /// メインスレッドからのみ読み書きする
+    nonisolated(unsafe) var dates: [Date] = []
+
+    /// dates の先頭の日時のインデックス(値のある足より前に日時を並べる場合は負の値)。
+    /// メインスレッドからのみ読み書きする
+    nonisolated(unsafe) var firstIndex = 0
+
     // MARK: - ラベルの位置を決める
 
     /// X軸ラベルを置く位置(axis.entries = 何本目の足に置くか)を決める。DGCharts が描画のたびに呼ぶ
@@ -60,6 +75,13 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
         // 最新の足が決まっていない(データ設定前)なら、DGCharts 標準の置き方にする
         guard let latestIndex else {
             super.computeAxisValues(min: visibleMin, max: visibleMax)
+            return
+        }
+
+        // 1分足・日中足(時刻にそろえる場合)は、既存アプリと同じく、左から詰めて置く
+        if let minuteMultiple = self.minuteMultiple {
+            let indexes = self.minuteLabelIndexes(multiple: minuteMultiple, visibleMin: visibleMin, visibleMax: visibleMax)
+            self.setLabelIndexes(indexes)
             return
         }
 
@@ -113,6 +135,70 @@ nonisolated final class LatestAlignedXAxisRenderer: XAxisRenderer {
                 continue
             }
             indexes.append(position)
+        }
+        return indexes
+    }
+
+    // MARK: - 時刻にそろえて置く(1分足・日中足)
+
+    /// 1分足・日中足のラベル同士の最小の間隔(pt)。既存アプリ(XxxCustomChartDateLabelsView)と同じ 5pt
+    static let minuteLabelGap: CGFloat = 5
+
+    /// 1分足・日中足のラベルを置く足を選ぶ。既存アプリ(XxxCustomChartDateLabelsView の 5Minute モード)と同じ決め方:
+    ///
+    ///   ・画面の左から順に足を見て、分が multiple の倍数の時刻(9:00・9:05・9:10 …)だけを候補にする
+    ///   ・ラベルの左端が描画領域の左端より右にあり、前のラベルとの間が minuteLabelGap 以上空く候補にだけ置く
+    ///     (ラベルの幅は、画面に出る候補の中で一番広いもので計算する)
+    ///
+    ///   例) 全体(9:00〜15:30)を表示: 9:00〜9:10 は左端からはみ出すので飛ばし、9:15 から間隔を空けて 15:15 まで並ぶ
+    ///
+    /// 時刻で選ぶので、昼休みのように間に足がない時間があっても、ラベルの時刻はずれない
+    /// - Returns: ラベルを置く足のインデックス(左から順)
+    private func minuteLabelIndexes(multiple: Int, visibleMin: Double, visibleMax: Double) -> [Double] {
+        guard multiple > 0 else { return [] }
+        guard let transformer else { return [] }
+        let calendar = Calendar(identifier: .gregorian)
+        let leftmostIndex = Int(visibleMin.rounded(.up))
+        let rightmostIndex = Int(visibleMax.rounded(.down))
+        guard leftmostIndex <= rightmostIndex else { return [] }
+
+        // 候補(分が multiple の倍数の時刻の足)を左から集める
+        var candidates: [Double] = []
+        for index in leftmostIndex...rightmostIndex {
+            let dateIndex = index - self.firstIndex
+            guard self.dates.indices.contains(dateIndex) else { continue }
+            let minute = calendar.component(.minute, from: self.dates[dateIndex])
+            if minute % multiple != 0 {
+                continue
+            }
+            candidates.append(Double(index))
+        }
+
+        // ラベルの幅(既存アプリは「10:10」の幅。ここでは候補の中で一番広い文字の幅)
+        var labelWidth: CGFloat = 0
+        for position in candidates {
+            labelWidth = max(labelWidth, self.labelWidth(at: position))
+        }
+
+        // 左から、前のラベルと重ならない候補だけに置く
+        var indexes: [Double] = []
+        var previousRight: CGFloat?
+        for position in candidates {
+            let centerX = transformer.pixelForValues(x: position, y: 0).x
+            let left = centerX - labelWidth / 2
+            if left < self.viewPortHandler.contentLeft {
+                continue
+            }
+            if let previousRight {
+                if left <= previousRight + Self.minuteLabelGap {
+                    continue
+                }
+            }
+            if !self.labelFitsInChart(at: position) {
+                continue
+            }
+            indexes.append(position)
+            previousRight = centerX + labelWidth / 2
         }
         return indexes
     }

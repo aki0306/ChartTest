@@ -96,6 +96,18 @@ import Foundation
         return parameters
     }
 
+    /// X軸ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
+    /// 1分足・日中足は、既存アプリ(XxxCustomChartDateLabelsView)と同じく、5分の倍数の時刻の足に、
+    /// 左から詰めて置く(例: 全体を表示すると 9:15 … 15:15。LatestAlignedXAxisRenderer)
+    var xAxisLabelMinuteMultiple: Int? {
+        switch self {
+        case .oneMinute, .intraday:
+            return 5
+        case .daily, .weekly, .monthly:
+            return nil
+        }
+    }
+
     /// X軸ラベルの日付の書式
     var dateFormat: String {
         switch self {

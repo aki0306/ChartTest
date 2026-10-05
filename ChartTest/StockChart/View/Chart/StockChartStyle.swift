@@ -73,8 +73,9 @@ struct StockChartStyle {
 
     // MARK: - フォント
 
-    /// X軸ラベル(日付)のフォント
-    var xAxisFont = UIFont.systemFont(ofSize: 10)
+    /// X軸ラベル(日付)のフォント。既存アプリ(XxxCustomChartDateLabelsView)と同じ 8pt
+    /// (1分足・日中足のラベルの並び 9:15 … 15:15 は、この大きさで既存アプリと同じになる)
+    var xAxisFont = UIFont.systemFont(ofSize: 8)
     /// Y軸ラベル(価格・指標の値)のフォント
     var yAxisFont = UIFont.systemFont(ofSize: 10)
     /// 凡例のフォント
@@ -101,6 +102,9 @@ struct StockChartStyle {
     /// この間隔を空けて画面の幅に入るだけラベルを並べる(横画面など、幅が広いときに日付を増やせる)。
     /// 0 なら xAxisLabelCount の個数くらいで並べる
     var xAxisLabelSpacing: CGFloat = 0
+    /// X軸ラベルを置く時刻の分の倍数(nil = 時刻にそろえない)。
+    /// 5 なら、ラベルを 9:00・9:05・9:10 のように 5分の倍数の時刻の足に、左から詰めて置く(1分足・日中足。ChartPeriod.xAxisLabelMinuteMultiple)
+    var xAxisLabelMinuteMultiple: Int?
 
     // MARK: - Y軸ラベル(価格・指標の値)
 
@@ -161,6 +165,7 @@ struct StockChartStyle {
         var style = self
         style.dateFormat = period.dateFormat
         style.xAxisLabelCount = period.xAxisLabelCount
+        style.xAxisLabelMinuteMultiple = period.xAxisLabelMinuteMultiple
         style.visibleCount = period.visibleCount
         return style
     }

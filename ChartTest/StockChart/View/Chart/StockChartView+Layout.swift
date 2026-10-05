@@ -333,6 +333,9 @@ extension StockChartView {
         // ラベル同士の間隔(0 より大きいと、幅に入るだけ並べる。LatestAlignedXAxisRenderer)
         self.priceXAxisRenderer.labelSpacing = self.style.xAxisLabelSpacing
         self.subXAxisRenderer.labelSpacing = self.style.xAxisLabelSpacing
+        // ラベルを置く時刻の分の倍数(1分足は 5分の倍数の時刻だけ。LatestAlignedXAxisRenderer)
+        self.priceXAxisRenderer.minuteMultiple = self.style.xAxisLabelMinuteMultiple
+        self.subXAxisRenderer.minuteMultiple = self.style.xAxisLabelMinuteMultiple
         // 両端のラベルをずらす DGCharts の機能は使わない(ずらすと足の位置と合わず、隣のラベルと重なることがある)。
         // はみ出すラベルは LatestAlignedXAxisRenderer が表示しないようにしている
         axis.avoidFirstLastClippingEnabled = false

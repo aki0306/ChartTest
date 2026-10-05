@@ -115,10 +115,11 @@ final class PortraitChartViewController: UIViewController {
     ///      ├──────────────────────────┤4,000,000,000┤
     ///      │出来高 出来高移動平均      │      0      │ サブ 60pt
     ///      └──────────────────────────┘             ┘
-    ///        7/21   7/31   8/13 ...(11pt)
+    ///        7/21   7/31   8/13 ...(8pt)
     ///      |←───── 画面の幅 - 70 ─────→|←── 70 ──→|
     ///
     /// ・Y軸ラベルは Times 8pt。一番長いラベルの幅の中で中央揃えにし、下端の「0」は枠の内側に収める
+    /// ・日付ラベルは 8pt(既存アプリと同じ。1分足・日中足は 9:15 … 15:15 のように並ぶ)
     /// ・凡例は 10pt。背景を白にして、凡例の文字の後ろのグリッド線を隠す
     /// ・高さ 208pt = 上の余白 8pt + 外枠 180pt(メイン 120 : サブ 60)+ 日付ラベル 20pt
     private func applyChartStyle() {
@@ -129,7 +130,7 @@ final class PortraitChartViewController: UIViewController {
         style.yAxisLabelOffset = 9
         style.centersYAxisLabels = true
         style.keepsYAxisLabelsInside = true
-        style.xAxisFont = .systemFont(ofSize: 11, weight: .medium)
+        style.xAxisFont = .systemFont(ofSize: 8)
         style.legendFont = .systemFont(ofSize: 10)
         style.legendTopInset = 5
         style.subLegendTopInset = 5

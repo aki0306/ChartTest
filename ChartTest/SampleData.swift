@@ -3,6 +3,8 @@
 //  ChartTest
 //
 //  動作確認用のダミーのローソク足データ(本来は API などから取得する想定)。
+//  1分足だけは、既存アプリの実際のレスポンス(SampleResponses/oneMinute.json。XxxChartDataUtil の
+//  dataArrayFromResponse:… の結果を JSON にしたもの)を使う。
 //
 
 import Foundation
@@ -68,7 +70,7 @@ final class SampleData: NSObject {
     static func candles(for period: ChartPeriod) -> [StockCandle] {
         switch period {
         case .oneMinute:
-            return self.intradayCandles(intervalMinutes: 1)
+            return self.responseCandles(fileName: "oneMinute")
         case .intraday:
             return self.intradayCandles(intervalMinutes: 5)
         case .daily:
@@ -78,6 +80,17 @@ final class SampleData: NSObject {
         case .monthly:
             return self.monthlyCandles()
         }
+    }
+
+    /// 既存アプリのレスポンス(SampleResponses の JSON)を、ChartResponseLoader と同じ読み方でローソク足にする。
+    /// 1分足のレスポンスは 9:00〜15:30 の日時があり、値は 14:35 まで(14:36 以降は値が空)なので、
+    /// 値のない時間帯は日時だけの足になる(チャートは 14:35 で足が止まり、右側に 15:30 までの日付が並ぶ)
+    /// - Parameter fileName: JSON のファイル名(拡張子なし)
+    private static func responseCandles(fileName: String) -> [StockCandle] {
+        guard let url = Bundle.main.url(forResource: fileName, withExtension: "json") else { return [] }
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        guard let response = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return StockCandleResponseParser.candles(from: response, market: .domestic, keepsEmptyDates: true)
     }
 
     /// 当日(2026/9/29)の分足。前場 9:00〜11:30、後場 12:30〜15:30。
