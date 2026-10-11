@@ -28,9 +28,6 @@ class ViewController: UIViewController {
     /// 横画面のチャート(Landscape.storyboard)
     private let landscapeViewController = LandscapeChartViewController.instantiate()
 
-    /// 現在の表示が横画面用か(nil = 未適用)
-    private var isLandscapeLayout: Bool?
-
     // MARK: - 銘柄・指数の種類の切り替え
 
     /// 日本株/国内指数/海外指数を切り替えるボタン(左下。縦画面だけに表示する)
@@ -84,13 +81,18 @@ class ViewController: UIViewController {
         self.showCharts(for: self.initialMarket)
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        // 画面の縦横が変わったら表示を切り替える
-        let isLandscape = self.view.bounds.width > self.view.bounds.height
-        if isLandscape != self.isLandscapeLayout {
-            self.applyLayout(isLandscape: isLandscape)
-        }
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        // viewDidLoad の時点では storyboard のサイズのままなので、実際の画面サイズでもう一度判定する
+        self.applyLayout(isLandscape: self.view.bounds.width > self.view.bounds.height)
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        // 画面の縦横が変わるときに表示を切り替える(回転のアニメーションに合わせる)
+        coordinator.animate(alongsideTransition: { _ in
+            self.applyLayout(isLandscape: size.width > size.height)
+        })
     }
 
     // MARK: - Setup
@@ -292,7 +294,6 @@ class ViewController: UIViewController {
 
     /// 縦向き/横画面のチャートを切り替える
     private func applyLayout(isLandscape: Bool) {
-        self.isLandscapeLayout = isLandscape
         self.portraitChartView.isHidden = isLandscape
         self.landscapeViewController.view.isHidden = !isLandscape
         // 切り替えボタン・横画面にするボタンは縦画面だけ(横画面では下の帯の文字と重なるため)
