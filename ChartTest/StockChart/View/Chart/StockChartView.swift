@@ -39,7 +39,8 @@
 //  ・StockChartView+HighLowLabels.swift  … 表示中の範囲の最高値・最安値の文字
 //  ・StockChartView+DGChartEnum.swift    … DGChartEnum の enum で設定するプロパティ(mainChart・subChart など)と銘柄コード
 //  ・StockChartStyle.swift               … 見た目の設定(色・フォント・余白など)
-//  ・ChartAxisFormatters.swift           … 軸ラベル・価格などの数値の書式
+//  ・ChartAxisFormatters.swift           … 軸ラベルの書式
+//  ・ChartNumberFormatter.swift          … 価格などの数値の書式
 //  Chart/Renderers/(DGCharts の描き方を変える部品)
 //  ・LatestAlignedXAxisRenderer.swift    … X軸ラベル(日付)をどの足の下に置くか
 //  ・AlignedYAxisRenderer.swift          … Y軸ラベルの揃え方
@@ -47,7 +48,8 @@
 //  ・SafePinchCombinedChartView.swift    … ピンチ操作のクラッシュ対策をしたチャート
 //  Crosshair/(4本値)
 //  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線・4本値の表示・操作
-//  ・ChartCrosshairViews.swift           … 十字線・4本値の枠・マーカーの部品
+//  ・ChartCrosshairViews.swift           … 十字線・マーカーの部品
+//  ・OHLCInfoView.swift                  … 4本値の枠
 //  初めて読む場合は、このファイル → Layout → Rendering → AxisRange → Crosshair の順がおすすめ。
 //
 //  【描画の流れ】

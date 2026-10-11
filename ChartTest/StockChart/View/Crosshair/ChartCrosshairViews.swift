@@ -2,18 +2,12 @@
 //  ChartCrosshairViews.swift
 //  ChartTest
 //
-//  【View】「4本値」表示用の部品。
+//  【View】「4本値」表示用の部品のうち、十字線とマーカー。
 //
 //  ・CrosshairOverlayView: 十字線(縦線 + 横線)を描く
-//  ・OHLCInfoView: 選択中の足の日付・始値・高値・安値・終値を表示する枠
 //  ・CrosshairMarkerLabel: 横線の値(グレーの六角形)・縦線と横線の位置を指す赤い矢印のマーカー
 //
-//    ┌──────────────────────────────┐
-//    │          2026/04/06          │
-//    │ 始値：53,413.68  高値：56,924.11 │
-//    │ 安値：53,413.68  終値：56,924.11 │
-//    └──────────────────────────────┘
-//
+//  4本値の枠(OHLCInfoView)は OHLCInfoView.swift。
 //  位置の計算は StockChartView が行い、ここでは渡された座標・値を描くだけ。
 //
 
@@ -108,98 +102,6 @@ final class CrosshairOverlayView: UIView {
         self.verticalLine.path = nil
         self.horizontalLine.path = nil
         CATransaction.commit()
-    }
-}
-
-// MARK: - 4本値の枠
-
-/// 日付と4本値(始値・高値・安値・終値)を表示する半透明の枠
-final class OHLCInfoView: UIView {
-
-    /// 日付
-    private let dateLabel = UILabel()
-    /// 「始値：… 高値：…」
-    private let upperLabel = UILabel()
-    /// 「安値：… 終値：…」
-    private let lowerLabel = UILabel()
-
-    /// 日付の書式(足種ごとに変わる。例: 日足 2026/04/06、月足 2026/04、1分足 09:15)
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "yyyy/MM/dd"
-        return formatter
-    }()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        self.setup()
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        self.setup()
-    }
-
-    /// 3行のラベルを縦に並べる
-    private func setup() {
-        self.isUserInteractionEnabled = false
-        self.backgroundColor = UIColor(resource: .chartOHLCBackground)
-        self.layer.cornerRadius = 6
-
-        self.dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
-        self.dateLabel.textAlignment = .center
-        for label in [self.upperLabel, self.lowerLabel] {
-            // 数字の幅をそろえる(値が変わっても文字の位置がずれないように)
-            label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        }
-        for label in [self.dateLabel, self.upperLabel, self.lowerLabel] {
-            label.textColor = UIColor(resource: .chartOHLCText)
-        }
-
-        let stack = UIStackView(arrangedSubviews: [self.dateLabel, self.upperLabel, self.lowerLabel])
-        stack.axis = .vertical
-        stack.spacing = 2
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        self.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: self.topAnchor, constant: 6),
-            stack.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -6),
-            stack.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 10),
-            stack.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -10),
-        ])
-    }
-
-    /// 表示する足を設定する。
-    /// 価格は3桁区切りなし・小数は必要な桁だけ(最大2桁)。例: 6230・5519.11
-    /// - Parameters:
-    ///   - candle: 表示する足
-    ///   - dateFormat: 日付の書式(StockChartStyle.ohlcDateFormat)
-    /// 表示する内容を変える。値のない日時は空欄にする
-    /// - Parameters:
-    ///   - date: 日時(nil なら日付も空欄)
-    ///   - candle: 値のある足(nil なら4本値を空欄にする)
-    ///   - dateFormat: 日付の書式
-    func update(date: Date?, candle: StockCandle?, dateFormat: String) {
-        self.dateFormatter.dateFormat = dateFormat
-        var dateText = ""
-        if let date {
-            dateText = self.dateFormatter.string(from: date)
-        }
-        self.dateLabel.text = dateText
-
-        var open = ""
-        var high = ""
-        var low = ""
-        var close = ""
-        if let candle {
-            open = ChartNumberFormatter.plainValue(candle.open)
-            high = ChartNumberFormatter.plainValue(candle.high)
-            low = ChartNumberFormatter.plainValue(candle.low)
-            close = ChartNumberFormatter.plainValue(candle.close)
-        }
-        self.upperLabel.text = "始値：\(open)  高値：\(high)"
-        self.lowerLabel.text = "安値：\(low)  終値：\(close)"
     }
 }
 

@@ -911,8 +911,8 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/SettingsScreen/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
 | テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/TechnicalMenu/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
 | 「テクニカル」「設定」タブ | [`StockChartViewController.swift`](ChartTest/StockChart/Controller/StockChartViewController.swift) | `configureTabButton` |
-| 4本値の枠(文字の大きさ・背景) | [`ChartCrosshairViews.swift`](ChartTest/StockChart/View/Crosshair/ChartCrosshairViews.swift) | `OHLCInfoView` |
-| 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartAxisFormatters.swift`](ChartTest/StockChart/View/Chart/ChartAxisFormatters.swift) | `ChartNumberFormatter` |
+| 4本値の枠(文字の大きさ・背景) | [`OHLCInfoView.swift`](ChartTest/StockChart/View/Crosshair/OHLCInfoView.swift) | 先頭の「見た目」(余白・行間・角の丸み・フォント) |
+| 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartNumberFormatter.swift`](ChartTest/StockChart/View/Chart/ChartNumberFormatter.swift) | `ChartNumberFormatter` |
 | 凡例の文言(「短期移動平均(5)」など) | [`ChartContentBuilder.swift`](ChartTest/StockChart/Model/Content/ChartContentBuilder.swift) | 各指標の `label` / `legendTitle` |
 
 ### Swift と Objective-C で使えるものの違い
@@ -1201,7 +1201,8 @@ ChartTest/
    │   ├─ Data/                             元になるデータ
    │   │   └─ StockCandle.swift                 ローソク足1本分のデータ
    │   ├─ Display/                          チャートの種類・足種・表示の設定
-   │   │   ├─ ChartPeriod.swift                 足種(1分足〜月足)・指数の種類(国内/海外)
+   │   │   ├─ ChartPeriod.swift                 足種(1分足〜月足)
+   │   │   ├─ IndexMarket.swift                 銘柄・指数の種類(国内/海外)
    │   │   ├─ ChartType.swift                   チャートの種類(ローソク足・折線チャート など)
    │   │   ├─ ChartDisplayOptions.swift         表示オプション(Y軸固定・4本値)
    │   │   └─ ChartStateStore.swift             横画面で選んだ状態を国内/海外ごとに覚える
@@ -1222,7 +1223,8 @@ ChartTest/
    │   │   ├─ StockChartView+AxisRange.swift    スクロール/ズームと、Y軸の範囲
    │   │   ├─ StockChartView+HighLowLabels.swift 最高値・最安値の文字
    │   │   ├─ StockChartStyle.swift             ★ 見た目の設定(色・フォント・余白など)
-   │   │   ├─ ChartAxisFormatters.swift         軸ラベル・価格などの書式
+   │   │   ├─ ChartAxisFormatters.swift         軸ラベルの書式
+   │   │   ├─ ChartNumberFormatter.swift        価格などの数値の書式
    │   │   └─ Renderers/                        DGCharts の描き方を変える部品(ふだんは触らない)
    │   │       ├─ CloudCombinedRenderer.swift       一目均衡表の雲
    │   │       ├─ LatestAlignedXAxisRenderer.swift  日付ラベルの並べ方
@@ -1230,13 +1232,15 @@ ChartTest/
    │   │       └─ SafePinchCombinedChartView.swift  ピンチのクラッシュ対策
    │   └─ Crosshair/                        4本値(十字線)
    │       ├─ StockChartView+Crosshair.swift    十字線の操作・配置
-   │       └─ ChartCrosshairViews.swift         十字線・4本値の枠・マーカーの部品
+   │       ├─ ChartCrosshairViews.swift         十字線・マーカーの部品
+   │       └─ OHLCInfoView.swift                4本値の枠
    │
    ├─ TechnicalMenu/                    テクニカルのメニュー(テクニカルタブ)だけで使うもの
    │   └─ TechnicalMenuView.swift           指標の選択メニュー
    │
    ├─ SettingsScreen/                   設定画面(設定タブ)だけで使うもの
    │   ├─ ChartSettingsView.swift / .xib    設定画面
+   │   ├─ ChartSettingsRows.swift           設定画面の右側の1行(トグル・数値)
    │   ├─ ChartPeriodTabView.swift          足種のタブ(設定画面の上)
    │   └─ ChartSettingsCatalog.swift        設定画面に並べる項目
    │
@@ -1289,7 +1293,8 @@ docs/images/                            README の画像
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
 | `ChartIndicatorValues.swift` | チャートの外(Objective-C など)で計算した指標の値(`ChartIndicatorValues`)と、計算に使う期間(`ChartIndicatorPeriods`)。値がある指標はチャートが計算しない |
-| `ChartPeriod.swift` | 足種(1分足〜月足)と足種ごとの表示の違い、指数の種類(国内/海外)ごとに選べる足種 |
+| `ChartPeriod.swift` | 足種(1分足〜月足)と足種ごとの表示の違い |
+| `IndexMarket.swift` | 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次)と、種類ごとに選べる足種・スクロールできる本数 |
 | `IndicatorParameters.swift` | 指標の計算パラメータ(期間など) |
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |
 | `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる |
@@ -1306,13 +1311,15 @@ docs/images/                            README の画像
 | | `StockChartView+AxisRange.swift` | スクロール/ズームの同期と、Y軸の範囲の調整 |
 | | `StockChartView+HighLowLabels.swift` | 表示中の範囲の最高値・最安値を、その足の上・下に表示する |
 | | `StockChartStyle.swift` | 見た目の設定(色・フォント・余白・初期表示本数・拡大縮小の限界) |
-| | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値)と、価格などの数値の書式(`ChartNumberFormatter`) |
+| | `ChartAxisFormatters.swift` | 軸ラベルの書式(X軸の日付・Y軸の数値) |
+| | `ChartNumberFormatter.swift` | 価格・指標の値などの数値の書式(凡例・4本値の枠・最高値と最安値・下の帯の現在値などで共通) |
 | `Chart/Renderers/` | `CloudCombinedRenderer.swift` | 一目均衡表の雲を塗るための描画処理 |
 | | `LatestAlignedXAxisRenderer.swift` | 日付(X軸)ラベルを並べる描画処理 |
 | | `AlignedYAxisRenderer.swift` | 価格(Y軸)ラベルの中央揃え・枠内に収める描画処理 |
 | | `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
 | `Crosshair/` | `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線・4本値の表示・操作 |
-| | `ChartCrosshairViews.swift` | 十字線・4本値の枠・マーカーの部品 |
+| | `ChartCrosshairViews.swift` | 十字線・マーカーの部品 |
+| | `OHLCInfoView.swift` | 4本値の枠(日付・始値・高値・安値・終値) |
 
 ### 設定画面(`StockChart/SettingsScreen/`)
 
@@ -1321,6 +1328,7 @@ docs/images/                            README の画像
 | ファイル | 内容 |
 |---|---|
 | `ChartSettingsView.swift` / `.xib` | 設定画面(View)。画面の配置(足種のタブ・行・下のボタン)と、右側の行の見本(トグル行・数値行)は XIB で編集する |
+| `ChartSettingsRows.swift` | 設定画面の右側に並べる1行(トグル行 `ChartSettingsToggleRow`・数値行 `ChartSettingsStepperRow`。View) |
 | `ChartPeriodTabView.swift` | 足種のタブ(View。設定画面の上部) |
 | `ChartSettingsCatalog.swift` | 設定画面に並べる項目と、編集できるパラメータ・設定できる足種の定義(Model) |
 
