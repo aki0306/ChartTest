@@ -91,7 +91,7 @@ final class SampleData: NSObject {
     private static let latestOneMinuteCandle = SampleData.candles(for: .oneMinute).last { candle in candle.hasValue }
 
     /// 現在値。当日の1分足の最後の足の終値(日足・週足・月足の最後の足の終値も、この値にそろえている)
-    static var latestPrice: Double {
+    @objc static var latestPrice: Double {
         guard let candle = self.latestOneMinuteCandle else {
             return 0
         }
@@ -100,7 +100,7 @@ final class SampleData: NSObject {
 
     /// 現在値の日時。日足の最後の日(2026/9/25)に、1分足の最後の足の時刻(14:35)を合わせたもの
     /// (1分足のレスポンスの日付は、時刻だけを使うための仮の日付「2000/01/01」なので、そのままでは使えない)
-    static var latestDate: Date {
+    @objc static var latestDate: Date {
         let calendar = Calendar(identifier: .gregorian)
         var components = DateComponents(year: 2026, month: 9, day: 25)
         if let candle = self.latestOneMinuteCandle {

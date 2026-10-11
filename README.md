@@ -523,7 +523,7 @@ Swift のクラスは、Xcode が自動で作るヘッダ `<プロダクトモ�
 
 | ファイル | 内容 |
 |---|---|
-| [`Sample/ObjCSample/ObjCChartViewController.m`](ChartTest/Sample/ObjCSample/ObjCChartViewController.m) | 指標メニュー付きのチャート(`StockChartViewController`)を使う |
+| [`Sample/ObjCSample/ObjCViewController.m`](ChartTest/Sample/ObjCSample/ObjCViewController.m) | 縦向きのチャート(`StockChartView`)と横画面のチャート(`LandscapeChartViewController`)を、画面の向きに合わせて切り替える(`ViewController.swift` を Objective-C で書いたもの) |
 
 ### 1. データを作る
 
