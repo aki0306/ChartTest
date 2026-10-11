@@ -65,7 +65,7 @@ class ViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.view.backgroundColor = .white
+        self.view.backgroundColor = UIColor(resource: .sampleBackground)
 
         // データを渡す前に埋め込んでおく(チャートが正しいサイズで初期表示位置を計算できるように)
         self.setupPortraitChartView()
@@ -99,6 +99,7 @@ class ViewController: UIViewController {
     /// 上端は、足種の切り替えボタンの下に合わせる(setupPeriodControl)
     private func setupPortraitChartView() {
         self.portraitChartView.translatesAutoresizingMaskIntoConstraints = false
+        self.portraitChartView.accessibilityIdentifier = "portrait.chartView"  // UI テストで探すための名前
         self.view.addSubview(self.portraitChartView)
         NSLayoutConstraint.activate([
             self.portraitChartView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 8),
@@ -134,6 +135,7 @@ class ViewController: UIViewController {
         }
         self.periodControl.addTarget(self, action: #selector(self.periodControlChanged), for: .valueChanged)
         self.periodControl.translatesAutoresizingMaskIntoConstraints = false
+        self.periodControl.accessibilityIdentifier = "portrait.periodControl"  // UI テストで探すための名前
         self.view.addSubview(self.periodControl)
         NSLayoutConstraint.activate([
             self.periodControl.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 16),
@@ -183,6 +185,7 @@ class ViewController: UIViewController {
         self.rotateButton.configuration?.imagePadding = 6
         self.rotateButton.addTarget(self, action: #selector(self.rotateButtonTapped), for: .touchUpInside)
         self.rotateButton.translatesAutoresizingMaskIntoConstraints = false
+        self.rotateButton.accessibilityIdentifier = "portrait.rotateButton"  // UI テストで探すための名前
         self.view.addSubview(self.rotateButton)
         NSLayoutConstraint.activate([
             self.rotateButton.topAnchor.constraint(equalTo: self.portraitChartView.bottomAnchor, constant: 16),
@@ -206,6 +209,7 @@ class ViewController: UIViewController {
         }
         self.marketControl.addTarget(self, action: #selector(self.marketControlChanged), for: .valueChanged)
         self.marketControl.translatesAutoresizingMaskIntoConstraints = false
+        self.marketControl.accessibilityIdentifier = "portrait.marketControl"  // UI テストで探すための名前
         self.view.addSubview(self.marketControl)
         NSLayoutConstraint.activate([
             self.marketControl.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 16),

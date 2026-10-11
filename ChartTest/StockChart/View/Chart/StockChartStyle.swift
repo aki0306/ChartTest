@@ -3,6 +3,7 @@
 //  ChartTest
 //
 //  【View】チャートの見た目(色・フォント・レイアウト・初期表示範囲)の設定。
+//  色の値は StockChartColors.xcassets(Common フォルダ)の色セットにある。
 //  Model が指定した色の役割(ChartColorRole)を、実際の色に変換する役目も持つ。
 //
 
@@ -24,53 +25,53 @@ struct StockChartStyle {
     // MARK: - 色
 
     /// 陽線(終値 > 始値)などの上昇を表す色。日本式に合わせて赤
-    var increasingColor = UIColor(hex: 0xe5003e)
+    var increasingColor = UIColor(resource: .chartIncreasing)
     /// 陰線(終値 < 始値)などの下降を表す色。日本式に合わせて青
-    var decreasingColor = UIColor(hex: 0x157efb)
+    var decreasingColor = UIColor(resource: .chartDecreasing)
     /// 汎用の線の色(ChartColorRole.line(n) の n 番目。足りない場合は先頭から繰り返す)
     var lineColors: [UIColor] = [
-        UIColor(hex: 0x94cb10),  // 0: 黄緑(短期移動平均・ボリンジャーの中心線・RSI・%D・シグナル・+DI など)
-        UIColor(hex: 0xff8a00),  // 1: オレンジ(長期移動平均・多重移動平均・±3σ・Slow%D・MACD・−DI など)
-        UIColor(hex: 0x157efb),  // 2: 青(サイコロジカル)
-        UIColor(hex: 0x00a2ff),  // 3: 水色(ボリンジャーの ±1σ)
-        UIColor(hex: 0x006cff),  // 4: 濃い青(ボリンジャーの ±2σ)
+        UIColor(resource: .chartLine0),  // 0: 黄緑(短期移動平均・ボリンジャーの中心線・RSI・%D・シグナル・+DI など)
+        UIColor(resource: .chartLine1),  // 1: オレンジ(長期移動平均・多重移動平均・±3σ・Slow%D・MACD・−DI など)
+        UIColor(resource: .chartLine2),  // 2: 青(サイコロジカル)
+        UIColor(resource: .chartLine3),  // 3: 水色(ボリンジャーの ±1σ)
+        UIColor(resource: .chartLine4),  // 4: 濃い青(ボリンジャーの ±2σ)
     ]
     /// 出来高バーの色(黄緑)
-    var volumeColor = UIColor(hex: 0x94cb10)
+    var volumeColor = UIColor(resource: .chartVolume)
     /// 出来高移動平均線の色(青)
-    var volumeAverageColor = UIColor(hex: 0x157efb)
+    var volumeAverageColor = UIColor(resource: .chartVolumeAverage)
     /// 一目均衡表: 転換線の色(青)
-    var ichimokuTenkanColor = UIColor(hex: 0x005bd8)
+    var ichimokuTenkanColor = UIColor(resource: .chartIchimokuTenkan)
     /// 一目均衡表: 基準線の色(黄緑)
-    var ichimokuKijunColor = UIColor(hex: 0x94cb10)
+    var ichimokuKijunColor = UIColor(resource: .chartIchimokuKijun)
     /// 一目均衡表: 先行スパン1 の色(陽雲の色にも使う。黄緑)
-    var ichimokuSpanAColor = UIColor(hex: 0x94cb10)
+    var ichimokuSpanAColor = UIColor(resource: .chartIchimokuSpanA)
     /// 一目均衡表: 先行スパン2 の色(陰雲の色にも使う。オレンジ)
-    var ichimokuSpanBColor = UIColor(hex: 0xff8a00)
+    var ichimokuSpanBColor = UIColor(resource: .chartIchimokuSpanB)
     /// 一目均衡表: 遅行スパンの色(グレー)
-    var ichimokuChikouColor = UIColor(hex: 0x666666)
+    var ichimokuChikouColor = UIColor(resource: .chartIchimokuChikou)
     /// パラボリック(SAR)の点の色(グレー)
-    var parabolicColor = UIColor(hex: 0x666666)
+    var parabolicColor = UIColor(resource: .chartParabolic)
     /// VWAP の線・点の色(赤)
-    var vwapColor = UIColor(hex: 0xe5003e)
+    var vwapColor = UIColor(resource: .chartVWAP)
     /// 新値足の色(陽線・陰線とも同じ青。陽線は枠だけ、陰線は塗りつぶしで区別する)
-    var newPriceColor = UIColor(hex: 0x157efb)
+    var newPriceColor = UIColor(resource: .chartNewPrice)
     /// 折線チャートの線の色(青)
-    var lineChartColor = UIColor(hex: 0x157efb)
+    var lineChartColor = UIColor(resource: .chartCloseLine)
     /// 現在値の破線(新値足・折線チャート)の色
-    var currentPriceLineColor = UIColor.darkGray
+    var currentPriceLineColor = UIColor(resource: .chartCurrentPriceLine)
     /// 雲の不透明度(先行スパンの色をこの不透明度で塗る。約 25%)
     var cloudAlpha: CGFloat = 0.25
     /// オシレーターの基準線(RSI の 20/80 など)の色(赤)
-    var referenceLineColor = UIColor(hex: 0xe5003e)
+    var referenceLineColor = UIColor(resource: .chartReferenceLine)
     /// 横グリッド線の色
-    var gridColor = UIColor.systemGray5
+    var gridColor = UIColor(resource: .chartGrid)
     /// 外枠の色
-    var borderColor = UIColor.black
+    var borderColor = UIColor(resource: .chartBorder)
     /// メイン/サブの区切り線の色(グレー)
-    var dividerColor = UIColor(hex: 0xaaaaaa)
+    var dividerColor = UIColor(resource: .chartDivider)
     /// 軸ラベル・凡例タイトルの文字色
-    var textColor = UIColor.black
+    var textColor = UIColor(resource: .chartText)
 
     // MARK: - フォント
 
@@ -204,18 +205,5 @@ struct StockChartStyle {
         case .closeLine:
             return self.lineChartColor
         }
-    }
-}
-
-// MARK: - 色コードから色を作る
-
-private extension UIColor {
-
-    /// 0xRRGGBB の色コードから色を作る
-    convenience init(hex: UInt32) {
-        let red = CGFloat((hex >> 16) & 0xff) / 255
-        let green = CGFloat((hex >> 8) & 0xff) / 255
-        let blue = CGFloat(hex & 0xff) / 255
-        self.init(red: red, green: green, blue: blue, alpha: 1)
     }
 }

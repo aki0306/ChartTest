@@ -10,8 +10,19 @@
 		1F20A59F3068506D003E502E /* DGCharts in Frameworks */ = {isa = PBXBuildFile; productRef = 1F20A59E3068506D003E502E /* DGCharts */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		1F20A5B03068700000000007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1F20A57D30684F69003E502E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1F20A58430684F69003E502E;
+			remoteInfo = ChartTest;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		1F20A58530684F69003E502E /* ChartTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ChartTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1F20A5B03068700000000001 /* ChartTestUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChartTestUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -33,6 +44,11 @@
 			path = ChartTest;
 			sourceTree = "<group>";
 		};
+		1F20A5B03068700000000002 /* ChartTestUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ChartTestUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -42,6 +58,11 @@
 				1F20A59F3068506D003E502E /* DGCharts in Frameworks */,
 			);
 		};
+		1F20A5B03068700000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -49,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				1F20A58730684F69003E502E /* ChartTest */,
+				1F20A5B03068700000000002 /* ChartTestUITests */,
 				1F20A58630684F69003E502E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -57,6 +79,7 @@
 			isa = PBXGroup;
 			children = (
 				1F20A58530684F69003E502E /* ChartTest.app */,
+				1F20A5B03068700000000001 /* ChartTestUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,6 +108,27 @@
 			productReference = 1F20A58530684F69003E502E /* ChartTest.app */;
 			productType = "com.apple.product-type.application";
 		};
+		1F20A5B03068700000000006 /* ChartTestUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1F20A5B03068700000000009 /* Build configuration list for PBXNativeTarget "ChartTestUITests" */;
+			buildPhases = (
+				1F20A5B03068700000000003 /* Sources */,
+				1F20A5B03068700000000004 /* Frameworks */,
+				1F20A5B03068700000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1F20A5B03068700000000008 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				1F20A5B03068700000000002 /* ChartTestUITests */,
+			);
+			name = ChartTestUITests;
+			productName = ChartTestUITests;
+			productReference = 1F20A5B03068700000000001 /* ChartTestUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -97,6 +141,10 @@
 				TargetAttributes = {
 					1F20A58430684F69003E502E = {
 						CreatedOnToolsVersion = 27.0;
+					};
+					1F20A5B03068700000000006 = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 1F20A58430684F69003E502E;
 					};
 				};
 			};
@@ -118,12 +166,18 @@
 			projectRoot = "";
 			targets = (
 				1F20A58430684F69003E502E /* ChartTest */,
+				1F20A5B03068700000000006 /* ChartTestUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		1F20A58330684F69003E502E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		1F20A5B03068700000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -136,7 +190,20 @@
 			files = (
 			);
 		};
+		1F20A5B03068700000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1F20A5B03068700000000008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1F20A58430684F69003E502E /* ChartTest */;
+			targetProxy = 1F20A5B03068700000000007 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		1F20A59930684F6A003E502E /* Debug configuration for PBXNativeTarget "ChartTest" */ = {
@@ -144,9 +211,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TCBGC86T9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChartTest/App/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -184,9 +253,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TCBGC86T9Y;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ChartTest/App/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -341,6 +412,44 @@
 			};
 			name = Release;
 		};
+		1F20A5B0306870000000000A /* Debug configuration for PBXNativeTarget "ChartTestUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Sample.ChartTestUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = ChartTest;
+			};
+			name = Debug;
+		};
+		1F20A5B0306870000000000B /* Release configuration for PBXNativeTarget "ChartTestUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Sample.ChartTestUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = ChartTest;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -357,6 +466,14 @@
 			buildConfigurations = (
 				1F20A59930684F6A003E502E /* Debug configuration for PBXNativeTarget "ChartTest" */,
 				1F20A59A30684F6A003E502E /* Release configuration for PBXNativeTarget "ChartTest" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		1F20A5B03068700000000009 /* Build configuration list for PBXNativeTarget "ChartTestUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1F20A5B0306870000000000A /* Debug configuration for PBXNativeTarget "ChartTestUITests" */,
+				1F20A5B0306870000000000B /* Release configuration for PBXNativeTarget "ChartTestUITests" */,
 			);
 			defaultConfigurationName = Release;
 		};

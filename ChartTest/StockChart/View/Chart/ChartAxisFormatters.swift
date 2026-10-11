@@ -16,8 +16,10 @@ import DGCharts
 
 // MARK: - X軸(インデックス → 日付)
 
-/// X軸の値(データのインデックス)を日付文字列に変換するフォーマッタ
-final class DateAxisValueFormatter: AxisValueFormatter {
+/// X軸の値(データのインデックス)を日付文字列に変換するフォーマッタ。
+/// X軸の描画処理(LatestAlignedXAxisRenderer。アクター分離なし)から widestSampleText を読むので、
+/// このプロジェクトの既定(MainActor)から外して nonisolated にしている
+nonisolated final class DateAxisValueFormatter: AxisValueFormatter {
 
     /// インデックスに対応する日付の配列
     private let dates: [Date]

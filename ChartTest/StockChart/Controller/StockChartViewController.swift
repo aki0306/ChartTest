@@ -137,7 +137,7 @@ final class StockChartViewController: UIViewController {
     var onPanelVisibilityChange: ((Bool) -> Void)?
 
     /// パネルを開いているときに、後ろ(チャート)に重ねる色。半透明の黒で、背景をグレーに見せる
-    static let dimmingColor = UIColor.black.withAlphaComponent(0.35)
+    static let dimmingColor = UIColor(resource: .chartDimming)
 
     /// メインチャートに表示する指標。変更すると表示位置を保ったまま再描画する
     @objc var mainIndicator: MainChartIndicator = StockChartViewController.initialState.mainIndicator {
@@ -503,12 +503,14 @@ final class StockChartViewController: UIViewController {
         self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
         self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market, period: self.period)
         self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market, period: self.period)
+        self.menuView.accessibilityIdentifier = "chart.technicalMenu"  // UI テストで探すための名前
         self.view.addSubview(self.menuView)
 
         // 設定画面: このViewの左側に幅 75% で表示(左側リスト + 右側パネル)
         self.settingsView.translatesAutoresizingMaskIntoConstraints = false
         self.settingsView.isHidden = true
         self.settingsView.delegate = self
+        self.settingsView.accessibilityIdentifier = "chart.settingsView"  // UI テストで探すための名前
         self.view.addSubview(self.settingsView)
 
         NSLayoutConstraint.activate([
@@ -528,6 +530,9 @@ final class StockChartViewController: UIViewController {
     private func setupTabs() {
         self.configureTabButton(self.technicalTabButton, title: "テクニカル", action: #selector(self.technicalTabTapped))
         self.configureTabButton(self.settingsTabButton, title: "設定", action: #selector(self.settingsTabTapped))
+        // UI テストで探すための名前(タブの文字は縦書きで1文字ずつ改行しているので、文字では探しにくい)
+        self.technicalTabButton.accessibilityIdentifier = "chart.technicalTab"
+        self.settingsTabButton.accessibilityIdentifier = "chart.settingsTab"
 
         self.tabStack.addArrangedSubview(self.technicalTabButton)
         self.tabStack.addArrangedSubview(self.settingsTabButton)
@@ -559,8 +564,8 @@ final class StockChartViewController: UIViewController {
         button.titleLabel?.numberOfLines = 0
         button.titleLabel?.font = .boldSystemFont(ofSize: 14)
         button.titleLabel?.textAlignment = .center
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+        button.setTitleColor(UIColor(resource: .chartPanelTabText), for: .normal)
+        button.backgroundColor = UIColor(resource: .chartPanelTab)
         button.layer.cornerRadius = 6
         button.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
         button.addTarget(self, action: action, for: .touchUpInside)

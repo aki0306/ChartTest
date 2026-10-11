@@ -259,7 +259,7 @@ extension StockChartView {
         self.priceLegendLabel.backgroundColor = self.style.legendBackgroundColor
         self.subLegendLabel.backgroundColor = self.style.legendBackgroundColor
         self.crosshairView.lineColor = self.style.textColor
-        self.valueMarker.fillColor = UIColor.darkGray.withAlphaComponent(0.85)
+        self.valueMarker.fillColor = UIColor(resource: .chartValueMarkerFill)
         self.dateMarker.fillColor = self.style.increasingColor
         self.yAxisMarker.fillColor = self.style.increasingColor
         // 画像が設定されていれば、形を塗る代わりに画像を描く

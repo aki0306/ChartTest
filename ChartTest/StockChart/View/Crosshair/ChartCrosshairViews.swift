@@ -30,7 +30,7 @@ final class CrosshairOverlayView: UIView {
     private let horizontalLine = CAShapeLayer()
 
     /// 線の色
-    var lineColor: UIColor = .black {
+    var lineColor = UIColor(resource: .chartCrosshairLine) {
         didSet {
             self.applyLineStyle()
         }
@@ -144,7 +144,7 @@ final class OHLCInfoView: UIView {
     /// 3行のラベルを縦に並べる
     private func setup() {
         self.isUserInteractionEnabled = false
-        self.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        self.backgroundColor = UIColor(resource: .chartOHLCBackground)
         self.layer.cornerRadius = 6
 
         self.dateLabel.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -154,7 +154,7 @@ final class OHLCInfoView: UIView {
             label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         }
         for label in [self.dateLabel, self.upperLabel, self.lowerLabel] {
-            label.textColor = .white
+            label.textColor = UIColor(resource: .chartOHLCText)
         }
 
         let stack = UIStackView(arrangedSubviews: [self.dateLabel, self.upperLabel, self.lowerLabel])
@@ -228,7 +228,7 @@ final class CrosshairMarkerLabel: UILabel {
     /// マーカーの形
     let shape: Shape
     /// 背景の塗り色
-    var fillColor: UIColor = .darkGray {
+    var fillColor = UIColor(resource: .chartMarkerFill) {
         didSet {
             self.setNeedsDisplay()
         }
@@ -263,7 +263,7 @@ final class CrosshairMarkerLabel: UILabel {
         super.init(frame: .zero)
         self.isUserInteractionEnabled = false
         self.backgroundColor = .clear  // 背景は draw で形に沿って塗る
-        self.textColor = .white
+        self.textColor = UIColor(resource: .chartMarkerText)
         self.textAlignment = .center
         self.font = .monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
     }

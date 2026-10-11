@@ -138,9 +138,9 @@ final class ChartSettingsView: UIView {
     // MARK: - 見た目(左リスト)
 
     /// 見出しの背景色
-    private let headerColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+    private let headerColor = UIColor(resource: .chartMenuHeader)
     /// 選択中の項目の背景色
-    private let selectedRowColor = UIColor(white: 0.40, alpha: 1)
+    private let selectedRowColor = UIColor(resource: .chartMenuSelectedRow)
 
     // MARK: - XIB の部品
 
@@ -331,10 +331,10 @@ final class ChartSettingsView: UIView {
         if isSelected {
             // 選択中: 太字・白文字(背景は selectedRowColor)
             content.textProperties.font = .boldSystemFont(ofSize: 16)
-            content.textProperties.color = .white
+            content.textProperties.color = UIColor(resource: .chartMenuSelectedRowText)
         } else {
             content.textProperties.font = .systemFont(ofSize: 16)
-            content.textProperties.color = .black
+            content.textProperties.color = UIColor(resource: .chartMenuRowText)
         }
         // 長い項目名(ボリンジャーバンドなど)は省略せず、文字を縮小して1行に収める
         content.textProperties.numberOfLines = 1
@@ -344,7 +344,7 @@ final class ChartSettingsView: UIView {
         if isSelected {
             cell.backgroundColor = self.selectedRowColor
         } else {
-            cell.backgroundColor = .white
+            cell.backgroundColor = UIColor(resource: .chartMenuRow)
         }
     }
 }
@@ -373,7 +373,7 @@ extension ChartSettingsView: UITableViewDataSource, UITableViewDelegate {
         let label = UILabel()
         label.text = self.sections[section].title
         label.textAlignment = .center
-        label.textColor = .white
+        label.textColor = UIColor(resource: .chartMenuHeaderText)
         label.font = .boldSystemFont(ofSize: 15)
         label.backgroundColor = self.headerColor
         return label
@@ -415,7 +415,7 @@ final class ChartSettingsContentView: UIView {
         super.awakeFromNib()
         // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
         for button in [self.applyToAllButton, self.resetButton] {
-            button?.layer.borderColor = UIColor.systemGray3.cgColor
+            button?.layer.borderColor = UIColor(resource: .chartSettingsButtonBorder).cgColor
         }
         // 画面が狭いときは、文字を「…」で省略せずに縮小して収める
         for button in [self.applyToAllButton, self.resetButton, self.confirmButton] {
@@ -423,6 +423,11 @@ final class ChartSettingsContentView: UIView {
             button?.titleLabel?.minimumScaleFactor = 0.6
             button?.titleLabel?.lineBreakMode = .byClipping
         }
+        // UI テストで探すための名前
+        self.tableView.accessibilityIdentifier = "settings.list"
+        self.applyToAllButton.accessibilityIdentifier = "settings.applyToAllButton"
+        self.resetButton.accessibilityIdentifier = "settings.resetButton"
+        self.confirmButton.accessibilityIdentifier = "settings.confirmButton"
     }
 }
 
@@ -483,7 +488,7 @@ final class ChartSettingsStepperRow: UIView {
         super.awakeFromNib()
         // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
         for button in [self.minusButton, self.plusButton] {
-            button?.layer.borderColor = UIColor.systemGray3.cgColor
+            button?.layer.borderColor = UIColor(resource: .chartSettingsButtonBorder).cgColor
         }
     }
 

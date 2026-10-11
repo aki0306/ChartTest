@@ -20,6 +20,7 @@
 | API のレスポンスを渡したい | [API のレスポンス(足種ごと)を渡す](#api-のレスポンス足種ごとを渡す) |
 | データを消したい・足種や銘柄を切り替えたい | [データを消す・入れ替えるとき](#データを消す入れ替えるとき) |
 | ファイルの中身・仕組みを知りたい | [フォルダ構成](#フォルダ構成)・[データの流れ](#データの流れ) |
+| 画面を自動で操作して確かめたい | [UI テスト](#ui-テスト) |
 
 ## はじめての導入ガイド
 
@@ -75,7 +76,7 @@
    それ以外のフォルダは、すべて必要です。
 5. ファイルがアプリのターゲットに入っているか確認する
    - **フォルダとして追加した場合**(Xcode 16 以降の既定。左の一覧で青いフォルダのアイコンになる): 中のファイルは自動でビルド・コピーされます。`StockChart` フォルダを選んで、右側の **File Inspector**(⌥⌘1)の **Target Membership** に組み込むアプリのターゲットのチェックが入っていれば OK です
-   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard`)が入っているか確認します。入っていないと、設定画面・横画面を開いたときにアプリが落ちます
+   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`・`StockChartColors.xcassets`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard`)が入っているか確認します。xib・storyboard が入っていないと、設定画面・横画面を開いたときにアプリが落ちます。`StockChartColors.xcassets` が入っていないと、`.chartIncreasing` などの色が見つからずビルドエラーになります
 
 **確認ポイント**: ⌘B(ビルド)が成功する。
 (組み込むアプリに `StockCandle` や `ChartType` など同じ名前の型があるとエラーになります。[困ったとき](#困ったとき) を見てください)
@@ -798,6 +799,23 @@ chartViewController.market = IndexMarketOverseasRealtime;
 
 `style` は代入するたびに描き直されるので、まとめて変更してから1回で代入します。
 
+#### 色の既定値(`StockChartColors.xcassets`)
+
+チャート部品の色の既定値は、すべて [`StockChart/Common/StockChartColors.xcassets`](ChartTest/StockChart/Common/StockChartColors.xcassets) の色セットにあります。
+Xcode で色セットを選び、右側の **Attributes インスペクタ**(⌥⌘4)で色を変えると、コードを変えずにアプリ全体の色が変わります。コードからは `UIColor(resource: .chartIncreasing)` のように、色セットの名前(先頭を小文字にしたもの)で参照します。
+
+| フォルダ | 色セット | 使う場所 |
+|---|---|---|
+| `Chart` | `ChartIncreasing`・`ChartLine0`〜`ChartLine4`・`ChartGrid` など | `StockChartStyle` の各色の初期値(名前は下の表の項目名に対応) |
+| `Crosshair` | `ChartCrosshairLine`・`ChartOHLCBackground`・`ChartOHLCText`・`ChartMarkerFill`・`ChartValueMarkerFill`・`ChartMarkerText` | 十字線・4本値の枠・値のマーカー |
+| `Panel` | `ChartPanelTab`・`ChartPanelTabText`・`ChartDimming` | 「テクニカル」「設定」タブと、パネルを開いたときの後ろの暗さ |
+| `Menu` | `ChartMenuHeader`・`ChartMenuRow`・`ChartMenuSelectedRow` など | 設定画面の左リストとテクニカルのメニュー(両方で同じ色セットを使う)・設定画面のボタンの枠線 |
+| `PeriodTab` | `ChartPeriodTabSelected`・`ChartPeriodTabNormal`・`ChartPeriodTabDisabled` など | 設定画面の足種タブ |
+| `Footer` | `ChartFooterButtonForeground`・`ChartFooterButtonBackground`・`ChartFooterButtonBorder` | 横画面の下の帯のボタン |
+
+- 常にライトモードのため、色セットはライトモードの色だけを持っています
+- xib・storyboard の中で指定している色(設定画面の背景など)は、色セットではなく Interface Builder で変えます
+
 ```swift
 // Swift
 var style = chartView.style
@@ -1240,6 +1258,7 @@ ChartTest/
    └─ Common/                           Model・View・Controller の共通部品
        └─ MainThread.swift                  データを受け取る入口を、必ずメインスレッドで動かす
 
+ChartTestUITests/                       UI テスト(画面を自動で操作して確かめる。詳しくは「UI テスト」)
 docs/images/                            README の画像
 ```
 
@@ -1362,6 +1381,43 @@ MainChartContent / SubChartContent(何を描くか)
 ```
 
 横画面では、`StockChartViewController` がメニュー・設定画面の操作を受け取り、状態を変えて上の流れをもう一度実行します。
+
+## UI テスト
+
+`ChartTestUITests/ChartTestUITests.swift` に、サンプルアプリの画面を自動で操作するテスト(XCUITest)があります。
+操作するたびにスクリーンショットを残すので、見た目の確認にも使えます。
+
+| テスト | 確かめること |
+|---|---|
+| `testPortraitPeriodSwitching` | 縦チャートの足種を 1分足 → 月足 の順に切り替えて、選んだボタンが選択中になる |
+| `testMarketSwitching` | 日本株/国内指数/海外を切り替えて、海外では 1分足・日中足 が押せなくなる |
+| `testLandscapeFooterMenus` | 横画面の下の帯のメニューが、最初の項目(ローソク足・日中足)を一番上にして並び、選んだものに切り替わる |
+| `testTechnicalAndSettingsPanels` | 横画面のテクニカルで指標を選び、設定画面を開いて「決定」で閉じる |
+
+### 動かし方
+
+- Xcode: スキーム `ChartTest` を選んで ⌘U
+- ターミナル:
+  ```sh
+  xcodebuild test -project ChartTest.xcodeproj -scheme ChartTest -destination 'platform=iOS Simulator,name=iPhone 17'
+  ```
+
+シミュレータの iOS は、アプリの最低対応 OS(ターゲットの **Minimum Deployments**)以上のものを選びます。
+スクリーンショットは、Xcode の Report navigator(⌘9)でテスト結果を開き、各テストの **Attachments** で見られます。
+
+### ボタンの探し方
+
+テストは、ボタンを文字ではなく識別子(`accessibilityIdentifier`)で探します。識別子は、アプリ側の各ファイルで「UI テストで探すための名前」として付けています。
+
+| 識別子 | 部品 | ファイル |
+|---|---|---|
+| `portrait.periodControl`・`portrait.marketControl`・`portrait.rotateButton`・`portrait.chartView` | 縦画面の足種・指数の種類の切り替え、横画面にするボタン、縦チャート | `Sample/ViewController.swift` |
+| `chart.technicalTab`・`chart.settingsTab`・`chart.technicalMenu`・`chart.settingsView` | テクニカル/設定タブとパネル | `Controller/StockChartViewController.swift` |
+| `technicalMenu.main.<指標名>`・`technicalMenu.sub.<指標名>` | テクニカルのメニューの各行(例: `technicalMenu.sub.ＲＳＩ`) | `TechnicalMenu/TechnicalMenuView.swift` |
+| `footer.chartTypeButton`・`footer.periodButton`・`footer.reloadButton`・`footer.rotateButton` | 横画面の下の帯のボタン | `LandscapeScreen/ChartFooterView.swift` |
+| `settings.list`・`settings.applyToAllButton`・`settings.resetButton`・`settings.confirmButton` | 設定画面の左のリストと下のボタン | `SettingsScreen/ChartSettingsView.swift` |
+
+ボタンの文字を変えた場合は、テストの文字(足種名・指標名など)も合わせて変えます。
 
 ## 初めて読むときのおすすめの順番
 

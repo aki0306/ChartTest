@@ -47,11 +47,11 @@ final class ChartPeriodTabView: UIView {
     // MARK: - 見た目
 
     /// 選択中のタブの背景色(青)
-    private let selectedColor = UIColor(red: 0.10, green: 0.47, blue: 0.95, alpha: 1)
+    private let selectedColor = UIColor(resource: .chartPeriodTabSelected)
     /// 選択していないタブの枠線・文字の色(灰色)
-    private let normalColor = UIColor.gray
+    private let normalColor = UIColor(resource: .chartPeriodTabNormal)
     /// 選べないタブの枠線・文字の色(薄い灰色)
-    private let disabledColor = UIColor.systemGray4
+    private let disabledColor = UIColor(resource: .chartPeriodTabDisabled)
     /// タブ同士の間隔
     private let spacing: CGFloat = 6
 
@@ -127,7 +127,7 @@ final class ChartPeriodTabView: UIView {
             button.isEnabled = !isDisabled
             if isDisabled {
                 // 選べない: 白地に薄い灰色の枠線と文字
-                button.backgroundColor = .white
+                button.backgroundColor = UIColor(resource: .chartPeriodTabBackground)
                 button.layer.borderColor = self.disabledColor.cgColor
                 button.setTitleColor(self.disabledColor, for: .normal)
                 button.setTitleColor(self.disabledColor, for: .disabled)
@@ -136,11 +136,11 @@ final class ChartPeriodTabView: UIView {
                 // 選択中: 青で塗りつぶし、白の太字
                 button.backgroundColor = self.selectedColor
                 button.layer.borderColor = self.selectedColor.cgColor
-                button.setTitleColor(.white, for: .normal)
+                button.setTitleColor(UIColor(resource: .chartPeriodTabSelectedText), for: .normal)
                 button.titleLabel?.font = .boldSystemFont(ofSize: 15)
             } else {
                 // 選択していない: 白地に灰色の枠線と文字
-                button.backgroundColor = .white
+                button.backgroundColor = UIColor(resource: .chartPeriodTabBackground)
                 button.layer.borderColor = self.normalColor.cgColor
                 button.setTitleColor(self.normalColor, for: .normal)
                 button.titleLabel?.font = .systemFont(ofSize: 15)

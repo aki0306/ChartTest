@@ -86,11 +86,11 @@ final class TechnicalMenuView: UIView {
     // MARK: - 見た目
 
     /// 見出しの背景色
-    private let headerColor = UIColor(red: 0.89, green: 0.05, blue: 0.27, alpha: 1)
+    private let headerColor = UIColor(resource: .chartMenuHeader)
     /// 選択中の行の背景色
-    private let selectedRowColor = UIColor(white: 0.40, alpha: 1)
+    private let selectedRowColor = UIColor(resource: .chartMenuSelectedRow)
     /// 行の区切り線の色
-    private let separatorColor = UIColor.systemGray4
+    private let separatorColor = UIColor(resource: .chartMenuSeparator)
 
     // MARK: - 部品
 
@@ -146,12 +146,15 @@ final class TechnicalMenuView: UIView {
         self.mainButtons = []
         for indicator in self.mainChoices {
             let button = self.makeRowButton(title: indicator.title, tag: indicator.rawValue)
+            // UI テストで探すための名前(「なし」はメイン・サブの両方にあるので、列の名前を付ける)
+            button.accessibilityIdentifier = "technicalMenu.main.\(indicator.title)"
             button.addTarget(self, action: #selector(self.mainButtonTapped(_:)), for: .touchUpInside)
             self.mainButtons.append(button)
         }
         self.subButtons = []
         for indicator in self.subChoices {
             let button = self.makeRowButton(title: indicator.title, tag: indicator.rawValue)
+            button.accessibilityIdentifier = "technicalMenu.sub.\(indicator.title)"  // UI テストで探すための名前
             button.addTarget(self, action: #selector(self.subButtonTapped(_:)), for: .touchUpInside)
             self.subButtons.append(button)
         }
@@ -187,7 +190,7 @@ final class TechnicalMenuView: UIView {
         let header = UILabel()
         header.text = title
         header.textAlignment = .center
-        header.textColor = .white
+        header.textColor = UIColor(resource: .chartMenuHeaderText)
         header.font = .boldSystemFont(ofSize: 15)
         header.backgroundColor = self.headerColor
 
@@ -196,7 +199,7 @@ final class TechnicalMenuView: UIView {
         var fillers: [UIView] = []
         for _ in 0..<fillerCount {
             let filler = UIView()
-            filler.backgroundColor = .white
+            filler.backgroundColor = UIColor(resource: .chartMenuRow)
             fillers.append(filler)
         }
 
@@ -249,11 +252,11 @@ final class TechnicalMenuView: UIView {
         if isSelected {
             // 選択中: 背景 selectedRowColor・白文字・太字
             config.background.backgroundColor = self.selectedRowColor
-            config.baseForegroundColor = .white
+            config.baseForegroundColor = UIColor(resource: .chartMenuSelectedRowText)
             font = .boldSystemFont(ofSize: 15)
         } else {
-            config.background.backgroundColor = .white
-            config.baseForegroundColor = .black
+            config.background.backgroundColor = UIColor(resource: .chartMenuRow)
+            config.baseForegroundColor = UIColor(resource: .chartMenuRowText)
             font = .systemFont(ofSize: 15)
         }
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in

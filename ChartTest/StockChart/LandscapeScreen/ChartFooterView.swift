@@ -71,9 +71,19 @@ final class ChartFooterView: UIView {
         self.contentView.chartTypeButton.showsMenuAsPrimaryAction = true
         self.contentView.periodButton.configuration = Self.menuButtonConfiguration()
         self.contentView.periodButton.showsMenuAsPrimaryAction = true
+        // メニューは上に開くので、標準(.automatic)だと1つ目の項目(ローソク足・1分足)がボタンに近い一番下になる。
+        // 渡した順のまま上から並べる
+        self.contentView.chartTypeButton.preferredMenuElementOrder = .fixed
+        self.contentView.periodButton.preferredMenuElementOrder = .fixed
         self.contentView.reloadButton.configuration = Self.iconButtonConfiguration(systemName: "arrow.clockwise")
         self.contentView.rotateButton.configuration = Self.iconButtonConfiguration(systemName: "rectangle.portrait.rotate")
         self.contentView.priceInfoLabel.text = nil  // updatePriceInfo で設定されるまでは空にする
+
+        // UI テストで探すための名前
+        self.contentView.chartTypeButton.accessibilityIdentifier = "footer.chartTypeButton"
+        self.contentView.periodButton.accessibilityIdentifier = "footer.periodButton"
+        self.contentView.reloadButton.accessibilityIdentifier = "footer.reloadButton"
+        self.contentView.rotateButton.accessibilityIdentifier = "footer.rotateButton"
 
         // ボタンが押されたら、外から設定された処理を呼ぶ
         self.contentView.onReload = { [weak self] in
@@ -209,9 +219,9 @@ final class ChartFooterView: UIView {
     /// 帯のボタンの共通の見た目(白地・灰色の枠・青)
     private static func baseButtonConfiguration() -> UIButton.Configuration {
         var configuration = UIButton.Configuration.bordered()
-        configuration.baseBackgroundColor = .white
-        configuration.baseForegroundColor = .systemBlue
-        configuration.background.strokeColor = .systemGray4
+        configuration.baseBackgroundColor = UIColor(resource: .chartFooterButtonBackground)
+        configuration.baseForegroundColor = UIColor(resource: .chartFooterButtonForeground)
+        configuration.background.strokeColor = UIColor(resource: .chartFooterButtonBorder)
         configuration.background.strokeWidth = 1
         configuration.background.cornerRadius = 6
         return configuration
