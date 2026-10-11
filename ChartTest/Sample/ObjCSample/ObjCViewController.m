@@ -146,8 +146,9 @@
     self.portraitChartView.accessibilityIdentifier = @"portrait.chartView";  // UI テストで探すための名前
     [self.view addSubview:self.portraitChartView];
     [NSLayoutConstraint activateConstraints:@[
-        [self.portraitChartView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:8],
-        [self.portraitChartView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        // 左右は安全な領域に合わせる(カメラの穴やステータスバーが横にある画面で、チャートが隠れないように)
+        [self.portraitChartView.leadingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.leadingAnchor constant:8],
+        [self.portraitChartView.trailingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor],
         [self.portraitChartView.heightAnchor constraintEqualToConstant:260],
     ]];
 }

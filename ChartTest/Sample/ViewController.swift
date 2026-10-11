@@ -104,8 +104,9 @@ class ViewController: UIViewController {
         self.portraitChartView.accessibilityIdentifier = "portrait.chartView"  // UI テストで探すための名前
         self.view.addSubview(self.portraitChartView)
         NSLayoutConstraint.activate([
-            self.portraitChartView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 8),
-            self.portraitChartView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+            // 左右は安全な領域に合わせる(カメラの穴やステータスバーが横にある画面で、チャートが隠れないように)
+            self.portraitChartView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor, constant: 8),
+            self.portraitChartView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
             self.portraitChartView.heightAnchor.constraint(equalToConstant: 260),
         ])
     }
