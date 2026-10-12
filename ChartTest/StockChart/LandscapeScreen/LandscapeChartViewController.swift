@@ -2,7 +2,7 @@
 //  LandscapeChartViewController.swift
 //  ChartTest
 //
-//  【Controller】横画面のチャート画面(Landscape.storyboard)。
+//  【Controller】横画面のチャート画面(LandscapeChartViewController.storyboard)。
 //
 //   ┌──┬──────────────────────────────────────────────────┐
 //   │テ│                                                  │
@@ -14,7 +14,7 @@
 //
 //  ・共通チャート部品は storyboard のコンテナビューに埋め込んであり、
 //    左端のテクニカル/設定タブで指標の切り替え・設定変更ができる
-//  ・下の帯(Landscape.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
+//  ・下の帯(LandscapeChartViewController.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
 //      左     : 指数名・現在値・日時(updatePriceInfo(name:price:date:) で設定する)
 //      ローソク足▼: チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート)を切り替える。
 //                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない
@@ -52,12 +52,12 @@ import UIKit
 
 final class LandscapeChartViewController: UIViewController {
 
-    /// Landscape.storyboard から生成する
+    /// LandscapeChartViewController.storyboard から生成する
     @objc static func instantiate() -> LandscapeChartViewController {
-        let storyboard = UIStoryboard(name: "Landscape", bundle: nil)
+        let storyboard = UIStoryboard(name: "LandscapeChartViewController", bundle: nil)
         guard let viewController = storyboard.instantiateInitialViewController() as? LandscapeChartViewController else {
             // storyboard の最初の画面のクラスが違う(設定ミス)。すぐ気付けるよう落とす
-            fatalError("Landscape.storyboard の最初の画面が LandscapeChartViewController になっていません")
+            fatalError("LandscapeChartViewController.storyboard の最初の画面が LandscapeChartViewController になっていません")
         }
         return viewController
     }
@@ -97,7 +97,7 @@ final class LandscapeChartViewController: UIViewController {
         self.loadViewIfNeeded()
         guard let embeddedChartViewController else {
             // storyboard のコンテナビューの embed が外れている(設定ミス)。すぐ気付けるよう落とす
-            fatalError("Landscape.storyboard のコンテナビューに StockChartViewController が埋め込まれていません")
+            fatalError("LandscapeChartViewController.storyboard のコンテナビューに StockChartViewController が埋め込まれていません")
         }
         return embeddedChartViewController
     }
@@ -110,7 +110,7 @@ final class LandscapeChartViewController: UIViewController {
         self.configurePanelLayering()
 
         // チャート部品は画面いっぱいに置き(パネルを画面の上端〜下端まで広げるため)、チャート本体だけを内側に置く。
-        // 下は帯(セーフエリアの下端から 44pt。Landscape.storyboard)と、その上の間隔 4pt の分を空ける
+        // 下は帯(セーフエリアの下端から 44pt。LandscapeChartViewController.storyboard)と、その上の間隔 4pt の分を空ける
         self.chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 44 + 4, right: 8)
 
         // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する

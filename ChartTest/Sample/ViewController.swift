@@ -8,7 +8,7 @@
 //  画面の向きに合わせて表示を切り替える。
 //
 //  ・縦向き: StockChartView(チャートだけ。最初は日足を表示する)
-//  ・横画面: LandscapeChartViewController(Landscape.storyboard。StockChartViewController で指標メニュー付き表示)
+//  ・横画面: LandscapeChartViewController(LandscapeChartViewController.storyboard。StockChartViewController で指標メニュー付き表示)
 //  この画面は「どちらを表示するか」と「データを渡す」ことだけを担当する。
 //  縦画面の左下の切り替えボタン(marketControl)で、日本株/国内指数/海外指数(リアルタイム・日次)を切り替えて表示を確かめられる
 //  (横画面では下の帯と重なるので隠す。縦画面で切り替えてから横にする)。
@@ -25,7 +25,7 @@ class ViewController: UIViewController {
 
     /// 縦向きのチャート(チャートだけ。最初は日足を表示する)
     private let portraitChartView = StockChartView()
-    /// 横画面のチャート(Landscape.storyboard)
+    /// 横画面のチャート(LandscapeChartViewController.storyboard)
     private let landscapeViewController = LandscapeChartViewController.instantiate()
 
     // MARK: - 銘柄・指数の種類の切り替え

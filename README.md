@@ -70,13 +70,13 @@
 
    | ファイル | 使わない場合は削除してよい |
    |---|---|
-   | `LandscapeScreen/` フォルダ | 横画面(下の帯付き)を使わない。下の帯は `ChartFooterView`(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)のことで、帯を付けた横画面 `LandscapeChartViewController`・`Landscape.storyboard` と一緒にこのフォルダに入っている。`ChartFooterView` はこのフォルダの中でしか使っていないので、帯を使わないならフォルダごと削除できる(横画面のチャートは `StockChartViewController` を直接使えば作れる) |
+   | `LandscapeScreen/` フォルダ | 横画面(下の帯付き)を使わない。下の帯は `ChartFooterView`(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)のことで、帯を付けた横画面 `LandscapeChartViewController`・`LandscapeChartViewController.storyboard` と一緒にこのフォルダに入っている。`ChartFooterView` はこのフォルダの中でしか使っていないので、帯を使わないならフォルダごと削除できる(横画面のチャートは `StockChartViewController` を直接使えば作れる) |
    | `DGChartEnum/` フォルダ | `DGMainChart` などの enum(`mainChart`・`subChart` など)でチャートを設定しない |
 
    それ以外のフォルダは、すべて必要です。
 5. ファイルがアプリのターゲットに入っているか確認する
    - **フォルダとして追加した場合**(Xcode 16 以降の既定。左の一覧で青いフォルダのアイコンになる): 中のファイルは自動でビルド・コピーされます。`StockChart` フォルダを選んで、右側の **File Inspector**(⌥⌘1)の **Target Membership** に組み込むアプリのターゲットのチェックが入っていれば OK です
-   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`StockChartColors.xcassets`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard`)が入っているか確認します。xib・storyboard が入っていないと、設定画面・横画面を開いたときにアプリが落ちます。`StockChartColors.xcassets` が入っていないと、`.chartIncreasing` などの色が見つからずビルドエラーになります
+   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`StockChartColors.xcassets`(と、使う場合は `ChartFooterView.xib`・`LandscapeChartViewController.storyboard`)が入っているか確認します。xib・storyboard が入っていないと、設定画面・横画面を開いたときにアプリが落ちます。`StockChartColors.xcassets` が入っていないと、`.chartIncreasing` などの色が見つからずビルドエラーになります
 
 **確認ポイント**: ⌘B(ビルド)が成功する。
 (組み込むアプリに `StockCandle` や `ChartType` など同じ名前の型があるとエラーになります。[困ったとき](#困ったとき) を見てください)
@@ -252,7 +252,7 @@ final class MyChartViewController: UIViewController {
 | 出来高(サブチャート)の棒が表示されない(凡例だけ出る・段ごとない) | `volume` がすべて 0(レスポンスに `kTurnover` キーがない)、海外指数を指定している、または横画面でローソク足以外のチャートを選んでいる | レスポンスのキーを `StockCandleResponseParser` の `Key.volume`(`kTurnover`)に合わせる。指数の種類・チャートの種類を確認する([サブチャート(出来高など)](#サブチャート出来高など)) |
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
 | 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
-| 横画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
+| 横画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `LandscapeChartViewController.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横向きにならない | アプリが横向きに対応していない | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる |
 | 横画面を閉じたあとも、メモリが解放されない | クロージャ(ブロック)の中で、画面を強く参照している | `[weak self]` / `__weak` を使う(ステップ 7 の注意) |
 | 配列を渡したらアプリが落ちた | 配列に辞書以外(文字列など)が入っている | `ChartResponseLoader` には辞書(`NSDictionary`)だけを入れた配列を渡す |
@@ -260,7 +260,7 @@ final class MyChartViewController: UIViewController {
 
 ## 画面
 
-| 横画面(`Landscape.storyboard` / `LandscapeChartViewController`) |
+| 横画面(`LandscapeChartViewController.storyboard` / `LandscapeChartViewController`) |
 |---|
 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。下の帯で、チャートの種類・足種の切り替え、更新、縦画面に戻す操作ができる |
 | <img src="docs/images/landscape.png" width="520" alt="横画面"> |
@@ -344,7 +344,7 @@ final class MyChartViewController: UIViewController {
 日経平均 68309.46 10/02 15:45            [ローソク足 ▼] [月足 ▼] [↻] | [⤾]
 ```
 
-帯は [`ChartFooterView`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.swift)(View)で、`Landscape.storyboard` の Footer View に置いています。配置は [`ChartFooterView.xib`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.xib) を Interface Builder で開いて編集します。
+帯は [`ChartFooterView`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.swift)(View)で、`LandscapeChartViewController.storyboard` の Footer View に置いています。配置は [`ChartFooterView.xib`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.xib) を Interface Builder で開いて編集します。
 帯は見た目(ボタンの色・幅・現在値の文字)だけを担当し、メニューの中身と「押されたら何をするか」は `LandscapeChartViewController` が渡します。データの取得や画面の回転はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
 「チャートの種類」「足種」のボタンの幅は、メニューの中で一番長い名前(「折線チャート」など)が1行で入る幅に固定しています(文字は縮小しません。選ぶたびに幅が変わらないようにするため)。
 
@@ -489,7 +489,7 @@ LandscapeChartViewController(横画面)
 |---|---|---|---|
 | 種類 | View | ViewController | ViewController |
 | 中身 | チャートだけ | `StockChartView` + 左端のテクニカル/設定タブ(`isTechnicalMenuEnabled = true` のとき) | `StockChartViewController` + 下の帯 |
-| 作り方 | `StockChartView()` | `StockChartViewController()` | `LandscapeChartViewController.instantiate()`(`Landscape.storyboard` から作る。`LandscapeChartViewController()` では下の帯が出ない) |
+| 作り方 | `StockChartView()` | `StockChartViewController()` | `LandscapeChartViewController.instantiate()`(`LandscapeChartViewController.storyboard` から作る。`LandscapeChartViewController()` では下の帯が出ない) |
 | 画面への置き方 | `addSubview` | 子 ViewController として埋め込む | 子 ViewController として埋め込む |
 | 指標・パラメータ | コードで設定する | テクニカル/設定タブで切り替えられる(コードでも設定できる) | 中の `chartViewController` で設定する |
 | チャートの種類・足種 | `chartType`・`period` をコードで設定する | ボタンはない。チャートの種類は `chartType`、足種は `setCandles(_:period:)` でデータと一緒に設定する | 下の帯のメニューで切り替えられる |
@@ -717,7 +717,7 @@ chartViewController.market = IndexMarketJapanIndex;   // 銘柄・指数の種�
 [chartViewController setCandles:candles period:ChartPeriodDaily];  // 足種ごとの設定で描画する
 ```
 
-このアプリの横画面(`LandscapeChartViewController`)は、これを `Landscape.storyboard` に埋め込んだものです。
+このアプリの横画面(`LandscapeChartViewController`)は、これを `LandscapeChartViewController.storyboard` に埋め込んだものです。
 
 ```swift
 let landscape = LandscapeChartViewController.instantiate()            // Swift
@@ -966,7 +966,7 @@ Swift の enum は、Objective-C では「型名 + ケース名」になりま�
 ## アプリへの組み込み
 
 チャート部分(`ChartTest/StockChart/`)は、ほかのアプリにそのまま組み込めるよう、ダミーデータ(`SampleData`)やサンプルの画面切り替え(`ViewController`)には依存しないように作っています。
-`StockChart/LandscapeScreen/` にある横画面(`LandscapeChartViewController`)は、同じフォルダにある `Landscape.storyboard` から作る画面です。`StockChart/` フォルダごとコピーすれば storyboard も入ります。
+`StockChart/LandscapeScreen/` にある横画面(`LandscapeChartViewController`)は、同じフォルダにある `LandscapeChartViewController.storyboard` から作る画面です。`StockChart/` フォルダごとコピーすれば storyboard も入ります。
 
 ### 手順
 
@@ -1106,7 +1106,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 | ファイル | 必要か | 説明 |
 |---|---|---|
 | `StockChart/` フォルダ(`ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面・下の帯。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
-| `StockChart/LandscapeScreen/Landscape.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` も同じ `StockChart/LandscapeScreen/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
+| `StockChart/LandscapeScreen/LandscapeChartViewController.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` も同じ `StockChart/LandscapeScreen/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
 | `Sample/` フォルダ・`App/Base.lproj/Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
 | `Sample/SampleData.swift` | 不要 | 動作確認用のダミーデータ(`Sample/` フォルダに含まれる) |
 
@@ -1154,7 +1154,7 @@ landscape.modalPresentationStyle = UIModalPresentationFullScreen;
 
 #### 下の帯をアプリ側のものにする場合
 
-`Landscape.storyboard` の下の帯の代わりにアプリ側のボタン(足種・更新など)を使う場合は、`StockChartViewController` を直接埋め込み、ボタンの分の余白を `chartInsets` で空けます。チャートの種類は `chartType` で切り替えます(`LandscapeChartViewController.swift` が実装例です)。
+`LandscapeChartViewController.storyboard` の下の帯の代わりにアプリ側のボタン(足種・更新など)を使う場合は、`StockChartViewController` を直接埋め込み、ボタンの分の余白を `chartInsets` で空けます。チャートの種類は `chartType` で切り替えます(`LandscapeChartViewController.swift` が実装例です)。
 
 ```swift
 chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 下のボタンの高さ + 余白, right: 8)
@@ -1247,7 +1247,7 @@ ChartTest/
    │   └─ ChartSettingsCatalog.swift        設定画面に並べる項目
    │
    ├─ LandscapeScreen/                  横画面だけで使うもの(横画面を使わなければフォルダごと削除してよい)
-   │   ├─ LandscapeChartViewController.swift 横画面(+ Landscape.storyboard)
+   │   ├─ LandscapeChartViewController.swift / .storyboard 横画面
    │   └─ ChartFooterView.swift / .xib      横画面の下の帯
    │
    ├─ Response/                         API のレスポンスをチャートに渡す
@@ -1347,8 +1347,8 @@ docs/images/                            README の画像
 
 | ファイル | 内容 |
 |---|---|
-| `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻す)を付ける)。`Landscape.storyboard` から作る |
-| `Landscape.storyboard` | 横画面のレイアウト(Interface Builder で開いて編集する) |
+| `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻す)を付ける)。`LandscapeChartViewController.storyboard` から作る |
+| `LandscapeChartViewController.storyboard` | 横画面のレイアウト(Interface Builder で開いて編集する) |
 | `ChartFooterView.swift` / `.xib` | 横画面の下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)。配置は XIB で編集する |
 
 ### API のレスポンス(`StockChart/Response/`)

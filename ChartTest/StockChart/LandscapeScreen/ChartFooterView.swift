@@ -19,7 +19,7 @@
 //  【レイアウト】ChartFooterView.xib(Interface Builder で開いて編集する)
 //  XIB の File's Owner をこのクラスにしてあり、XIB を読み込むと、中のラベル・ボタンがこのクラスの @IBOutlet につながる。
 //  読み込んだ Content View(帯全体)を、この View いっぱいに貼り付けている(ChartSettingsView と同じ作り)。
-//  storyboard に置く場合は、View のクラスを ChartFooterView にする(Landscape.storyboard の Footer View)。
+//  storyboard に置く場合は、View のクラスを ChartFooterView にする(LandscapeChartViewController.storyboard の Footer View)。
 //
 
 import UIKit
