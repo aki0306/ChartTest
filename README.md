@@ -70,7 +70,7 @@
 
    | ファイル | 使わない場合は削除してよい |
    |---|---|
-   | `LandscapeScreen/` フォルダ | 横画面(下の帯付き)を使わない |
+   | `LandscapeScreen/` フォルダ | 横画面(下の帯付き)を使わない。下の帯は `ChartFooterView`(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)のことで、帯を付けた横画面 `LandscapeChartViewController`・`Landscape.storyboard` と一緒にこのフォルダに入っている。`ChartFooterView` はこのフォルダの中でしか使っていないので、帯を使わないならフォルダごと削除できる(横画面のチャートは `StockChartViewController` を直接使えば作れる) |
    | `DGChartEnum/` フォルダ | `DGMainChart` などの enum(`mainChart`・`subChart` など)でチャートを設定しない |
 
    それ以外のフォルダは、すべて必要です。
