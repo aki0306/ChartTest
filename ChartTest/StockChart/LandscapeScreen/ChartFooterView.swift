@@ -17,7 +17,8 @@
 //  ・更新・縦画面に戻すボタンが押されたら onReload / onRotate を呼ぶ(何をするかは使う側が決める)
 //
 //  【レイアウト】ChartFooterView.xib(Interface Builder で開いて編集する)
-//  XIB の Content View(ChartFooterContentView)を、この View いっぱいに貼り付けている(ChartSettingsView と同じ作り)。
+//  XIB の File's Owner をこのクラスにしてあり、XIB を読み込むと、中のラベル・ボタンがこのクラスの @IBOutlet につながる。
+//  読み込んだ Content View(帯全体)を、この View いっぱいに貼り付けている(ChartSettingsView と同じ作り)。
 //  storyboard に置く場合は、View のクラスを ChartFooterView にする(Landscape.storyboard の Footer View)。
 //
 
@@ -32,13 +33,28 @@ final class ChartFooterView: UIView {
     /// 縦画面に戻すボタンが押されたときに呼ばれる処理
     var onRotate: (() -> Void)?
 
-    // MARK: - 部品
+    // MARK: - XIB の部品(XIB の File's Owner から接続)
 
     /// ChartFooterView.xib(帯の配置が入っている)
     private static let nib = UINib(nibName: "ChartFooterView", bundle: Bundle(for: ChartFooterView.self))
 
-    /// XIB の Content View(帯全体。この View いっぱいに貼り付ける)
-    private let contentView = ChartFooterView.loadContentView()
+    /// XIB の Content View(帯全体。この View いっぱいに貼り付ける)。
+    /// XIB の一番外側の View は、読み込んだ直後はどこからも持たれていないので、解放されないよう strong で持つ
+    @IBOutlet private var contentView: UIView!
+    /// 指数名・現在値・日時
+    @IBOutlet private weak var priceInfoLabel: UILabel!
+    /// チャートの種類のボタン
+    @IBOutlet private weak var chartTypeButton: UIButton!
+    /// チャートの種類のボタンの幅(一番長い名前が入る幅に、コードで変える)
+    @IBOutlet private weak var chartTypeButtonWidth: NSLayoutConstraint!
+    /// 足種のボタン
+    @IBOutlet private weak var periodButton: UIButton!
+    /// 足種のボタンの幅(一番長い名前が入る幅に、コードで変える)
+    @IBOutlet private weak var periodButtonWidth: NSLayoutConstraint!
+    /// 更新ボタン
+    @IBOutlet private weak var reloadButton: UIButton!
+    /// 縦画面に戻すボタン
+    @IBOutlet private weak var rotateButton: UIButton!
 
     // MARK: - 初期化
 
@@ -54,8 +70,15 @@ final class ChartFooterView: UIView {
         self.setup()
     }
 
-    /// XIB の Content View を、この View いっぱいに貼り付け、ボタンの見た目を設定する
+    /// XIB を読み込み、Content View を この View いっぱいに貼り付け、ボタンの見た目を設定する
     private func setup() {
+        // 自分を File's Owner にして読み込むと、XIB の部品が @IBOutlet につながる
+        _ = Self.nib.instantiate(withOwner: self)
+        guard self.contentView != nil else {
+            // XIB の File's Owner から Content View が接続されていない(設定ミス)。すぐ気付けるよう落とす
+            fatalError("ChartFooterView.xib の File's Owner に contentView が接続されていません")
+        }
+
         self.backgroundColor = .clear  // 背景の色は Content View(XIB)で決める
         self.contentView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(self.contentView)
@@ -67,42 +90,35 @@ final class ChartFooterView: UIView {
         ])
 
         // ボタンの見た目
-        self.contentView.chartTypeButton.configuration = Self.menuButtonConfiguration()
-        self.contentView.chartTypeButton.showsMenuAsPrimaryAction = true
-        self.contentView.periodButton.configuration = Self.menuButtonConfiguration()
-        self.contentView.periodButton.showsMenuAsPrimaryAction = true
+        self.chartTypeButton.configuration = Self.menuButtonConfiguration()
+        self.chartTypeButton.showsMenuAsPrimaryAction = true
+        self.periodButton.configuration = Self.menuButtonConfiguration()
+        self.periodButton.showsMenuAsPrimaryAction = true
         // メニューは上に開くので、標準(.automatic)だと1つ目の項目(ローソク足・1分足)がボタンに近い一番下になる。
         // 渡した順のまま上から並べる
-        self.contentView.chartTypeButton.preferredMenuElementOrder = .fixed
-        self.contentView.periodButton.preferredMenuElementOrder = .fixed
-        self.contentView.reloadButton.configuration = Self.iconButtonConfiguration(systemName: "arrow.clockwise")
-        self.contentView.rotateButton.configuration = Self.iconButtonConfiguration(systemName: "rectangle.portrait.rotate")
-        self.contentView.priceInfoLabel.text = nil  // updatePriceInfo で設定されるまでは空にする
+        self.chartTypeButton.preferredMenuElementOrder = .fixed
+        self.periodButton.preferredMenuElementOrder = .fixed
+        self.reloadButton.configuration = Self.iconButtonConfiguration(systemName: "arrow.clockwise")
+        self.rotateButton.configuration = Self.iconButtonConfiguration(systemName: "rectangle.portrait.rotate")
+        self.priceInfoLabel.text = nil  // updatePriceInfo で設定されるまでは空にする
 
         // UI テストで探すための名前
-        self.contentView.chartTypeButton.accessibilityIdentifier = "footer.chartTypeButton"
-        self.contentView.periodButton.accessibilityIdentifier = "footer.periodButton"
-        self.contentView.reloadButton.accessibilityIdentifier = "footer.reloadButton"
-        self.contentView.rotateButton.accessibilityIdentifier = "footer.rotateButton"
-
-        // ボタンが押されたら、外から設定された処理を呼ぶ
-        self.contentView.onReload = { [weak self] in
-            self?.onReload?()
-        }
-        self.contentView.onRotate = { [weak self] in
-            self?.onRotate?()
-        }
+        self.chartTypeButton.accessibilityIdentifier = "footer.chartTypeButton"
+        self.periodButton.accessibilityIdentifier = "footer.periodButton"
+        self.reloadButton.accessibilityIdentifier = "footer.reloadButton"
+        self.rotateButton.accessibilityIdentifier = "footer.rotateButton"
     }
 
-    /// XIB を読み込んで、Content View を取り出す
-    private static func loadContentView() -> ChartFooterContentView {
-        let objects = self.nib.instantiate(withOwner: nil)
-        let views = objects.compactMap { object in object as? ChartFooterContentView }
-        guard let view = views.first else {
-            // XIB に Content View がない(Custom Class の設定ミス)。すぐ気付けるよう落とす
-            fatalError("ChartFooterView.xib に ChartFooterContentView がありません")
-        }
-        return view
+    // MARK: - 更新・縦画面に戻すボタン
+
+    /// 更新ボタンが押されたとき(XIB で Touch Up Inside に接続)
+    @IBAction private func reloadTapped(_ sender: UIButton) {
+        self.onReload?()
+    }
+
+    /// 縦画面に戻すボタンが押されたとき(XIB で Touch Up Inside に接続)
+    @IBAction private func rotateTapped(_ sender: UIButton) {
+        self.onRotate?()
     }
 
     // MARK: - メニューのボタン
@@ -113,7 +129,7 @@ final class ChartFooterView: UIView {
     ///   - candidates: ボタンに出る可能性のある名前すべて(ボタンの幅を、一番長い名前が入る幅にする)
     ///   - menu: 押したときに出すメニュー
     func setChartTypeMenu(title: String, candidates: [String], menu: UIMenu) {
-        self.setMenu(of: self.contentView.chartTypeButton, width: self.contentView.chartTypeButtonWidth,
+        self.setMenu(of: self.chartTypeButton, width: self.chartTypeButtonWidth,
                      title: title, candidates: candidates, menu: menu)
     }
 
@@ -123,7 +139,7 @@ final class ChartFooterView: UIView {
     ///   - candidates: ボタンに出る可能性のある名前すべて(ボタンの幅を、一番長い名前が入る幅にする)
     ///   - menu: 押したときに出すメニュー
     func setPeriodMenu(title: String, candidates: [String], menu: UIMenu) {
-        self.setMenu(of: self.contentView.periodButton, width: self.contentView.periodButtonWidth,
+        self.setMenu(of: self.periodButton, width: self.periodButtonWidth,
                      title: title, candidates: candidates, menu: menu)
     }
 
@@ -172,7 +188,7 @@ final class ChartFooterView: UIView {
         let text = NSMutableAttributedString(string: "\(name) \(priceText) ",
                                              attributes: [.font: UIFont.boldSystemFont(ofSize: 20)])
         text.append(NSAttributedString(string: dateText, attributes: [.font: UIFont.systemFont(ofSize: 16)]))
-        self.contentView.priceInfoLabel.attributedText = text
+        self.priceInfoLabel.attributedText = text
     }
 
     /// 日時の書式(例: 10/02 15:45)
@@ -225,41 +241,5 @@ final class ChartFooterView: UIView {
         configuration.background.strokeWidth = 1
         configuration.background.cornerRadius = 6
         return configuration
-    }
-}
-
-// MARK: - 帯の中身。見た目は XIB の「Content View」
-
-/// 帯の中身(XIB で配置した部品)。ChartFooterView が外側に貼り付けて使う
-final class ChartFooterContentView: UIView {
-
-    /// 指数名・現在値・日時
-    @IBOutlet private(set) weak var priceInfoLabel: UILabel!
-    /// チャートの種類のボタン
-    @IBOutlet private(set) weak var chartTypeButton: UIButton!
-    /// チャートの種類のボタンの幅(一番長い名前が入る幅に、コードで変える)
-    @IBOutlet private(set) weak var chartTypeButtonWidth: NSLayoutConstraint!
-    /// 足種のボタン
-    @IBOutlet private(set) weak var periodButton: UIButton!
-    /// 足種のボタンの幅(一番長い名前が入る幅に、コードで変える)
-    @IBOutlet private(set) weak var periodButtonWidth: NSLayoutConstraint!
-    /// 更新ボタン
-    @IBOutlet private(set) weak var reloadButton: UIButton!
-    /// 縦画面に戻すボタン
-    @IBOutlet private(set) weak var rotateButton: UIButton!
-
-    /// 更新ボタンが押されたときの処理(ChartFooterView が設定する)
-    var onReload: (() -> Void)?
-    /// 縦画面に戻すボタンが押されたときの処理(ChartFooterView が設定する)
-    var onRotate: (() -> Void)?
-
-    /// 更新ボタンが押されたとき(XIB で Touch Up Inside に接続)
-    @IBAction private func reloadTapped(_ sender: UIButton) {
-        self.onReload?()
-    }
-
-    /// 縦画面に戻すボタンが押されたとき(XIB で Touch Up Inside に接続)
-    @IBAction private func rotateTapped(_ sender: UIButton) {
-        self.onRotate?()
     }
 }

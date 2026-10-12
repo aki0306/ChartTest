@@ -17,15 +17,15 @@
 //
 //  ・「オプション」(トグル)を選んだときは、足種のタブと下のボタンを隠し、トグルだけをパネルの中央に並べる
 //
-//  【レイアウト】ChartSettingsView.xib(Interface Builder で開いて編集する)
-//  XIB には次の3つを並べて置いている。
-//  ・Content View(ChartSettingsContentView) … 画面全体の配置(左のリスト・右の白いパネル)
+//  【レイアウト】XIB(Interface Builder で開いて編集する)。クラスごとに、同じ名前の XIB を1つ用意している。
+//  ・ChartSettingsView.xib       … 画面全体の配置(左のリスト・右の白いパネル)。
+//      XIB の File's Owner をこのクラスにしてあり、自分を File's Owner にして読み込むと、中の部品がこのクラスの
+//      @IBOutlet につながる。読み込んだ Content View を、このViewいっぱいに貼り付ける(setup)。
 //      右のパネルは上から「Period Header(足種のタブ)」「Rows Scroll View(行。入りきらないときはスクロール)」「Button Bar(下のボタン)」
-//  ・Toggle Row(ChartSettingsToggleRow)     … 右側の「名称 + トグル」の1行の見本
-//  ・Stepper Row(ChartSettingsStepperRow)   … 右側の「名称 + −/スライダー/+」の1行の見本
-//  どれも「XIB を読み込んで、欲しい種類の View を取り出す」(loadFromNib)で作る。
-//  Toggle Row・Stepper Row のクラスは ChartSettingsRows.swift にある。
-//  右側の行は、選んだ項目によって数と種類が変わるので、見本の行を必要な数だけ作って並べる。
+//  ・ChartSettingsToggleRow.xib  … 右側の「名称 + トグル」の1行(ChartSettingsToggleRow)
+//  ・ChartSettingsStepperRow.xib … 右側の「名称 + −/スライダー/+」の1行(ChartSettingsStepperRow)
+//  行のクラスは ChartSettingsToggleRow.swift・ChartSettingsStepperRow.swift にある。
+//  右側の行は、選んだ項目によって数と種類が変わるので、行の XIB を必要な数だけ読み込んで並べる(loadRowFromNib)。
 //  左リストの項目・見出しは文字と色だけなので、コードで作る(applyCellStyle / viewForHeaderInSection)。
 //
 //  【責務】渡された項目・行を表示し、操作を delegate で通知するのみ。
@@ -109,30 +109,30 @@ final class ChartSettingsView: UIView {
     /// タブに並べる足種
     var periods: [ChartPeriod] {
         get {
-            self.contentView.periodTabView.periods
+            self.periodTabView.periods
         }
         set {
-            self.contentView.periodTabView.periods = newValue
+            self.periodTabView.periods = newValue
         }
     }
 
     /// 選べない足種(グレーにして押せなくする)
     var disabledPeriods: Set<ChartPeriod> {
         get {
-            self.contentView.periodTabView.disabledPeriods
+            self.periodTabView.disabledPeriods
         }
         set {
-            self.contentView.periodTabView.disabledPeriods = newValue
+            self.periodTabView.disabledPeriods = newValue
         }
     }
 
     /// 選択中の足種
     var selectedPeriod: ChartPeriod? {
         get {
-            self.contentView.periodTabView.selectedPeriod
+            self.periodTabView.selectedPeriod
         }
         set {
-            self.contentView.periodTabView.selectedPeriod = newValue
+            self.periodTabView.selectedPeriod = newValue
         }
     }
 
@@ -143,26 +143,39 @@ final class ChartSettingsView: UIView {
     /// 選択中の項目の背景色
     private let selectedRowColor = UIColor(resource: .chartMenuSelectedRow)
 
-    // MARK: - XIB の部品
+    // MARK: - XIB の部品(XIB の File's Owner から接続)
 
-    /// ChartSettingsView.xib(画面全体の配置と、行の見本が入っている)
+    /// ChartSettingsView.xib(画面全体の配置が入っている)
     private static let nib = UINib(nibName: "ChartSettingsView", bundle: Bundle(for: ChartSettingsView.self))
 
-    /// XIB の Content View(画面全体。このViewいっぱいに貼り付ける)
-    private let contentView = ChartSettingsView.loadFromNib(ChartSettingsContentView.self)
+    /// XIB の Content View(画面全体。このViewいっぱいに貼り付ける)。
+    /// XIB の一番外側の View は、読み込んだ直後はどこからも持たれていないので、解放されないよう strong で持つ
+    @IBOutlet private var contentView: UIView!
     /// 左側のリスト
-    private var tableView: UITableView {
-        return self.contentView.tableView
-    }
-
+    @IBOutlet private weak var tableView: UITableView!
+    /// 足種のタブと区切り線(オプションのときは隠す)
+    @IBOutlet private weak var periodHeader: UIView!
+    /// 足種のタブ
+    @IBOutlet private weak var periodTabView: ChartPeriodTabView!
+    /// 行を入れるスクロールビュー(行がパネルに入りきらないときはスクロールする)
+    @IBOutlet private weak var rowsScrollView: UIScrollView!
     /// 右側の白いパネルの中で、行を縦に並べるスタック
-    private var rowsStack: UIStackView {
-        return self.contentView.rowsStack
-    }
+    @IBOutlet private weak var rowsStack: UIStackView!
+    /// 行をスクロールビューの上から並べる制約(オプションのときは外して、中央に置く)。
+    /// 一時的に外すことがあるので、外しても解放されないよう strong で持つ
+    @IBOutlet private var rowsTopConstraint: NSLayoutConstraint!
+    /// 下のボタンの帯(オプションのときは隠す)
+    @IBOutlet private weak var buttonBar: UIView!
+    /// 「すべての足に反映」
+    @IBOutlet private weak var applyToAllButton: UIButton!
+    /// 「初期値に戻す」
+    @IBOutlet private weak var resetButton: UIButton!
+    /// 「決定」
+    @IBOutlet private weak var confirmButton: UIButton!
 
     /// オプションのときに、行をパネル(スクロールビューの表示範囲)の縦の中央に置く制約
     private lazy var rowsCenterYConstraint = self.rowsStack.centerYAnchor.constraint(
-        equalTo: self.contentView.rowsScrollView.frameLayoutGuide.centerYAnchor)
+        equalTo: self.rowsScrollView.frameLayoutGuide.centerYAnchor)
 
     // MARK: - 初期化
 
@@ -179,8 +192,15 @@ final class ChartSettingsView: UIView {
 
     // MARK: - 組み立て
 
-    /// XIB の Content View を、このViewいっぱいに貼り付け、操作を受け取れるようにする
+    /// XIB を読み込み、Content View をこのViewいっぱいに貼り付け、操作を受け取れるようにする
     private func setup() {
+        // 自分を File's Owner にして読み込むと、XIB の部品が @IBOutlet につながる
+        _ = Self.nib.instantiate(withOwner: self)
+        guard self.contentView != nil else {
+            // XIB の File's Owner から Content View が接続されていない(設定ミス)。すぐ気付けるよう落とす
+            fatalError("ChartSettingsView.xib の File's Owner に contentView が接続されていません")
+        }
+
         self.contentView.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(self.contentView)
         NSLayoutConstraint.activate([
@@ -197,7 +217,7 @@ final class ChartSettingsView: UIView {
         self.tableView.sectionHeaderTopPadding = 0
 
         // 足種のタブ
-        self.contentView.periodTabView.onSelect = { [weak self] period in
+        self.periodTabView.onSelect = { [weak self] period in
             guard let self else {
                 return
             }
@@ -205,9 +225,25 @@ final class ChartSettingsView: UIView {
         }
 
         // 下のボタン
-        self.contentView.applyToAllButton.addTarget(self, action: #selector(self.applyToAllTapped), for: .touchUpInside)
-        self.contentView.resetButton.addTarget(self, action: #selector(self.resetTapped), for: .touchUpInside)
-        self.contentView.confirmButton.addTarget(self, action: #selector(self.confirmTapped), for: .touchUpInside)
+        self.applyToAllButton.addTarget(self, action: #selector(self.applyToAllTapped), for: .touchUpInside)
+        self.resetButton.addTarget(self, action: #selector(self.resetTapped), for: .touchUpInside)
+        self.confirmButton.addTarget(self, action: #selector(self.confirmTapped), for: .touchUpInside)
+        // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
+        for button in [self.applyToAllButton, self.resetButton] {
+            button?.layer.borderColor = UIColor(resource: .chartSettingsButtonBorder).cgColor
+        }
+        // 画面が狭いときは、文字を「…」で省略せずに縮小して収める
+        for button in [self.applyToAllButton, self.resetButton, self.confirmButton] {
+            button?.titleLabel?.adjustsFontSizeToFitWidth = true
+            button?.titleLabel?.minimumScaleFactor = 0.6
+            button?.titleLabel?.lineBreakMode = .byClipping
+        }
+
+        // UI テストで探すための名前
+        self.tableView.accessibilityIdentifier = "settings.list"
+        self.applyToAllButton.accessibilityIdentifier = "settings.applyToAllButton"
+        self.resetButton.accessibilityIdentifier = "settings.resetButton"
+        self.confirmButton.accessibilityIdentifier = "settings.confirmButton"
     }
 
     // MARK: - 右側の行
@@ -237,7 +273,7 @@ final class ChartSettingsView: UIView {
     private func makeRowView(_ row: Row, index: Int) -> (UIView, UILabel) {
         switch row {
         case let .toggle(title, isOn):
-            let rowView = Self.loadFromNib(ChartSettingsToggleRow.self)
+            let rowView = Self.loadRowFromNib(ChartSettingsToggleRow.self)
             rowView.configure(title: title, isOn: isOn) { [weak self] newValue in
                 guard let self else {
                     return
@@ -247,7 +283,7 @@ final class ChartSettingsView: UIView {
             return (rowView, rowView.titleLabel)
 
         case let .stepper(title, value, range, step, fractionDigits):
-            let rowView = Self.loadFromNib(ChartSettingsStepperRow.self)
+            let rowView = Self.loadRowFromNib(ChartSettingsStepperRow.self)
             rowView.configure(title: title, value: value, range: range, step: step,
                               fractionDigits: fractionDigits) { [weak self] newValue in
                 guard let self else {
@@ -263,27 +299,28 @@ final class ChartSettingsView: UIView {
     /// オプション(トグル)のときはタブとボタンを隠し、行をパネルの中央(上下左右)に並べる。
     /// 指標のパラメータのときは、行をパネルの幅いっぱいに、上から並べる
     private func updatePeriodControlsVisibility() {
-        self.contentView.periodHeader.isHidden = !self.showsPeriodControls
-        self.contentView.buttonBar.isHidden = !self.showsPeriodControls
+        self.periodHeader.isHidden = !self.showsPeriodControls
+        self.buttonBar.isHidden = !self.showsPeriodControls
         if self.showsPeriodControls {
             self.rowsStack.alignment = .fill
             self.rowsCenterYConstraint.isActive = false
-            self.contentView.rowsTopConstraint.isActive = true
+            self.rowsTopConstraint.isActive = true
         } else {
             self.rowsStack.alignment = .center
-            self.contentView.rowsTopConstraint.isActive = false
+            self.rowsTopConstraint.isActive = false
             self.rowsCenterYConstraint.isActive = true
         }
     }
 
-    /// XIB を読み込んで、指定した種類の View(Content View・行の見本)を新しく1つ作る
-    /// (XIB を読み込むと中の3つがすべて新しく作られるので、その中から欲しい種類だけを取り出して使う)
-    private static func loadFromNib<PartView: UIView>(_ type: PartView.Type) -> PartView {
-        let objects = self.nib.instantiate(withOwner: nil)
-        let views = objects.compactMap { object in object as? PartView }
+    /// 行のクラスと同じ名前の XIB(ChartSettingsToggleRow.xib など)を読み込んで、行を新しく1つ作る
+    private static func loadRowFromNib<RowView: UIView>(_ type: RowView.Type) -> RowView {
+        let nibName = String(describing: type)
+        let nib = UINib(nibName: nibName, bundle: Bundle(for: ChartSettingsView.self))
+        let objects = nib.instantiate(withOwner: nil)
+        let views = objects.compactMap { object in object as? RowView }
         guard let view = views.first else {
             // XIB にその種類の View がない(Custom Class の設定ミス)。すぐ気付けるよう落とす
-            fatalError("ChartSettingsView.xib に \(String(describing: type)) がありません")
+            fatalError("\(nibName).xib に \(nibName) がありません")
         }
         return view
     }
@@ -382,52 +419,5 @@ extension ChartSettingsView: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         self.delegate?.settingsView(self, didSelectItemAt: indexPath)
-    }
-}
-
-// MARK: - 画面全体。見た目は XIB の「Content View」
-
-/// 設定画面の全体(左のリスト・右の白いパネル)
-final class ChartSettingsContentView: UIView {
-
-    /// 左側のリスト
-    @IBOutlet private(set) weak var tableView: UITableView!
-    /// 足種のタブと区切り線(オプションのときは隠す)
-    @IBOutlet private(set) weak var periodHeader: UIView!
-    /// 足種のタブ
-    @IBOutlet private(set) weak var periodTabView: ChartPeriodTabView!
-    /// 行を入れるスクロールビュー(行がパネルに入りきらないときはスクロールする)
-    @IBOutlet private(set) weak var rowsScrollView: UIScrollView!
-    /// 右側の白いパネルの中で、行を縦に並べるスタック
-    @IBOutlet private(set) weak var rowsStack: UIStackView!
-    /// 行をスクロールビューの上から並べる制約(オプションのときは外して、中央に置く)。
-    /// 一時的に外すことがあるので、外しても解放されないよう strong で持つ
-    @IBOutlet private(set) var rowsTopConstraint: NSLayoutConstraint!
-    /// 下のボタンの帯(オプションのときは隠す)
-    @IBOutlet private(set) weak var buttonBar: UIView!
-    /// 「すべての足に反映」
-    @IBOutlet private(set) weak var applyToAllButton: UIButton!
-    /// 「初期値に戻す」
-    @IBOutlet private(set) weak var resetButton: UIButton!
-    /// 「決定」
-    @IBOutlet private(set) weak var confirmButton: UIButton!
-
-    override func awakeFromNib() {
-        super.awakeFromNib()
-        // 枠線の色(Interface Builder の User Defined Runtime Attributes では CGColor を指定できないのでコードで指定)
-        for button in [self.applyToAllButton, self.resetButton] {
-            button?.layer.borderColor = UIColor(resource: .chartSettingsButtonBorder).cgColor
-        }
-        // 画面が狭いときは、文字を「…」で省略せずに縮小して収める
-        for button in [self.applyToAllButton, self.resetButton, self.confirmButton] {
-            button?.titleLabel?.adjustsFontSizeToFitWidth = true
-            button?.titleLabel?.minimumScaleFactor = 0.6
-            button?.titleLabel?.lineBreakMode = .byClipping
-        }
-        // UI テストで探すための名前
-        self.tableView.accessibilityIdentifier = "settings.list"
-        self.applyToAllButton.accessibilityIdentifier = "settings.applyToAllButton"
-        self.resetButton.accessibilityIdentifier = "settings.resetButton"
-        self.confirmButton.accessibilityIdentifier = "settings.confirmButton"
     }
 }

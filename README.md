@@ -76,7 +76,7 @@
    それ以外のフォルダは、すべて必要です。
 5. ファイルがアプリのターゲットに入っているか確認する
    - **フォルダとして追加した場合**(Xcode 16 以降の既定。左の一覧で青いフォルダのアイコンになる): 中のファイルは自動でビルド・コピーされます。`StockChart` フォルダを選んで、右側の **File Inspector**(⌥⌘1)の **Target Membership** に組み込むアプリのターゲットのチェックが入っていれば OK です
-   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`・`StockChartColors.xcassets`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard`)が入っているか確認します。xib・storyboard が入っていないと、設定画面・横画面を開いたときにアプリが落ちます。`StockChartColors.xcassets` が入っていないと、`.chartIncreasing` などの色が見つからずビルドエラーになります
+   - **グループとして追加した場合**(黄色いフォルダのアイコン): ターゲットの **Build Phases** を開き、**Compile Sources** に `.swift` ファイルが、**Copy Bundle Resources** に `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`StockChartColors.xcassets`(と、使う場合は `ChartFooterView.xib`・`Landscape.storyboard`)が入っているか確認します。xib・storyboard が入っていないと、設定画面・横画面を開いたときにアプリが落ちます。`StockChartColors.xcassets` が入っていないと、`.chartIncreasing` などの色が見つからずビルドエラーになります
 
 **確認ポイント**: ⌘B(ビルド)が成功する。
 (組み込むアプリに `StockCandle` や `ChartType` など同じ名前の型があるとエラーになります。[困ったとき](#困ったとき) を見てください)
@@ -251,7 +251,7 @@ final class MyChartViewController: UIViewController {
 | 「現在、指定の条件で表示できる情報はありません。」と表示される | 渡したデータが 0 件(レスポンスのキーや日付の形式が合っていない場合も、読めない件が飛ばされて 0 件になる。日付は読めても4本値が1件も読めなければ 0 件になる) | `StockCandleResponseParser` の `Key`・`dateFormats` がレスポンスと合っているか確認する |
 | 出来高(サブチャート)の棒が表示されない(凡例だけ出る・段ごとない) | `volume` がすべて 0(レスポンスに `kTurnover` キーがない)、海外指数を指定している、または横画面でローソク足以外のチャートを選んでいる | レスポンスのキーを `StockCandleResponseParser` の `Key.volume`(`kTurnover`)に合わせる。指数の種類・チャートの種類を確認する([サブチャート(出来高など)](#サブチャート出来高など)) |
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
-| 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
+| 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `Landscape.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横向きにならない | アプリが横向きに対応していない | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる |
 | 横画面を閉じたあとも、メモリが解放されない | クロージャ(ブロック)の中で、画面を強く参照している | `[weak self]` / `__weak` を使う(ステップ 7 の注意) |
@@ -905,8 +905,9 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | ファイル | 項目 |
 |---|---|---|
 | 設定画面の足種タブ(色・文字の大きさ) | [`ChartPeriodTabView.swift`](ChartTest/StockChart/SettingsScreen/ChartPeriodTabView.swift) | `selectedColor`・`normalColor`、`updateSelection` 内のフォント |
-| 設定画面(配置・右側の行の見た目) | [`ChartSettingsView.xib`](ChartTest/StockChart/SettingsScreen/ChartSettingsView.xib) | Interface Builder で開いて編集する(Content View = 画面全体、Toggle Row / Stepper Row = 右側の行の見本) |
-| 横画面の下の帯(配置) | [`ChartFooterView.xib`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.xib) | Interface Builder で開いて編集する(Content View = 帯全体) |
+| 設定画面(配置) | [`ChartSettingsView.xib`](ChartTest/StockChart/SettingsScreen/ChartSettingsView.xib) | Interface Builder で開いて編集する(Content View = 画面全体)。File's Owner は `ChartSettingsView` で、部品はここに接続する |
+| 設定画面(右側の行の見た目) | [`ChartSettingsToggleRow.xib`](ChartTest/StockChart/SettingsScreen/ChartSettingsToggleRow.xib)・[`ChartSettingsStepperRow.xib`](ChartTest/StockChart/SettingsScreen/ChartSettingsStepperRow.xib) | Interface Builder で開いて編集する(トグルの行・数値の行) |
+| 横画面の下の帯(配置) | [`ChartFooterView.xib`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.xib) | Interface Builder で開いて編集する(Content View = 帯全体)。File's Owner は `ChartFooterView` で、部品はここに接続する |
 | 横画面の下の帯(ボタンの色・文字の大きさ・現在値の書式) | [`ChartFooterView.swift`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.swift) | `baseButtonConfiguration`・`menuTitleFont`・`updatePriceInfo` |
 | 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/SettingsScreen/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
 | テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/TechnicalMenu/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
@@ -1104,7 +1105,7 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 | ファイル | 必要か | 説明 |
 |---|---|---|
-| `StockChart/` フォルダ(`ChartSettingsView.xib`・`ChartFooterView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面・下の帯。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
+| `StockChart/` フォルダ(`ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面・下の帯。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
 | `StockChart/LandscapeScreen/Landscape.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` も同じ `StockChart/LandscapeScreen/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
 | `Sample/` フォルダ・`App/Base.lproj/Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
 | `Sample/SampleData.swift` | 不要 | 動作確認用のダミーデータ(`Sample/` フォルダに含まれる) |
@@ -1240,7 +1241,8 @@ ChartTest/
    │
    ├─ SettingsScreen/                   設定画面(設定タブ)だけで使うもの
    │   ├─ ChartSettingsView.swift / .xib    設定画面
-   │   ├─ ChartSettingsRows.swift           設定画面の右側の1行(トグル・数値)
+   │   ├─ ChartSettingsToggleRow.swift / .xib  設定画面の右側の1行(トグル)
+   │   ├─ ChartSettingsStepperRow.swift / .xib 設定画面の右側の1行(数値)
    │   ├─ ChartPeriodTabView.swift          足種のタブ(設定画面の上)
    │   └─ ChartSettingsCatalog.swift        設定画面に並べる項目
    │
@@ -1279,7 +1281,7 @@ docs/images/                            README の画像
 | 凡例の文言(「短期移動平均(5)」など)を変えたい | `Model/Content/ChartContentBuilder.swift` |
 | API のレスポンスのキーの名前・日付の形式を合わせたい | `Response/StockCandleResponseParser.swift` |
 | 設定画面に並べる項目・値の範囲を変えたい | `SettingsScreen/ChartSettingsCatalog.swift` |
-| 設定画面・下の帯の配置を変えたい | `SettingsScreen/ChartSettingsView.xib`・`LandscapeScreen/ChartFooterView.xib`(Interface Builder で開く) |
+| 設定画面・下の帯の配置を変えたい | `SettingsScreen/ChartSettingsView.xib`(行は `ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`)・`LandscapeScreen/ChartFooterView.xib`(Interface Builder で開く) |
 | 4本値(十字線)の動きを変えたい | `View/Crosshair/StockChartView+Crosshair.swift` |
 | テクニカル/設定パネルの開き方を変えたい | `Controller/StockChartViewController.swift` |
 | 横画面の下の帯のボタンの動きを変えたい | `LandscapeScreen/LandscapeChartViewController.swift` |
@@ -1327,8 +1329,9 @@ docs/images/                            README の画像
 
 | ファイル | 内容 |
 |---|---|
-| `ChartSettingsView.swift` / `.xib` | 設定画面(View)。画面の配置(足種のタブ・行・下のボタン)と、右側の行の見本(トグル行・数値行)は XIB で編集する |
-| `ChartSettingsRows.swift` | 設定画面の右側に並べる1行(トグル行 `ChartSettingsToggleRow`・数値行 `ChartSettingsStepperRow`。View) |
+| `ChartSettingsView.swift` / `.xib` | 設定画面(View)。画面の配置(足種のタブ・行・下のボタン)は XIB で編集する |
+| `ChartSettingsToggleRow.swift` / `.xib` | 設定画面の右側に並べる1行(トグル行。View)。見た目は XIB で編集する |
+| `ChartSettingsStepperRow.swift` / `.xib` | 設定画面の右側に並べる1行(数値行。−/+ ボタンとスライダー。View)。見た目は XIB で編集する |
 | `ChartPeriodTabView.swift` | 足種のタブ(View。設定画面の上部) |
 | `ChartSettingsCatalog.swift` | 設定画面に並べる項目と、編集できるパラメータ・設定できる足種の定義(Model) |
 
