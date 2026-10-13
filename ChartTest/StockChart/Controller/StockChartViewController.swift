@@ -708,7 +708,12 @@ final class StockChartViewController: UIViewController {
         } else {
             self.dimmingView.alpha = 0
         }
-        self.view.layoutIfNeeded()  // タブの移動もアニメーションさせる
+        // タブの移動もアニメーションさせる。
+        // 画面に表示される前(viewDidLoad でパネルを閉じた状態にするときなど)は、レイアウトしない
+        // (表示前にレイアウトすると、隠れている設定画面の表までレイアウトされて警告が出るため)
+        if self.view.window != nil {
+            self.view.layoutIfNeeded()
+        }
     }
 
     /// 閉じ終わったパネル(と、パネルを閉じたときは背景のグレー)を隠して、タッチを受けないようにする

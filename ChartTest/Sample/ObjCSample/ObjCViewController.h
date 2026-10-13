@@ -3,7 +3,7 @@
 //  ChartTest
 //
 //  ViewController.swift を Objective-C で書いたもの。
-//  縦向き用のチャートと横画面用のチャート画面を置き、画面の向きに合わせて表示を切り替える。
+//  縦向きのチャートを置き、ボタンで横画面のチャート画面を全画面で表示(present)する。
 //
 
 #import <UIKit/UIKit.h>

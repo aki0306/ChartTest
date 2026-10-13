@@ -7,6 +7,7 @@
 //
 //  ・縦チャートの足種の切り替え(1分足〜月足)
 //  ・日本株/国内指数/海外の切り替え(海外は 1分足・日中足 が押せない)
+//  ・横画面の開閉(「横画面にする」で横向きに開き、下の帯の「縦画面に戻す」で閉じると縦向きに戻るか)
 //  ・横画面の下の帯のメニュー(チャートの種類・足種。一番上が最初の項目になっているか)
 //  ・横画面のテクニカル/設定パネル
 //
@@ -79,11 +80,43 @@ final class ChartTestUITests: XCTestCase {
         }
     }
 
+    // MARK: - 横画面の開閉
+
+    /// 「横画面にする」で横画面のチャートが横向きに開き、下の帯の「縦画面に戻す」で閉じると縦画面に戻るか確かめる
+    func testLandscapePresentAndDismiss() {
+        self.openLandscape()
+        let window = self.app.windows.firstMatch
+        XCTAssertGreaterThan(window.frame.width, window.frame.height, "横画面が横向きで開いていない")
+        self.attachScreenshot(named: "横画面_開いたところ")
+
+        self.app.buttons["footer.rotateButton"].tap()
+        self.waitUntilHittable(self.app.buttons["portrait.rotateButton"])
+        XCTAssertLessThan(window.frame.width, window.frame.height, "閉じたあと縦向きに戻っていない")
+        self.attachScreenshot(named: "横画面_閉じたあと")
+    }
+
+    /// 端末を横に向けると横画面のチャートが開き、縦に戻すと閉じるか確かめる(左右どちらに傾けても)
+    func testLandscapeOpensAndClosesByDeviceOrientation() {
+        let window = self.app.windows.firstMatch
+        self.waitUntilHittable(self.app.buttons["portrait.rotateButton"])
+
+        for orientation in [UIDeviceOrientation.landscapeLeft, .landscapeRight] {
+            XCUIDevice.shared.orientation = orientation
+            self.waitUntilHittable(self.app.buttons["footer.rotateButton"])
+            XCTAssertGreaterThan(window.frame.width, window.frame.height, "横に向けても横画面が開いていない")
+            self.attachScreenshot(named: "端末を横に向けた_\(orientation.rawValue)")
+
+            XCUIDevice.shared.orientation = .portrait
+            self.waitUntilHittable(self.app.buttons["portrait.rotateButton"])
+            XCTAssertLessThan(window.frame.width, window.frame.height, "縦に戻しても閉じていない")
+        }
+    }
+
     // MARK: - 横画面の下の帯
 
     /// 下の帯のメニューが、最初の項目(ローソク足・日中足)を一番上にして並ぶか確かめ、選んだものに切り替わるか確かめる
     func testLandscapeFooterMenus() {
-        self.rotateToLandscape()
+        self.openLandscape()
 
         // チャートの種類: ローソク足が一番上、折線チャートが一番下
         let chartTypeButton = self.app.buttons["footer.chartTypeButton"]
@@ -115,9 +148,9 @@ final class ChartTestUITests: XCTestCase {
 
     // MARK: - 横画面のテクニカル/設定パネル
 
-    /// テクニカルのメニューで指標を選び、設定画面を開いて「決定」で閉じる
+    /// テクニカルのメニューで指標を選び、設定画面を開いて移動平均線を選び、「決定」で閉じる
     func testTechnicalAndSettingsPanels() {
-        self.rotateToLandscape()
+        self.openLandscape()
 
         // テクニカル: ボリンジャーバンド + ＲＳＩ を選ぶ(選んでもメニューは開いたまま)
         let technicalTab = self.app.buttons["chart.technicalTab"]
@@ -134,9 +167,13 @@ final class ChartTestUITests: XCTestCase {
         self.waitUntilGone(bollinger)
         self.attachScreenshot(named: "テクニカル_閉じたあと")
 
-        // 設定: 開いて「決定」で閉じる
+        // 設定: 開いて移動平均線を選び、「決定」で閉じる。
+        // 開いた直後は「オプション」が選ばれていて、下のボタン(「決定」など)は隠れているので、指標の項目を選んでから押す
         let settingsTab = self.app.buttons["chart.settingsTab"]
         settingsTab.tap()
+        let movingAverage = self.app.tables["settings.list"].cells.staticTexts["移動平均線"]
+        self.waitUntilHittable(movingAverage)
+        movingAverage.tap()
         let confirmButton = self.app.buttons["settings.confirmButton"]
         self.waitUntilHittable(confirmButton)
         self.attachScreenshot(named: "設定画面")
@@ -147,9 +184,11 @@ final class ChartTestUITests: XCTestCase {
 
     // MARK: - 共通の操作
 
-    /// 横画面にして、下の帯が出るまで待つ
-    private func rotateToLandscape() {
-        XCUIDevice.shared.orientation = .landscapeLeft
+    /// 「横画面にする」ボタンで横画面のチャートを開き、下の帯が出るまで待つ
+    private func openLandscape() {
+        let rotateButton = self.app.buttons["portrait.rotateButton"]
+        self.waitUntilHittable(rotateButton)
+        rotateButton.tap()
         self.waitUntilHittable(self.app.buttons["footer.rotateButton"])
     }
 

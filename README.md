@@ -44,9 +44,9 @@
 2. 初回は DGCharts の取得が自動で始まります。左下の進み具合の表示が消えるまで待つ
 3. 画面上部の実行先で、iPhone のシミュレータ(例: iPhone 16 Pro)を選ぶ
 4. **⌘R**(Product > Run)で実行する
-5. シミュレータで **⌘ →**(Device > Rotate Right)を押して横向きにする
+5. 縦画面のチャートの下にある「横画面にする」ボタンを押す
 
-**確認ポイント**: 横向きにすると、左に「テクニカル」「設定」タブ・下に帯のあるチャートが表示される(下の「画面」の画像と同じ見た目)。
+**確認ポイント**: 画面が横向きになり、左に「テクニカル」「設定」タブ・下に帯のあるチャートが全画面で表示される(下の「画面」の画像と同じ見た目)。帯の右端の ⤾ ボタンを押すと閉じて、縦画面に戻る。
 
 ### ステップ 2. アプリに DGCharts を追加する
 
@@ -253,7 +253,7 @@ final class MyChartViewController: UIViewController {
 | ローソク足の並びがおかしい・日付ラベルがおかしい | データが日付の古い順になっていない | `StockCandle` の配列を日付の古い順に並べる(`ChartResponseLoader` を使うと自動で並べ替える) |
 | 設定タブを押す・横画面を開くとアプリが落ちる(`Could not load NIB`) | `ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` がアプリに入っていない | ステップ 3 の 6. のとおり、XIB の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
 | 横画面を開くとアプリが落ちる(`Could not find a storyboard named`) | storyboard がアプリに入っていない | `LandscapeChartViewController.storyboard` の **Target Membership** にチェックを入れる(グループの場合は **Copy Bundle Resources** に入れる) |
-| 横向きにならない | アプリが横向きに対応していない | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる |
+| 横向きにならない | アプリが横向きに対応していない、または `modalPresentationStyle` を全画面以外に変えている | ターゲットの **General > Deployment Info** で **Landscape Left / Right** にチェックを入れる。`present` する前に `modalPresentationStyle` を変えない(`instantiate()` で `.fullScreen` にしてある) |
 | 横画面を閉じたあとも、メモリが解放されない | クロージャ(ブロック)の中で、画面を強く参照している | `[weak self]` / `__weak` を使う(ステップ 7 の注意) |
 | 配列を渡したらアプリが落ちた | 配列に辞書以外(文字列など)が入っている | `ChartResponseLoader` には辞書(`NSDictionary`)だけを入れた配列を渡す |
 
@@ -265,7 +265,7 @@ final class MyChartViewController: UIViewController {
 | 左端の「テクニカル」「設定」タブで、指標の切り替えや設定の変更ができる。下の帯で、チャートの種類・足種の切り替え、更新、縦画面に戻す操作ができる |
 | <img src="docs/images/landscape.png" width="520" alt="横画面"> |
 
-`ViewController`(`Main.storyboard`)は、縦向きでは `StockChartView`(チャートだけ・日足)を、横向きでは横画面を表示します。
+`ViewController`(`Main.storyboard`)は縦向きだけの画面で、`StockChartView`(チャートだけ・日足)を表示します。「横画面にする」ボタンを押すと、横画面を present で全画面に表示します(開くと横向きになり、閉じると縦向きに戻ります)。
 
 ### 横画面のテクニカル
 
@@ -345,7 +345,7 @@ final class MyChartViewController: UIViewController {
 ```
 
 帯は [`ChartFooterView`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.swift)(View)で、`LandscapeChartViewController.storyboard` の Footer View に置いています。配置は [`ChartFooterView.xib`](ChartTest/StockChart/LandscapeScreen/ChartFooterView.xib) を Interface Builder で開いて編集します。
-帯は見た目(ボタンの色・幅・現在値の文字)だけを担当し、メニューの中身と「押されたら何をするか」は `LandscapeChartViewController` が渡します。データの取得や画面の回転はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
+帯は見た目(ボタンの色・幅・現在値の文字)だけを担当し、メニューの中身と「押されたら何をするか」は `LandscapeChartViewController` が渡します。データの取得や画面の閉じ方はアプリによって違うので、ボタンが押されたら `LandscapeChartViewController` の処理(クロージャ / ブロック)を呼ぶだけにしています。
 「チャートの種類」「足種」のボタンの幅は、メニューの中で一番長い名前(「折線チャート」など)が1行で入る幅に固定しています(文字は縮小しません。選ぶたびに幅が変わらないようにするため)。
 
 | 部品 | 動き | 使うもの |
@@ -354,7 +354,7 @@ final class MyChartViewController: UIViewController {
 | ローソク足 ▼ | チャートの種類のメニュー(下の「横画面のチャートの種類」) | `chartViewController.chartType` |
 | 月足 ▼ | 足種のメニュー(国内指数は 1分足〜月足、海外指数は 日足・週足・月足。VWAP のときは 日中足 だけ、新値足・折線チャートのときは 1分足 を除く。`ChartType.periods(in:)`)。選ばれると `onPeriodSelect` が呼ばれるので、その足種のデータを取得して `setCandles(_:period:)` で渡す。ボタンの文字は、渡した足種に変わる | `onPeriodSelect` |
 | ↻(更新) | `onReload` が呼ばれるので、表示中の足種(`chartViewController.period`)のデータと現在値を取得し直して渡す | `onReload` |
-| ⤾(縦画面に戻す) | `onRotate` が呼ばれるので、縦画面に戻す処理をする(全画面で表示している場合は `dismiss` など) | `onRotate` |
+| ⤾(縦画面に戻す) | `onRotate` が呼ばれるので、画面を閉じる(`dismiss`)。閉じると、開く前の画面の向き(縦)に戻る | `onRotate` |
 
 ```swift
 // Swift
@@ -363,7 +363,7 @@ landscape.onPeriodSelect = { [weak landscape] period in
     landscape?.setCandles(candles, period: period)
 }
 landscape.onReload = { [weak self] in /* 表示中の足種のデータを取得し直して setCandles(_:period:)・updatePriceInfo を呼ぶ */ }
-landscape.onRotate = { [weak self] in /* 縦画面に戻す */ }
+landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }   // 閉じる(縦画面に戻る)
 landscape.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
 ```
 
@@ -374,7 +374,7 @@ landscape.onPeriodSelect = ^(ChartPeriod period) {
     [ChartResponseLoader setResponse:responseArray period:period to:weakLandscape];
 };
 landscape.onReload = ^{ /* 取得し直す */ };
-landscape.onRotate = ^{ /* 縦画面に戻す */ };
+landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES completion:nil]; };   // 閉じる(縦画面に戻る)
 [landscape updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
 ```
 
@@ -382,8 +382,8 @@ landscape.onRotate = ^{ /* 縦画面に戻す */ };
 > 中で `landscape` 自身や、`landscape` を持っている画面(`self`)を使う場合は、Swift は `[weak landscape]` / `[weak self]`、
 > Objective-C は `__weak` を付けた変数を使ってください(そのまま使うと、お互いを持ち合って解放されなくなります)。
 
-このアプリの `ViewController.swift`(`setupLandscapeFooter`)では、SampleData のデータで動かしています。
-縦画面の左下にある「日本株・国内指数・海外(R)・海外(D)」の切り替えボタンはサンプル用で、横画面では帯と重なるので表示しません。
+このアプリの `ViewController.swift`(`presentLandscapeChart`)では、SampleData のデータで動かしています。
+縦画面の左下にある「日本株・国内指数・海外(R)・海外(D)」の切り替えボタンはサンプル用です。横画面は、開いたときに選んでいる種類で表示します。
 
 ### 横画面のチャートの種類
 
@@ -490,7 +490,7 @@ LandscapeChartViewController(横画面)
 | 種類 | View | ViewController | ViewController |
 | 中身 | チャートだけ | `StockChartView` + 左端のテクニカル/設定タブ(`isTechnicalMenuEnabled = true` のとき) | `StockChartViewController` + 下の帯 |
 | 作り方 | `StockChartView()` | `StockChartViewController()` | `LandscapeChartViewController.instantiate()`(`LandscapeChartViewController.storyboard` から作る。`LandscapeChartViewController()` では下の帯が出ない) |
-| 画面への置き方 | `addSubview` | 子 ViewController として埋め込む | 子 ViewController として埋め込む |
+| 画面への置き方 | `addSubview` | 子 ViewController として埋め込む | `present` で全画面に表示する(横向きになる) |
 | 指標・パラメータ | コードで設定する | テクニカル/設定タブで切り替えられる(コードでも設定できる) | 中の `chartViewController` で設定する |
 | チャートの種類・足種 | `chartType`・`period` をコードで設定する | ボタンはない。チャートの種類は `chartType`、足種は `setCandles(_:period:)` でデータと一緒に設定する | 下の帯のメニューで切り替えられる |
 | データの渡し方 | `setCandles(_:period:)` などで渡す | `setCandles(_:period:)` などで渡す | 足種・更新・縦画面に戻すが押されると `onPeriodSelect`・`onReload`・`onRotate` が呼ばれるので、アプリ側でデータを取得して `setCandles(_:period:)` で渡す |
@@ -523,7 +523,7 @@ Swift のクラスは、Xcode が自動で作るヘッダ `<プロダクトモ�
 
 | ファイル | 内容 |
 |---|---|
-| [`Sample/ObjCSample/ObjCViewController.m`](ChartTest/Sample/ObjCSample/ObjCViewController.m) | 縦向きのチャート(`StockChartView`)と横画面のチャート(`LandscapeChartViewController`)を、画面の向きに合わせて切り替える(`ViewController.swift` を Objective-C で書いたもの) |
+| [`Sample/ObjCSample/ObjCViewController.m`](ChartTest/Sample/ObjCSample/ObjCViewController.m) | 縦向きのチャート(`StockChartView`)を置き、ボタンで横画面のチャート(`LandscapeChartViewController`)を present する(`ViewController.swift` を Objective-C で書いたもの) |
 
 ### 1. データを作る
 
@@ -1107,50 +1107,57 @@ NSMutableArray *responseArray = [NSMutableArray array];
 |---|---|---|
 | `StockChart/` フォルダ(`ChartSettingsView.xib`・`ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`・`ChartFooterView.xib` を含む) | 必要 | チャート本体・テクニカル・設定画面・下の帯。`ChartPeriodTabView` も設定画面の足種のタブで使うので、フォルダごとコピーする |
 | `StockChart/LandscapeScreen/LandscapeChartViewController.storyboard` | 必要 | 横画面(下の帯付き)。画面のクラス `LandscapeChartViewController` も同じ `StockChart/LandscapeScreen/` に入っている。下の帯が不要なら、`StockChartViewController` を直接使ってもよい |
-| `Sample/` フォルダ・`App/Base.lproj/Main.storyboard` | 不要 | このアプリの、縦横を切り替えるサンプル画面 |
+| `Sample/` フォルダ・`App/Base.lproj/Main.storyboard` | 不要 | このアプリの、横画面を開くサンプル画面 |
 | `Sample/SampleData.swift` | 不要 | 動作確認用のダミーデータ(`Sample/` フォルダに含まれる) |
 
 #### 横画面を表示する
 
-既存の縦画面から、横画面のチャートを表示します。表示の仕方はアプリに合わせて選んでください。
+縦画面のボタンなどから、横画面のチャートを `present` で全画面に表示します。このアプリの `ViewController.swift`(`presentLandscapeChart`)と同じ方法です。
 
-- **ボタンなどで全画面に表示する**(参考画面の右上の回転ボタンのような使い方)
+- `LandscapeChartViewController` は横向きだけに対応している(`supportedInterfaceOrientations`)ので、開くと横向きになり、閉じると開く前の画面の向きに戻ります。自分で向きを変える処理(`requestGeometryUpdate`)はいりません
+- 全画面でないと向きが変わらないので、`instantiate()` で `modalPresentationStyle` を `.fullScreen` にしてあります
+- 開く・閉じるときは、端末を回したときと同じ回転のアニメーションが付きます(`LandscapeChartTransition`。開く前の画面のスナップショットと横画面を一緒に回しながら入れ替える)。`instantiate()` で `transitioningDelegate` に設定してあるので、`present(animated: true)` で呼ぶだけでよく、iPad の画面分割中など向きが変わらないときはフェードだけになります
+- 閉じる操作は、下の帯の「縦画面に戻す」ボタンが押されたら呼ばれる `onRotate` で `dismiss` します
+- 端末を縦に向けたときも、「縦画面に戻す」ボタンと同じく `onRotate` が呼ばれます(横向きから縦向きに変わったときだけ。机に置いて持ち上げただけでは呼ばれません)
+- 端末を横に向けて開く場合は、開く画面で端末の向きの変化(`UIDevice.orientationDidChangeNotification`)を受け取り、縦から横に変わったら `present` します(`ViewController.swift` の `deviceOrientationDidChange`)。開く向きは、端末を傾けた向きに合わせます
 
 ```swift
-// Swift(既存の縦画面の ViewController から)
+// Swift(縦画面の ViewController から)
 let landscape = LandscapeChartViewController.instantiate()
 landscape.chartViewController.market = .japanIndex        // 日本株は .japanStock、海外指数は .overseasRealtime / .overseasDaily(データを渡す前に指定する)
-landscape.setCandles(candles, period: .daily)             // 表示中の足種のデータ(古い順)
-landscape.modalPresentationStyle = .fullScreen
+let period = landscape.chartViewController.period         // 前回選んでいた足種(初めてなら日足)
+landscape.setCandles(candles, period: period)             // その足種のデータ(古い順)
+landscape.updatePriceInfo(name: "日経平均", price: price, date: date)
+landscape.onPeriodSelect = { [weak landscape] period in /* その足種のデータを取得して landscape?.setCandles(_:period:) */ }
+landscape.onReload = { [weak landscape] in /* 表示中の足種のデータを取得し直す */ }
+landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }
 present(landscape, animated: true)
 ```
 
 ```objc
-// Objective-C(既存の縦画面の ViewController から)
+// Objective-C(縦画面の ViewController から)
 LandscapeChartViewController *landscape = [LandscapeChartViewController instantiate];
 landscape.chartViewController.market = IndexMarketJapanIndex;   // 日本株は IndexMarketJapanStock、海外指数は IndexMarketOverseasRealtime / IndexMarketOverseasDaily
-[landscape setCandles:candles period:ChartPeriodDaily];
-landscape.modalPresentationStyle = UIModalPresentationFullScreen;
+ChartPeriod period = landscape.chartViewController.period;      // 前回選んでいた足種(初めてなら日足)
+[landscape setCandles:candles period:period];
+[landscape updatePriceInfoWithName:@"日経平均" price:price date:date];
+__weak LandscapeChartViewController *weakLandscape = landscape;
+landscape.onPeriodSelect = ^(ChartPeriod period) { /* その足種のデータを取得して [weakLandscape setCandles:period:] */ };
+landscape.onReload = ^{ /* 表示中の足種のデータを取得し直す */ };
+landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES completion:nil]; };
 [self presentViewController:landscape animated:YES completion:nil];
 ```
 
-  このとき、次の2点をアプリ側で追加してください(`LandscapeChartViewController` はコピーしたものを直接書き換えて構いません)。
+開くたびに `instantiate()` で作り直してかまいません。チャートの種類・指標・足種・設定値などは `ChartStateStore` がアプリの起動中は覚えているので、前回の状態で開きます。
 
-  - 横向きで表示する: `LandscapeChartViewController` に次を追加する(アプリの対応する向きに「横」が含まれている必要があります)
+アプリ側で確認すること:
 
-    ```swift
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .landscape }
-    ```
+| 項目 | 内容 |
+|---|---|
+| アプリの対応する向き | ターゲットの **General > Deployment Info** で、**Portrait** と **Landscape Left / Right** にチェックが入っている(横が入っていないと横向きにならない) |
+| 開く側の画面の向き | 開く側の画面を縦だけにしたい場合は、その画面の `supportedInterfaceOrientations` を `.portrait` にする(`ViewController.swift` を参照)。画面が `UINavigationController` や `UITabBarController` の中にある場合は、向きは一番外側のコンテナの `supportedInterfaceOrientations` で決まるので、コンテナ側で中の画面の値を返すようにする |
 
-  - 閉じる操作: 下の帯の「縦画面に戻す」ボタンが押されたら呼ばれる `onRotate` で、`dismiss(animated:)` を呼ぶ
-
-    ```swift
-    landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }
-    ```
-
-- **端末を横にしたときに切り替える**
-
-  このアプリの `ViewController.swift` と同じ方法です。既存の画面に `LandscapeChartViewController` を子 ViewController として画面いっぱいに埋め込んでおき、`viewDidLayoutSubviews` で縦横を判定して、横のときだけ表示します(`ViewController.swift` の `embed` / `applyLayout` を参照)。
+端末を横にしたときに自動で切り替えたい場合は、`LandscapeChartViewController` を子 ViewController として画面いっぱいに埋め込んでおき、`viewWillTransition(to:with:)` で縦横を判定して、横のときだけ表示します(埋め込んだ場合、`supportedInterfaceOrientations` は使われません)。
 
 #### 下の帯をアプリ側のものにする場合
 
@@ -1190,7 +1197,7 @@ ChartTest/
 │   └─ Base.lproj/                          Main.storyboard・LaunchScreen.storyboard
 │
 ├─ Sample/                              サンプル(動作確認用。ほかのアプリには不要)
-│   ├─ ViewController.swift                 縦向きは StockChartView、横向きは横画面を表示する画面
+│   ├─ ViewController.swift                 縦向きの StockChartView を置き、ボタンで横画面を present する画面
 │   ├─ SampleData.swift                     動作確認用のダミーデータ
 │   ├─ SampleResponses/oneMinute.json       1分足のデータ(実際のレスポンス。14:35 まで値があり、15:30 まで日時がある)
 │   ├─ SampleResponses/intraday.json        日中足のデータ(実際のレスポンス。14:35 まで値があり、15:30 まで日時がある)
@@ -1248,6 +1255,7 @@ ChartTest/
    │
    ├─ LandscapeScreen/                  横画面だけで使うもの(横画面を使わなければフォルダごと削除してよい)
    │   ├─ LandscapeChartViewController.swift / .storyboard 横画面
+   │   ├─ LandscapeChartTransition.swift     横画面を開く・閉じるときの回転のアニメーション
    │   └─ ChartFooterView.swift / .xib      横画面の下の帯
    │
    ├─ Response/                         API のレスポンスをチャートに渡す
@@ -1349,6 +1357,7 @@ docs/images/                            README の画像
 |---|---|
 | `LandscapeChartViewController.swift` | 横画面(StockChartViewController を埋め込み、下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻す)を付ける)。`LandscapeChartViewController.storyboard` から作る |
 | `LandscapeChartViewController.storyboard` | 横画面のレイアウト(Interface Builder で開いて編集する) |
+| `LandscapeChartTransition.swift` | 横画面を開く・閉じるときの回転のアニメーション(開く前の画面のスナップショットと横画面を一緒に回しながら入れ替える) |
 | `ChartFooterView.swift` / `.xib` | 横画面の下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)。配置は XIB で編集する |
 
 ### API のレスポンス(`StockChart/Response/`)
@@ -1402,8 +1411,9 @@ MainChartContent / SubChartContent(何を描くか)
 |---|---|
 | `testPortraitPeriodSwitching` | 縦チャートの足種を 1分足 → 月足 の順に切り替えて、選んだボタンが選択中になる |
 | `testMarketSwitching` | 日本株/国内指数/海外を切り替えて、海外では 1分足・日中足 が押せなくなる |
+| `testLandscapePresentAndDismiss` | 「横画面にする」で横画面が横向きに開き、下の帯の「縦画面に戻す」で閉じると縦向きに戻る |
 | `testLandscapeFooterMenus` | 横画面の下の帯のメニューが、最初の項目(ローソク足・日中足)を一番上にして並び、選んだものに切り替わる |
-| `testTechnicalAndSettingsPanels` | 横画面のテクニカルで指標を選び、設定画面を開いて「決定」で閉じる |
+| `testTechnicalAndSettingsPanels` | 横画面のテクニカルで指標を選び、設定画面を開いて移動平均線を選び、「決定」で閉じる |
 
 ### 動かし方
 
@@ -1422,7 +1432,7 @@ MainChartContent / SubChartContent(何を描くか)
 
 | 識別子 | 部品 | ファイル |
 |---|---|---|
-| `portrait.periodControl`・`portrait.marketControl`・`portrait.rotateButton`・`portrait.chartView` | 縦画面の足種・指数の種類の切り替え、横画面にするボタン、縦チャート | `Sample/ViewController.swift` |
+| `portrait.periodControl`・`portrait.marketControl`・`portrait.rotateButton`・`portrait.chartView` | 縦画面の足種・指数の種類の切り替え、横画面を開くボタン、縦チャート | `Sample/ViewController.swift` |
 | `chart.technicalTab`・`chart.settingsTab`・`chart.technicalMenu`・`chart.settingsView` | テクニカル/設定タブとパネル | `Controller/StockChartViewController.swift` |
 | `technicalMenu.main.<指標名>`・`technicalMenu.sub.<指標名>` | テクニカルのメニューの各行(例: `technicalMenu.sub.ＲＳＩ`) | `TechnicalMenu/TechnicalMenuView.swift` |
 | `footer.chartTypeButton`・`footer.periodButton`・`footer.reloadButton`・`footer.rotateButton` | 横画面の下の帯のボタン | `LandscapeScreen/ChartFooterView.swift` |

@@ -2,17 +2,19 @@
 //  ObjCViewController.m
 //  ChartTest
 //
-//  【Controller】ViewController.swift を Objective-C で書いたもの。縦向き用のチャートと横画面用のチャート画面を置き、
-//  画面の向きに合わせて表示を切り替える。
+//  【Controller】ViewController.swift を Objective-C で書いたもの。縦向きのチャートを置き、
+//  ボタンで横画面のチャート画面を全画面で表示(present)する。
 //
-//  ・縦向き: StockChartView(チャートだけ。最初は日足を表示する)
-//  ・横画面: LandscapeChartViewController(LandscapeChartViewController.storyboard。StockChartViewController で指標メニュー付き表示)
-//  この画面は「どちらを表示するか」と「データを渡す」ことだけを担当する。
-//  縦画面の左下の切り替えボタン(marketControl)で、日本株/国内指数/海外指数(リアルタイム・日次)を切り替えて表示を確かめられる
-//  (横画面では下の帯と重なるので隠す。縦画面で切り替えてから横にする)。
-//  チャートの上には縦向きのチャートの足種を切り替えるボタン(periodControl)を、下には横画面にするボタン(rotateButton)を置く
-//  (どちらも縦画面だけに表示する。テスト用)。
-//  横画面の下の帯(足種・更新・縦画面に戻す)が押されたときの処理も、ここで設定している(setupLandscapeFooter)。
+//  ・縦向き: StockChartView(チャートだけ。最初は日足を表示する)。この画面は縦向きだけで表示する(supportedInterfaceOrientations)
+//  ・横画面: LandscapeChartViewController(LandscapeChartViewController.storyboard。StockChartViewController で指標メニュー付き表示)。
+//           チャートの下の「横画面にする」ボタン(rotateButton)で present すると横向きになり、
+//           下の帯の「縦画面に戻す」ボタンで閉じる(dismiss)と縦向きに戻る。
+//           端末を横に向けても開き(deviceOrientationDidChange)、縦に戻すと閉じる(LandscapeChartViewController が onRotate を呼ぶ)
+//  この画面は「横画面を開く」ことと「データを渡す」ことだけを担当する。
+//  左下の切り替えボタン(marketControl)で、日本株/国内指数/海外指数(リアルタイム・日次)を切り替えて表示を確かめられる
+//  (横画面は、開いたときに選んでいる種類で表示する)。
+//  チャートの上には縦向きのチャートの足種を切り替えるボタン(periodControl)を置く(テスト用)。
+//  横画面の下の帯(足種・更新・縦画面に戻す)が押されたときの処理も、ここで設定している(presentLandscapeChart)。
 //
 //  ChartPeriod.title・IndexMarket.periods は Swift の enum のプロパティで Objective-C からは呼べないため、
 //  同じ内容をこのファイルに書いている(titleForPeriod: ・periodsForMarket:)。Swift 側を変えたら、こちらも合わせる。
@@ -28,12 +30,10 @@
 
 /// 縦向きのチャート(チャートだけ。最初は日足を表示する)
 @property (nonatomic, strong) StockChartView *portraitChartView;
-/// 横画面のチャート(LandscapeChartViewController.storyboard)
-@property (nonatomic, strong) LandscapeChartViewController *landscapeViewController;
 
 // MARK: - 銘柄・指数の種類の切り替え
 
-/// 日本株/国内指数/海外指数を切り替えるボタン(左下。縦画面だけに表示する)
+/// 日本株/国内指数/海外指数を切り替えるボタン(左下)
 @property (nonatomic, strong) UISegmentedControl *marketControl;
 
 /// 切り替えボタンの並び順と同じ、銘柄・指数の種類(IndexMarket を NSNumber に包んだもの)
@@ -44,7 +44,7 @@
 
 // MARK: - 縦向きのチャートの足種の切り替え(テスト用)
 
-/// 縦向きのチャートの足種を切り替えるボタン(チャートの上。縦画面だけに表示する)
+/// 縦向きのチャートの足種を切り替えるボタン(チャートの上)
 @property (nonatomic, strong) UISegmentedControl *periodControl;
 
 /// 切り替えボタンの並び順と同じ足種(ChartPeriod を NSNumber に包んだもの)
@@ -56,10 +56,15 @@
 /// 表示している銘柄・指数の種類
 @property (nonatomic, assign) IndexMarket currentMarket;
 
-// MARK: - 横画面にするボタン(テスト用)
+// MARK: - 横画面にするボタン
 
-/// 横画面にするボタン(チャートの下。縦画面だけに表示する)
+/// 横画面のチャートを開くボタン(チャートの下)
 @property (nonatomic, strong) UIButton *rotateButton;
+
+// MARK: - 端末の向き
+
+/// 最後に分かった端末の向き(縦か横だけを覚える。机に置いたときなどの向きは無視する)
+@property (nonatomic, assign) UIDeviceOrientation lastDeviceOrientation;
 
 @end
 
@@ -86,7 +91,6 @@
 /// プロパティの初期値を設定する(Swift 版でプロパティの宣言時に入れている値)
 - (void)commonInit {
     self.portraitChartView = [[StockChartView alloc] init];
-    self.landscapeViewController = [LandscapeChartViewController instantiate];
 
     self.marketControl = [[UISegmentedControl alloc] initWithItems:@[@"日本株", @"国内指数", @"海外(R)", @"海外(D)"]];
     self.marketChoices = @[@(IndexMarketJapanStock), @(IndexMarketJapanIndex), @(IndexMarketOverseasRealtime), @(IndexMarketOverseasDaily)];
@@ -106,35 +110,59 @@
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor colorNamed:@"SampleBackground"];
 
-    // データを渡す前に埋め込んでおく(チャートが正しいサイズで初期表示位置を計算できるように)
     [self setupPortraitChartView];
-    [self embedChildViewController:self.landscapeViewController];
-    [self applyLayoutForLandscape:self.view.bounds.size.width > self.view.bounds.size.height];
 
-    // 横画面: 下の帯のボタンが押されたときの処理
-    [self setupLandscapeFooter];
-
-    // 縦向きのチャートの足種の切り替えボタンと、横画面にするボタン(テスト用)
+    // 縦向きのチャートの足種の切り替えボタン(テスト用)と、横画面にするボタン
     [self setupPeriodControl];
     [self setupRotateButton];
 
     // 日本株/国内指数/海外指数の切り替えボタン(最初は国内指数)
     [self setupMarketControl];
-    [self showChartsForMarket:self.initialMarket];
+    [self showPortraitChartForMarket:self.initialMarket];
 }
 
-- (void)viewIsAppearing:(BOOL)animated {
-    [super viewIsAppearing:animated];
-    // viewDidLoad の時点では storyboard のサイズのままなので、実際の画面サイズでもう一度判定する
-    [self applyLayoutForLandscape:self.view.bounds.size.width > self.view.bounds.size.height];
+// MARK: - 画面の向き
+
+/// この画面は縦向きだけで表示する(横画面のチャートは present で開く。LandscapeChartViewController は横向きだけ)
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
 }
 
-- (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator {
-    [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
-    // 画面の縦横が変わるときに表示を切り替える(回転のアニメーションに合わせる)
-    [coordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-        [self applyLayoutForLandscape:size.width > size.height];
-    } completion:nil];
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    // 端末を横に向けたら横画面のチャートを開けるよう、端末の向きの変化を受け取る
+    // (横画面のチャートを開いている間は、viewWillDisappear: で受け取るのをやめる)
+    self.lastDeviceOrientation = UIDevice.currentDevice.orientation;
+    [UIDevice.currentDevice beginGeneratingDeviceOrientationNotifications];
+    [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(deviceOrientationDidChange)
+                                               name:UIDeviceOrientationDidChangeNotification object:nil];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+    [super viewWillDisappear:animated];
+    [NSNotificationCenter.defaultCenter removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+    [UIDevice.currentDevice endGeneratingDeviceOrientationNotifications];
+}
+
+/// 端末の向きが変わったとき。縦から横に変わったら、横画面のチャートを開く
+/// (横に持ったまま「縦画面に戻す」で閉じたときに、すぐ開き直さないよう、縦を経由したときだけにする)
+- (void)deviceOrientationDidChange {
+    UIDeviceOrientation orientation = UIDevice.currentDevice.orientation;
+    if (UIDeviceOrientationIsLandscape(orientation)) {
+        BOOL wasLandscape = UIDeviceOrientationIsLandscape(self.lastDeviceOrientation);
+        self.lastDeviceOrientation = orientation;
+        if (wasLandscape) {
+            return;
+        }
+        if (self.presentedViewController != nil) {
+            return;
+        }
+        [self presentLandscapeChart];
+        return;
+    }
+    if (orientation == UIDeviceOrientationPortrait) {
+        self.lastDeviceOrientation = orientation;
+    }
 }
 
 // MARK: - Setup
@@ -151,21 +179,6 @@
         [self.portraitChartView.trailingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor],
         [self.portraitChartView.heightAnchor constraintEqualToConstant:260],
     ]];
-}
-
-/// 子 ViewController を画面いっぱいに埋め込む
-- (void)embedChildViewController:(UIViewController *)child {
-    [self addChildViewController:child];
-    UIView *childView = child.view;
-    childView.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.view addSubview:childView];
-    [NSLayoutConstraint activateConstraints:@[
-        [childView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
-        [childView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-        [childView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
-        [childView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-    ]];
-    [child didMoveToParentViewController:self];
 }
 
 // MARK: - 縦向きのチャートの足種(テスト用)
@@ -228,7 +241,7 @@
                                 market:self.currentMarket];
 }
 
-// MARK: - 横画面にする(テスト用)
+// MARK: - 横画面にする
 
 /// 横画面にするボタンを、チャートの下に置く
 - (void)setupRotateButton {
@@ -248,21 +261,14 @@
     ]];
 }
 
-/// 横画面にするボタンが押されたら、画面を横向きにする(横画面のチャートに切り替わる)
+/// 横画面にするボタンが押されたら、横画面のチャートを全画面で表示する(横向きになる)
 - (void)rotateButtonTapped {
-    [self requestInterfaceOrientations:UIInterfaceOrientationMaskLandscapeRight];
-}
-
-/// 画面を指定した向きにするよう、シーンに頼む
-- (void)requestInterfaceOrientations:(UIInterfaceOrientationMask)orientations {
-    UIWindowSceneGeometryPreferencesIOS *preferences =
-        [[UIWindowSceneGeometryPreferencesIOS alloc] initWithInterfaceOrientations:orientations];
-    [self.view.window.windowScene requestGeometryUpdateWithPreferences:preferences errorHandler:nil];
+    [self presentLandscapeChart];
 }
 
 // MARK: - 日本株/国内指数/海外指数
 
-/// 切り替えボタンを左下に置く(チャート画面より手前)
+/// 切り替えボタンを左下に置く
 - (void)setupMarketControl {
     // 最初に表示する種類のボタンを選んだ状態にする
     NSUInteger index = [self.marketChoices indexOfObject:@(self.initialMarket)];
@@ -289,60 +295,71 @@
     if (index >= (NSInteger)self.marketChoices.count) {
         return;
     }
-    [self showChartsForMarket:(IndexMarket)self.marketChoices[index].integerValue];
+    [self showPortraitChartForMarket:(IndexMarket)self.marketChoices[index].integerValue];
 }
 
-/// 縦向き・横画面のチャートを、指定した指数の種類で表示し直す。
-/// 指数の種類は、データを渡す前に設定する(描き方・選べる足種や指標が変わるため)
-///   ・国内指数: 縦向きは ローソク足 + 移動平均線 + 出来高
-///   ・海外指数(R・D とも同じ): 縦向きは ローソク足 + 移動平均線(サブチャートなし)。
-///              横画面は テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
+/// 縦向きのチャートを、指定した指数の種類で表示し直す(海外指数で選べない足種なら日足にする)。
+///   ・国内指数: ローソク足 + 移動平均線 + 出来高
+///   ・海外指数(R・D とも同じ): ローソク足 + 移動平均線(サブチャートなし)
+/// 横画面のチャートは、開くときにこの種類で表示する(presentLandscapeChart)
 /// (サンプルなので、海外指数でも同じダミーデータを使う)
-- (void)showChartsForMarket:(IndexMarket)market {
-    // 縦向き: 表示中の足種のデータを、指数の種類に合わせて描き直す(海外指数で選べない足種なら日足にする)
+- (void)showPortraitChartForMarket:(IndexMarket)market {
     self.currentMarket = market;
     [self updatePeriodControlForMarket:market];
     [self showPortraitChart];
-
-    // 横画面: market を変えると、国内/海外ごとに前回選んでいた足種(初めてなら日足)が period に入るので、
-    // その足種のデータを渡す。下の帯の指数名・現在値も変える
-    self.landscapeViewController.chartViewController.market = market;
-    ChartPeriod period = self.landscapeViewController.chartViewController.period;
-    [self.landscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
-    [self updateLandscapePriceInfo];
 }
 
-// MARK: - 横画面の下の帯
+// MARK: - 横画面のチャート
 
-/// 横画面の下の帯のボタンが押されたときの処理を設定する
+/// 横画面のチャートを作り、データと下の帯のボタンの処理を設定して、全画面で表示する。
+/// 開くたびに作り直す(チャートの種類・指標・足種などは ChartStateStore が覚えているので、前回の状態で開く)。
 /// (サンプルなので SampleData から読み込む。実際のアプリでは API から取得して setCandles:period: で渡す)
-- (void)setupLandscapeFooter {
+- (void)presentLandscapeChart {
+    LandscapeChartViewController *landscapeViewController = [LandscapeChartViewController instantiate];
+
+    // 指数の種類は、データを渡す前に設定する(描き方・選べる足種や指標が変わるため)。
+    //   ・国内指数: テクニカル・チャートの種類はすべて選べる
+    //   ・海外指数: テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
+    // market を設定すると、国内/海外ごとに前回選んでいた足種(初めてなら日足)が period に入るので、その足種のデータを渡す
+    landscapeViewController.chartViewController.market = self.currentMarket;
+    ChartPeriod initialPeriod = landscapeViewController.chartViewController.period;
+    [landscapeViewController setCandles:[SampleData candlesForPeriod:initialPeriod] period:initialPeriod];
+    [self updatePriceInfoOfLandscapeViewController:landscapeViewController];
+
+    // ブロックはこの画面・横画面が持ち続けるので、中では weak で使う(循環参照を防ぐ)
     __weak typeof(self) weakSelf = self;
+    __weak LandscapeChartViewController *weakLandscapeViewController = landscapeViewController;
     // 足種が選ばれたら、その足種のデータを渡す(足種のボタンの表示も切り替わる)
-    self.landscapeViewController.onPeriodSelect = ^(ChartPeriod period) {
-        [weakSelf.landscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
+    landscapeViewController.onPeriodSelect = ^(ChartPeriod period) {
+        [weakLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
     };
     // 更新: 表示中の足種のデータを読み込み直し、現在値も更新する
-    self.landscapeViewController.onReload = ^{
+    landscapeViewController.onReload = ^{
         __strong typeof(weakSelf) strongSelf = weakSelf;
         if (strongSelf == nil) {
             return;
         }
-        ChartPeriod period = strongSelf.landscapeViewController.chartViewController.period;
-        [strongSelf.landscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
-        [strongSelf updateLandscapePriceInfo];
+        LandscapeChartViewController *strongLandscapeViewController = weakLandscapeViewController;
+        if (strongLandscapeViewController == nil) {
+            return;
+        }
+        ChartPeriod period = strongLandscapeViewController.chartViewController.period;
+        [strongLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
+        [strongSelf updatePriceInfoOfLandscapeViewController:strongLandscapeViewController];
     };
-    // 縦画面に戻す
-    self.landscapeViewController.onRotate = ^{
-        [weakSelf requestInterfaceOrientations:UIInterfaceOrientationMaskPortrait];
+    // 縦画面に戻す: 閉じると、この画面の向き(縦)に戻る
+    landscapeViewController.onRotate = ^{
+        [weakLandscapeViewController dismissViewControllerAnimated:YES completion:nil];
     };
+
+    [self presentViewController:landscapeViewController animated:YES completion:nil];
 }
 
 /// 横画面の下の帯に、指数名・現在値・日時を表示する
 /// (サンプルなので、当日の1分足の最後の足の終値・時刻を現在値として使う。どの足種を表示していても同じ値)
-- (void)updateLandscapePriceInfo {
+- (void)updatePriceInfoOfLandscapeViewController:(LandscapeChartViewController *)landscapeViewController {
     NSString *name = @"日経平均";
-    switch (self.landscapeViewController.chartViewController.market) {
+    switch (landscapeViewController.chartViewController.market) {
         case IndexMarketJapanStock:
             name = @"サンプル銘柄";
             break;
@@ -355,19 +372,7 @@
             name = @"NYダウ(日次)";
             break;
     }
-    [self.landscapeViewController updatePriceInfoWithName:name price:SampleData.latestPrice date:SampleData.latestDate];
-}
-
-// MARK: - Layout switching
-
-/// 縦向き/横画面のチャートを切り替える
-- (void)applyLayoutForLandscape:(BOOL)isLandscape {
-    self.portraitChartView.hidden = isLandscape;
-    self.landscapeViewController.view.hidden = !isLandscape;
-    // 切り替えボタン・横画面にするボタンは縦画面だけ(横画面では下の帯の文字と重なるため)
-    self.marketControl.hidden = isLandscape;
-    self.periodControl.hidden = isLandscape;
-    self.rotateButton.hidden = isLandscape;
+    [landscapeViewController updatePriceInfoWithName:name price:SampleData.latestPrice date:SampleData.latestDate];
 }
 
 // MARK: - Swift の enum のプロパティの代わり

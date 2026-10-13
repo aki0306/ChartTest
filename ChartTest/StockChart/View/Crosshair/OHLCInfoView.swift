@@ -85,11 +85,19 @@ final class OHLCInfoView: UIView {
         stack.spacing = self.lineSpacing
         stack.translatesAutoresizingMaskIntoConstraints = false
         self.addSubview(stack)
+        // 下端・右端の余白は、必須より少し弱くする。
+        // この枠は最初は大きさ 0 のまま隠しておく(位置と大きさは表示するときに frame で決める)ので、
+        // 必須のままだと「大きさ 0」と「上下左右の余白」を両方は満たせず、制約の警告が出るため。
+        // 大きさを決めるとき(systemLayoutSizeFitting)は、この制約どおりの大きさになる
+        let bottom = stack.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -self.padding.bottom)
+        bottom.priority = .required - 1
+        let trailing = stack.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -self.padding.right)
+        trailing.priority = .required - 1
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: self.topAnchor, constant: self.padding.top),
-            stack.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -self.padding.bottom),
+            bottom,
             stack.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: self.padding.left),
-            stack.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -self.padding.right),
+            trailing,
         ])
     }
 

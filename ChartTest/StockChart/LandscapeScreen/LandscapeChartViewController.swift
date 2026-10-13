@@ -20,8 +20,12 @@
 //                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない
 //      月足▼ : 足種を選ぶ。選ばれると onPeriodSelect が呼ばれるので、その足種のデータを取得して setCandles(_:period:) で渡す
 //      ↻     : 更新。onReload が呼ばれるので、表示中の足種のデータを取得し直して渡す
-//      ⤾     : 縦画面に戻す。onRotate が呼ばれるので、画面の向きを変える処理をする
-//    データの取得・画面の回転は、呼び出し側(アプリ)の仕事にしている(API の取得は非同期のことが多いため)
+//      ⤾     : 縦画面に戻す。onRotate が呼ばれるので、画面を閉じる(dismiss)
+//    データの取得・画面を閉じる処理は、呼び出し側(アプリ)の仕事にしている(API の取得は非同期のことが多いため)
+//  ・縦画面から present で全画面に表示する(instantiate で modalPresentationStyle を .fullScreen にしてある)。
+//    この画面は横向きだけに対応しているので(supportedInterfaceOrientations)、開くと横向きになり、閉じると元の画面の向きに戻る。
+//    開く・閉じるときの回転のアニメーションは LandscapeChartTransition が付ける(instantiate で transitioningDelegate に設定)
+//  ・端末を縦に向けたときも、縦画面に戻すボタンと同じく onRotate が呼ばれる(deviceOrientationDidChange)
 //  ・チャート部品は画面いっぱいに置き、チャート本体だけを chartInsets で内側(帯の上)に置く。
 //    テクニカル/設定を開いている間は、パネルが画面の上端〜セーフエリアの下端まで、背景のグレーが画面全体に広がる(configurePanelLayering)
 //
@@ -30,18 +34,20 @@
 //      viewController.chartViewController.market = .overseasRealtime             // 海外指数(移動平均線・ローソク足/折線チャートだけ)
 //      viewController.onPeriodSelect = { [weak viewController] period in /* その足種のデータを取得して viewController?.setCandles(_:period:) */ }
 //      viewController.onReload = { [weak self] in /* 表示中の足種(chartViewController.period)のデータを取得し直す */ }
-//      viewController.onRotate = { [weak self] in /* 縦画面に戻す */ }
-//      viewController.setCandles(candles, period: .daily)
+//      viewController.onRotate = { [weak viewController] in viewController?.dismiss(animated: true) }   // 閉じる
+//      viewController.setCandles(candles, period: viewController.chartViewController.period)
 //      viewController.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
+//      present(viewController, animated: true)
 //
 //  使い方(Objective-C):
 //      LandscapeChartViewController *viewController = [LandscapeChartViewController instantiate];
 //      __weak LandscapeChartViewController *weakViewController = viewController;   // ブロックの中では weak で使う
 //      viewController.onPeriodSelect = ^(ChartPeriod period) { ... [weakViewController setCandles:candles period:period]; };
 //      viewController.onReload = ^{ ... };
-//      viewController.onRotate = ^{ ... };
-//      [viewController setCandles:candles period:ChartPeriodDaily];
+//      viewController.onRotate = ^{ [weakViewController dismissViewControllerAnimated:YES completion:nil]; };
+//      [viewController setCandles:candles period:viewController.chartViewController.period];
 //      [viewController updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
+//      [self presentViewController:viewController animated:YES completion:nil];
 //
 //  API のレスポンス(足種ごと)を渡す場合(Objective-C):
 //      [ChartResponseLoader setResponse:responseArray period:ChartPeriodDaily to:viewController];   // 辞書の配列(NSMutableArray のままでよい)
@@ -59,8 +65,70 @@ final class LandscapeChartViewController: UIViewController {
             // storyboard の最初の画面のクラスが違う(設定ミス)。すぐ気付けるよう落とす
             fatalError("LandscapeChartViewController.storyboard の最初の画面が LandscapeChartViewController になっていません")
         }
+        // present したときに全画面で表示する(全画面でないと、画面の向きが横に変わらない)
+        viewController.modalPresentationStyle = .fullScreen
+        // 開く・閉じるときの回転のアニメーション(transitioningDelegate は weak なので、この画面が持っておく)
+        viewController.transitioningDelegate = viewController.transition
         return viewController
     }
+
+    // MARK: - 画面の向き(present で表示したとき)
+
+    /// 横向きだけで表示する。present で表示すると横向きになり、閉じると元の画面の向きに戻る
+    /// (アプリの対応する向き(Info.plist)に、Landscape Left / Right が入っている必要がある)
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .landscape
+    }
+
+    /// 開いたときの向き。端末を横に傾けて開いたときは、傾けた向きに合わせる
+    /// (端末の向き UIDeviceOrientation.landscapeRight は、画面の向き UIInterfaceOrientation.landscapeLeft になる)。
+    /// 端末が縦のまま(ボタンで開いたときなど)は landscapeRight
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        if UIDevice.current.orientation == .landscapeRight {
+            return .landscapeLeft
+        }
+        return .landscapeRight
+    }
+
+    // MARK: - 端末を縦に向けたとき
+
+    /// 最後に分かった端末の向き(縦か横だけを覚える。机に置いたときなどの向きは無視する)
+    private var lastDeviceOrientation = UIDeviceOrientation.unknown
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // 端末を縦に向けたら閉じられるよう、端末の向きの変化を受け取る
+        self.lastDeviceOrientation = UIDevice.current.orientation
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        NotificationCenter.default.addObserver(self, selector: #selector(self.deviceOrientationDidChange),
+                                               name: UIDevice.orientationDidChangeNotification, object: nil)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
+    }
+
+    /// 端末の向きが変わったとき。横から縦に変わったら、縦画面に戻すボタンと同じく onRotate を呼ぶ
+    /// (縦のままボタンで開いたあと、机に置いて持ち上げただけで閉じないよう、横を経由したときだけにする)
+    @objc private func deviceOrientationDidChange() {
+        let orientation = UIDevice.current.orientation
+        if orientation == .portrait {
+            let wasLandscape = self.lastDeviceOrientation.isLandscape
+            self.lastDeviceOrientation = orientation
+            if wasLandscape {
+                self.onRotate?()
+            }
+            return
+        }
+        if orientation.isLandscape {
+            self.lastDeviceOrientation = orientation
+        }
+    }
+
+    /// 開く・閉じるときの回転のアニメーション(LandscapeChartTransition)
+    private let transition = LandscapeChartTransition()
 
     // MARK: - 部品(storyboard に配置)
 
@@ -76,12 +144,11 @@ final class LandscapeChartViewController: UIViewController {
     @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
     /// 更新ボタンが押されたときに呼ばれる処理。表示中の足種(chartViewController.period)のデータを取得し直して渡す
     @objc var onReload: (() -> Void)?
-    /// 縦画面に戻すボタンが押されたときに呼ばれる処理
+    /// 縦画面に戻すボタンが押されたときに呼ばれる処理。present で表示した場合は、ここで dismiss する
     @objc var onRotate: (() -> Void)?
 
     /// テクニカル/設定のパネルを開いた・閉じたときに呼ばれる処理(true = 開いた)。
-    /// この画面の上に重ねたボタンなど(このアプリでは ViewController の 国内指数/海外指数 の切り替え)を、
-    /// パネルを開いている間はパネルの奥に回す場合に使う。
+    /// この画面の上に重ねたボタンなどを、パネルを開いている間はパネルの奥に回す場合に使う。
     /// 閉じたときは、パネルを閉じるアニメーション(panelAnimationDuration 秒)が終わってから呼ばれる
     var onPanelVisibilityChange: ((Bool) -> Void)?
 

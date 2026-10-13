@@ -346,6 +346,11 @@ final class ChartSettingsView: UIView {
 
     /// 選択中の項目の見た目を更新する
     private func updateListSelection() {
+        // 画面に表示される前は何もしない(表示されるときに cellForRowAt で見た目を付ける)。
+        // 表示前に visibleCells を読むと、表がレイアウトされて警告が出るため
+        guard self.tableView.window != nil else {
+            return
+        }
         for cell in self.tableView.visibleCells {
             guard let indexPath = self.tableView.indexPath(for: cell) else {
                 continue
