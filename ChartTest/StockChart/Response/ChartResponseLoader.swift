@@ -10,8 +10,7 @@
 //    | 描画先                         | 使う場面                                        |
 //    |--------------------------------|-------------------------------------------------|
 //    | StockChartView                 | 縦画面などに、チャートだけを置く場合            |
-//    | StockChartViewController       | テクニカル・設定画面付きのチャートを埋め込む場合 |
-//    | LandscapeChartViewController   | このアプリの横画面をそのまま使う場合             |
+//    | LandscapeChartViewController   | 横画面(テクニカル・設定画面・下の帯付き)       |
 //
 //  使い方(Objective-C):
 //      NSMutableArray *responseArray = …;   // chartDataFromResponse:… の結果。中身は NSDictionary(@{kTimestamp: …, kStart: …, …})
@@ -31,8 +30,8 @@
 import Foundation
 
 /// 足種を指定してローソク足を受け取り、描画できるもの。
-/// StockChartView・StockChartViewController が対応している。
-/// ほかの画面(このアプリの LandscapeChartViewController など)も、market と setCandles(_:period:) を持っていれば対応させられる
+/// StockChartView・LandscapeChartViewController が対応している。
+/// ほかの画面も、market と setCandles(_:period:) を持っていれば対応させられる
 @objc protocol StockCandleReceiving: AnyObject {
     /// 指数の種類。レスポンスの読み方(海外は終値だけの件も足にする)を決めるのに使う
     var market: IndexMarket { get }
@@ -41,7 +40,6 @@ import Foundation
 }
 
 extension StockChartView: StockCandleReceiving {}
-extension StockChartViewController: StockCandleReceiving {}
 // LandscapeChartViewController(このアプリの横画面)は、そのファイルで対応させている
 // (横画面を使わない場合に、そのファイルを削除しても、このファイルがビルドできるように)
 

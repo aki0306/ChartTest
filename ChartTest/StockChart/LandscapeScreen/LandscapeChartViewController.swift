@@ -6,14 +6,25 @@
 //
 //   ┌──┬──────────────────────────────────────────────────┐
 //   │テ│                                                  │
-//   │ク│            StockChartView(チャート本体)            │  ← 共通チャート部品(StockChartViewController)
+//   │ク│            StockChartView(チャート本体)            │
 //   │設│                                                  │
 //   ├──┴──────────────────────────────────────────────────┤
 //   │日経平均 68309.46 10/02 15:45  [ローソク足▼][月足▼][↻] │ [⤾] │  ← 下の帯(footerView)
 //   └─────────────────────────────────────────────────────┘
 //
-//  ・共通チャート部品は storyboard のコンテナビューに埋め込んであり、
-//    左端のテクニカル/設定タブで指標の切り替え・設定変更ができる
+//  【責務】
+//  ・状態の保持: ローソク足データ・足種・チャートの種類・選択中の指標・指標パラメータ(足種ごと)・表示オプション
+//  ・Model(ChartContentBuilder)で描画内容を組み立て、View(StockChartView)に渡す
+//  ・View(TechnicalMenuView / ChartSettingsView / ChartFooterView)からの操作を受け取り、状態を更新して再描画する
+//  ・左端のテクニカル/設定タブと、各パネルの開閉
+//
+//  【ファイルの分け方】1つのクラスを、役割ごとのファイルに分けている
+//  ・LandscapeChartViewController.swift            … 状態・画面の向き・ライフサイクル・データを渡す入口・描画(このファイル)
+//  ・LandscapeChartViewController+Panels.swift     … チャート・パネル・タブの配置と、テクニカル/設定パネルの開閉
+//  ・LandscapeChartViewController+Settings.swift   … 設定画面との受け渡し
+//  ・LandscapeChartViewController+Footer.swift     … 下の帯(指数名・現在値、チャートの種類・足種のメニュー)
+//  (extension は別のファイルから private のものを使えないので、ファイルをまたいで使うものは private を付けていない)
+//
 //  ・下の帯(LandscapeChartViewController.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
 //      左     : 指数名・現在値・日時(updatePriceInfo(name:price:date:) で設定する)
 //      ローソク足▼: チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート)を切り替える。
@@ -26,16 +37,16 @@
 //    この画面は横向きだけに対応しているので(supportedInterfaceOrientations)、開くと横向きになり、閉じると元の画面の向きに戻る。
 //    開く・閉じるときの回転のアニメーションは LandscapeChartTransition が付ける(instantiate で transitioningDelegate に設定)
 //  ・端末を縦に向けたときも、縦画面に戻すボタンと同じく onRotate が呼ばれる(deviceOrientationDidChange)
-//  ・チャート部品は画面いっぱいに置き、チャート本体だけを chartInsets で内側(帯の上)に置く。
-//    テクニカル/設定を開いている間は、パネルが画面の上端〜セーフエリアの下端まで、背景のグレーが画面全体に広がる(configurePanelLayering)
+//  ・チャートは chartInsets で内側(帯の上)に置く。テクニカル/設定を開いている間は、パネルが画面の上端〜セーフエリアの下端まで、
+//    背景のグレーが画面全体(下の帯の上にも)に広がる
 //
 //  使い方(Swift):
 //      let viewController = LandscapeChartViewController.instantiate()
-//      viewController.chartViewController.market = .overseasRealtime             // 海外指数(移動平均線・ローソク足/折線チャートだけ)
+//      viewController.market = .overseasRealtime             // 海外指数(移動平均線・ローソク足/折線チャートだけ)
 //      viewController.onPeriodSelect = { [weak viewController] period in /* その足種のデータを取得して viewController?.setCandles(_:period:) */ }
-//      viewController.onReload = { [weak self] in /* 表示中の足種(chartViewController.period)のデータを取得し直す */ }
+//      viewController.onReload = { [weak self] in /* 表示中の足種(period)のデータを取得し直す */ }
 //      viewController.onRotate = { [weak viewController] in viewController?.dismiss(animated: true) }   // 閉じる
-//      viewController.setCandles(candles, period: viewController.chartViewController.period)
+//      viewController.setCandles(candles, period: viewController.period)
 //      viewController.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
 //      present(viewController, animated: true)
 //
@@ -45,7 +56,7 @@
 //      viewController.onPeriodSelect = ^(ChartPeriod period) { ... [weakViewController setCandles:candles period:period]; };
 //      viewController.onReload = ^{ ... };
 //      viewController.onRotate = ^{ [weakViewController dismissViewControllerAnimated:YES completion:nil]; };
-//      [viewController setCandles:candles period:viewController.chartViewController.period];
+//      [viewController setCandles:candles period:viewController.period];
 //      [viewController updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
 //      [self presentViewController:viewController animated:YES completion:nil];
 //
@@ -90,10 +101,266 @@ final class LandscapeChartViewController: UIViewController {
         return .landscapeRight
     }
 
-    // MARK: - 端末を縦に向けたとき
+    /// 開く・閉じるときの回転のアニメーション(LandscapeChartTransition)
+    private let transition = LandscapeChartTransition()
 
     /// 最後に分かった端末の向き(縦か横だけを覚える。机に置いたときなどの向きは無視する)
     private var lastDeviceOrientation = UIDeviceOrientation.unknown
+
+    // MARK: - 状態(Model の状態)
+
+    /// 表示中のローソク足データ(古い順)
+    private var candles: [StockCandle] = []
+
+    /// 表示中のデータの足種。使う指標パラメータ(足種ごと)と、設定画面を開いたときのタブを決める。
+    /// setCandles(_:period:) で設定する(setCandles(_:) の場合は今の足種のまま)。
+    /// 最初は、国内で前回選んでいた足種(初めてなら日足)。market を国内⇔海外で切り替えると、切り替えた先で前回選んでいた足種になる
+    /// (ChartStateStore)。そのときは、この足種のデータを取得して setCandles(_:period:) で渡す
+    @objc private(set) var period: ChartPeriod = LandscapeChartViewController.initialState.period
+
+    /// 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次。描き方は国内/海外の2通り)。種類によって、選べるもの・使えるものが変わる。
+    /// データを渡す前に設定する。
+    ///
+    ///   | 項目                     | 国内指数       | 海外指数                                      |
+    ///   |--------------------------|----------------|-----------------------------------------------|
+    ///   | テクニカル(メイン)       | すべて         | 移動平均線・なし                              |
+    ///   | テクニカル(サブ)         | すべて         | なし(サブチャートは表示しない)              |
+    ///   | 設定画面の項目           | すべて         | オプション・移動平均線                        |
+    ///   | 設定画面のオプション     | すべて         | Y軸(メイン)固定・4本値(Y軸(サブ)固定はオンでも効かない) |
+    ///   | 設定画面の足種のタブ     | 1分足〜月足    | 日足・週足・月足(1分足・日中足のタブは出さない)      |
+    ///   | チャートの種類           | すべて         | ローソク足・折線チャート                      |
+    ///
+    /// チャートの種類・指標・足種・設定値・表示オプションは国内/海外で別々に覚えておき、
+    /// 国内⇔海外を切り替えると、切り替えた先で前回選んでいた状態に戻す(アプリの起動中だけ。ChartStateStore)。
+    /// 最初は 国内: ローソク足・移動平均線 + 出来高・日足、海外: 折線チャート・移動平均線・日足。
+    /// 選べない指標を選んでいた場合は 移動平均線・サブなし に切り替える
+    @objc var market: IndexMarket = .japanIndex {
+        didSet {
+            guard self.market != oldValue else {
+                return
+            }
+            self.loadViewIfNeeded()
+            self.applyMarket(previousMarket: oldValue)
+        }
+    }
+
+    /// 画面を作ったときの状態(既定の market = 国内で、前回選んでいた状態。初めてなら初期の状態。ChartStateStore)
+    private static var initialState: ChartViewState {
+        return ChartStateStore.state(for: .japanIndex)
+    }
+
+    /// 覚えている状態に戻している最中か(戻している間は、途中で描き直したり、途中の状態を覚え直したりしない)
+    private var isRestoringState = false
+
+    /// 足種ごとの指標の計算パラメータ。設定画面で足種ごとに変えられる。
+    /// 初期値は足種に合わせたもの(週足の移動平均は 13/26 など。ChartPeriod.indicatorParameters)
+    var parametersByPeriod = LandscapeChartViewController.initialState.parametersByPeriod
+
+    /// 表示中の足種の指標パラメータ。変更すると再描画する
+    var parameters: IndicatorParameters {
+        get {
+            self.parameters(for: self.period)
+        }
+        set {
+            self.parametersByPeriod[self.period] = newValue
+            self.reloadChart(keepsViewport: true)
+        }
+    }
+
+    /// 表示オプション(Y軸固定・4本値)。変更すると即座にチャートへ反映する
+    var displayOptions = LandscapeChartViewController.initialState.displayOptions {
+        didSet {
+            self.applyDisplayOptionsToChart()
+            // 設定画面でオプションを表示中なら、トグルの状態を合わせる
+            if self.selectedSettingsItem == .displayOptions {
+                self.reloadSettingsRows()
+            }
+        }
+    }
+
+    /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。
+    /// ローソク足以外では、テクニカル指標とサブチャートは表示せず、テクニカルのメニューは「なし」だけにする。
+    /// 4本値は、オンにしていてもローソク足のときだけ表示する
+    @objc var chartType: ChartType = LandscapeChartViewController.initialState.chartType {
+        didSet {
+            guard self.chartType != oldValue else {
+                return
+            }
+            self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
+            // 覚えている状態に戻している最中は、指標を「なし」にしたり描き直したりしない(指標も覚えている値に戻すため)
+            if self.isRestoringState {
+                self.chartTypeDidChange()
+                return
+            }
+            // 指標を使わない種類(VWAP・新値足・国内の折線チャート)にしたら、メイン・サブとも「なし」にする。
+            // ローソク足に戻しても「なし」のまま(前に選んでいた指標には戻さない)
+            if !self.chartType.usesTechnicalIndicators(in: self.market) {
+                self.mainIndicator = .candleOnly
+                self.subIndicator = .hidden
+            }
+            self.applyDisplayOptionsToChart()
+            self.reloadChart(keepsViewport: true)
+            self.chartTypeDidChange()
+        }
+    }
+
+    /// メインチャートに表示する指標。変更すると表示位置を保ったまま再描画する
+    @objc var mainIndicator: MainChartIndicator = LandscapeChartViewController.initialState.mainIndicator {
+        didSet {
+            guard self.mainIndicator != oldValue else {
+                return
+            }
+            self.menuView.selectedMainIndicator = self.mainIndicator
+            guard !self.isRestoringState else {
+                return
+            }
+            self.reloadChart(keepsViewport: true)
+        }
+    }
+
+    /// サブチャートに表示する指標。.hidden にするとサブチャートを隠す
+    @objc var subIndicator: SubChartIndicator = LandscapeChartViewController.initialState.subIndicator {
+        didSet {
+            guard self.subIndicator != oldValue else {
+                return
+            }
+            self.menuView.selectedSubIndicator = self.subIndicator
+            guard !self.isRestoringState else {
+                return
+            }
+            self.reloadChart(keepsViewport: true)
+        }
+    }
+
+    /// チャート(とテクニカル/設定タブ)を、この画面のセーフエリアの端からどれだけ内側に置くか。
+    /// 下は帯(セーフエリアの下端から 44pt。LandscapeChartViewController.storyboard)と、その上の間隔 4pt の分を空ける。
+    /// テクニカル/設定のパネルと背景のグレーは、この余白に関係なく、画面の上端〜下端いっぱいに表示する
+    @objc var chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 44 + 4, right: 8) {
+        didSet {
+            self.applyChartInsets()
+        }
+    }
+
+    // MARK: - 操作されたときの処理(外から設定する)
+
+    /// 足種のメニューで足種が選ばれたときに呼ばれる処理(選ばれた足種が渡される)。
+    /// その足種のデータを取得して setCandles(_:period:) で渡すと、チャートとボタンの表示が切り替わる。
+    /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
+    @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
+    /// 更新ボタンが押されたときに呼ばれる処理。表示中の足種(period)のデータを取得し直して渡す
+    @objc var onReload: (() -> Void)?
+    /// 縦画面に戻すボタンが押されたとき・端末を縦に向けたときに呼ばれる処理。present で表示した場合は、ここで dismiss する
+    @objc var onRotate: (() -> Void)?
+
+    /// テクニカル/設定のパネルを開いた・閉じたときに呼ばれる処理(true = 開いた)。
+    /// 閉じたときは、パネルを閉じるアニメーション(panelAnimationDuration 秒)が終わってから呼ばれる
+    var onPanelVisibilityChange: ((Bool) -> Void)?
+
+    /// パネルを開閉するアニメーションの秒数
+    static let panelAnimationDuration: TimeInterval = 0.25
+
+    /// パネルを開いているときに、後ろ(チャートと下の帯)に重ねる色。半透明の黒で、背景をグレーに見せる
+    static let dimmingColor = UIColor(resource: .chartDimming)
+
+    // MARK: - 部品(View)
+
+    /// 下の帯(ChartFooterView。見た目は ChartFooterView.xib)。storyboard に配置
+    @IBOutlet weak var footerView: ChartFooterView!
+    /// チャート本体。見た目は chartView.style で変更できる
+    @objc let chartView = StockChartView()
+    /// パネルを開いているときにチャートと下の帯の上に重ねる、半透明の黒(背景をグレーにする)。タップするとパネルを閉じる
+    let dimmingView = UIView()
+    /// 指標の選択メニュー
+    let menuView = TechnicalMenuView()
+    /// 設定画面
+    let settingsView = ChartSettingsView()
+    /// テクニカルタブ(指標の選択メニューを開閉)
+    let technicalTabButton = UIButton(type: .custom)
+    /// 設定タブ(設定画面を開閉)
+    let settingsTabButton = UIButton(type: .custom)
+    /// 2つのタブを縦に並べるスタック
+    let tabStack = UIStackView()
+
+    // MARK: - パネル(テクニカル/設定)の状態
+
+    /// 開閉できるパネルの種類
+    enum Panel {
+        /// 指標の選択メニュー
+        case technical
+        /// 設定画面
+        case settings
+    }
+
+    /// 開いているパネル(nil = どちらも閉じている)
+    var openPanel: Panel?
+
+    /// テクニカル/設定のパネルを開いているか
+    var isPanelOpen: Bool {
+        return self.openPanel != nil
+    }
+
+    /// 設定画面の左側リストで選択中の位置
+    var selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
+
+    /// 設定画面の左側リストに並べる見出しと項目(指数の種類で変わる)
+    var settingsSections: [ChartSettingsSection] {
+        ChartSettingsCatalog.sections(for: self.market)
+    }
+
+    /// 設定画面で選択中の項目
+    var selectedSettingsItem: ChartSettingsItem {
+        let indexPath = self.selectedSettingsIndexPath
+        let section = self.settingsSections[indexPath.section]
+        return section.items[indexPath.row]
+    }
+
+    /// 設定画面で選択中の足種(タブ)
+    var settingsPeriod: ChartPeriod = .daily
+
+    /// 設定画面で編集中のパラメータ(足種ごと)。
+    /// 設定画面を開くたびに今のパラメータから作り直し、「決定」を押すと parametersByPeriod に反映する
+    /// (決定せずに閉じた場合は捨てる)
+    var draftParametersByPeriod: [ChartPeriod: IndicatorParameters] = [:]
+
+    // MARK: - レイアウト
+
+    /// タブの幅
+    let tabWidth: CGFloat = 30
+    /// タブとチャートの間隔
+    let tabSpacing: CGFloat = 8
+
+    /// チャートの上端・下端・左端・右端(chartInsets で位置が変わる)
+    var chartTopConstraint: NSLayoutConstraint?
+    var chartBottomConstraint: NSLayoutConstraint?
+    var chartLeadingConstraint: NSLayoutConstraint?
+    var chartTrailingConstraint: NSLayoutConstraint?
+    /// タブの左端: パネルを閉じているとき(画面の左端に付ける)
+    var tabClosedConstraint: NSLayoutConstraint?
+    /// タブの左端: 指標の選択メニューを開いているとき(メニューの右端に付ける)
+    var tabTechnicalOpenedConstraint: NSLayoutConstraint?
+    /// タブの左端: 設定画面を開いているとき(設定画面の右端に付ける)
+    var tabSettingsOpenedConstraint: NSLayoutConstraint?
+
+    // MARK: - ライフサイクル
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // 重なり順(下から): チャート → 下の帯 → 背景のグレー → パネル → タブ(+Panels)
+        self.setupChartView()
+        self.setupPanels()
+        self.setupTabs()
+        self.configureSettingsView()
+        self.configureFooter()
+
+        // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する
+        self.chartView.showsHighLowLabels = true
+
+        // 必要に応じて設定を変更できる(例)
+        // self.mainIndicator = .bollingerBands     // メインチャートの指標
+        // self.subIndicator = .macd                // サブチャートの指標
+        // self.parameters.rsiPeriod = 9            // 指標のパラメータ(Model)
+    }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -127,268 +394,284 @@ final class LandscapeChartViewController: UIViewController {
         }
     }
 
-    /// 開く・閉じるときの回転のアニメーション(LandscapeChartTransition)
-    private let transition = LandscapeChartTransition()
+    // MARK: - 外から呼ぶ入口
 
-    // MARK: - 部品(storyboard に配置)
-
-    /// 下の帯(ChartFooterView。見た目は ChartFooterView.xib)。
-    /// テクニカル/設定のパネルを閉じている間は、チャート部品より手前に置く
-    @IBOutlet private weak var footerView: ChartFooterView!
-
-    // MARK: - 操作されたときの処理(外から設定する)
-
-    /// 足種のメニューで足種が選ばれたときに呼ばれる処理(選ばれた足種が渡される)。
-    /// その足種のデータを取得して setCandles(_:period:) で渡すと、チャートとボタンの表示が切り替わる。
-    /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
-    @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
-    /// 更新ボタンが押されたときに呼ばれる処理。表示中の足種(chartViewController.period)のデータを取得し直して渡す
-    @objc var onReload: (() -> Void)?
-    /// 縦画面に戻すボタンが押されたときに呼ばれる処理。present で表示した場合は、ここで dismiss する
-    @objc var onRotate: (() -> Void)?
-
-    /// テクニカル/設定のパネルを開いた・閉じたときに呼ばれる処理(true = 開いた)。
-    /// この画面の上に重ねたボタンなどを、パネルを開いている間はパネルの奥に回す場合に使う。
-    /// 閉じたときは、パネルを閉じるアニメーション(panelAnimationDuration 秒)が終わってから呼ばれる
-    var onPanelVisibilityChange: ((Bool) -> Void)?
-
-    /// パネルを開閉するアニメーションの秒数(StockChartViewController と同じ)
-    static let panelAnimationDuration: TimeInterval = 0.25
-
-    /// コンテナビューの embed で受け取った共通チャート部品(画面の読み込み時に設定される)
-    private var embeddedChartViewController: StockChartViewController?
-
-    /// 共通チャート部品(指標メニュー・設定画面付き)。
-    /// 画面を読み込むまでは存在しないので、まだなら読み込んでから返す
-    @objc var chartViewController: StockChartViewController {
-        self.loadViewIfNeeded()
-        guard let embeddedChartViewController else {
-            // storyboard のコンテナビューの embed が外れている(設定ミス)。すぐ気付けるよう落とす
-            fatalError("LandscapeChartViewController.storyboard のコンテナビューに StockChartViewController が埋め込まれていません")
-        }
-        return embeddedChartViewController
-    }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        self.chartViewController.isTechnicalMenuEnabled = true
-        self.configureFooter()
-        self.configurePanelLayering()
-
-        // チャート部品は画面いっぱいに置き(パネルを画面の上端〜下端まで広げるため)、チャート本体だけを内側に置く。
-        // 下は帯(セーフエリアの下端から 44pt。LandscapeChartViewController.storyboard)と、その上の間隔 4pt の分を空ける
-        self.chartViewController.chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 44 + 4, right: 8)
-
-        // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する
-        self.chartViewController.chartView.showsHighLowLabels = true
-
-        // 必要に応じて設定を変更できる(例)
-        // chartViewController.mainIndicator = .bollingerBands     // メインチャートの指標
-        // chartViewController.subIndicator = .macd                // サブチャートの指標
-        // chartViewController.parameters.rsiPeriod = 9            // 指標のパラメータ(Model)
-    }
-
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if let chart = segue.destination as? StockChartViewController {
-            self.embeddedChartViewController = chart
-        }
-    }
-
-    // MARK: - パネル(テクニカル/設定)を開いている間
-
-    /// パネルの開閉に合わせて、チャート部品と下の帯の重なり順を切り替える。
-    ///
-    /// チャート部品(コンテナビュー)は画面いっぱいに置いてあり、パネルと背景のグレーは画面の上端〜下端まで広がる。
-    /// ・開いている間: チャート部品を手前にする(下の帯にもグレーとパネルがかかり、帯のボタンは押せなくなる)
-    /// ・閉じている間: 下の帯を手前にする(チャート部品は透明な部分もタップを受けるので、手前にあると帯のボタンが押せない)
-    private func configurePanelLayering() {
-        self.chartViewController.onPanelVisibilityChange = { [weak self] isOpen in
-            guard let self else {
-                return
-            }
-            guard let containerView = self.chartViewController.view.superview else {
-                return
-            }
-            if isOpen {
-                self.view.bringSubviewToFront(containerView)
-                self.onPanelVisibilityChange?(true)
-            } else {
-                // 背景のグレーが消えるのを待ってから(パネルを閉じるアニメーションと同じ秒数)、ボタンを手前に戻す
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.panelAnimationDuration) {
-                    // 待っている間にもう一度開いた場合は、チャート部品を手前のままにする
-                    guard !self.chartViewController.isPanelOpen else {
-                        return
-                    }
-                    self.view.bringSubviewToFront(self.footerView)
-                    self.onPanelVisibilityChange?(false)
-                }
-            }
-        }
-    }
-
-    // MARK: - 下の帯
-
-    /// 下の帯のメニュー・ボタンを設定する。
-    /// 見た目は帯(ChartFooterView)が決め、この画面はメニューの中身と、押されたときの処理だけを渡す
-    private func configureFooter() {
-        self.updateChartTypeMenu()
-        self.updatePeriodMenu()
-        self.footerView.onReload = { [weak self] in
-            self?.onReload?()
-        }
-        self.footerView.onRotate = { [weak self] in
-            self?.onRotate?()
-        }
-
-        // チャートの種類が変わったら(メニューからでも、コードから chartType を変えた場合でも)ボタンの表示を合わせ、
-        // 表示中の足種がその種類では選べない場合(新値足の1分足)は、選べる足種に切り替える
-        self.chartViewController.onChartTypeChange = { [weak self] _ in
-            guard let self else {
-                return
-            }
-            self.updateChartTypeMenu()
-            self.switchPeriodIfUnavailable()
-        }
-    }
-
-    // MARK: - チャートの種類
-
-    /// 「チャートの種類」ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
-    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)が後から変わっても反映される
-    private func updateChartTypeMenu() {
-        let items = UIDeferredMenuElement.uncached { [weak self] completion in
-            guard let self else {
-                completion([])
-                return
-            }
-            let selectedType = self.chartViewController.chartType
-            var actions: [UIAction] = []
-            for chartType in ChartType.choices(for: self.chartViewController.market) {
-                let action = UIAction(title: chartType.title) { [weak self] _ in
-                    self?.chartViewController.chartType = chartType  // ボタンの表示は onChartTypeChange で更新される
-                }
-                if chartType == selectedType {
-                    action.state = .on
-                }
-                actions.append(action)
-            }
-            completion(actions)
-        }
-        // ボタンの幅は、すべての種類の名前のうち一番長いもの(「折線チャート」など)が1行で入る幅にする
-        let candidates = ChartType.allCases.map { chartType in chartType.title }
-        self.footerView.setChartTypeMenu(title: self.chartViewController.chartType.title,
-                                         candidates: candidates, menu: UIMenu(children: [items]))
-    }
-
-    // MARK: - 足種
-
-    /// 「足種」ボタンの文字とメニュー(表示中の足種にチェック)を、表示中の足種に合わせる。
-    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は 日足・週足・月足 だけ)・
-    /// チャートの種類(VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を除く。ChartType.periods(in:))が後から変わっても反映される
-    private func updatePeriodMenu() {
-        let items = UIDeferredMenuElement.uncached { [weak self] completion in
-            guard let self else {
-                completion([])
-                return
-            }
-            let selectedPeriod = self.chartViewController.period
-            var actions: [UIAction] = []
-            for period in self.availablePeriods {
-                let action = UIAction(title: Self.shortTitle(of: period)) { [weak self] _ in
-                    self?.onPeriodSelect?(period)
-                }
-                if period == selectedPeriod {
-                    action.state = .on
-                }
-                actions.append(action)
-            }
-            completion(actions)
-        }
-        // ボタンの幅は、すべての足種の名前のうち一番長いもの(「1分足」「日中足」)が1行で入る幅にする
-        let candidates = ChartPeriod.allCases.map { period in Self.shortTitle(of: period) }
-        self.footerView.setPeriodMenu(title: Self.shortTitle(of: self.chartViewController.period),
-                                      candidates: candidates, menu: UIMenu(children: [items]))
-    }
-
-    /// 今のチャートの種類・指数の種類で選べる足種(VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を除く)
-    private var availablePeriods: [ChartPeriod] {
-        return self.chartViewController.chartType.periods(in: self.chartViewController.market)
-    }
-
-    /// 表示中の足種が今のチャートの種類では選べない場合(1分足のまま新値足・折線チャートにした・日足のまま VWAP にした など)、
-    /// 選べる足種に切り替える。データの取得はアプリの仕事なので、足種のメニューで選んだときと同じく onPeriodSelect を呼ぶ
-    /// (日中足を選べるなら 日中足 に切り替える。日中足も選べなければ、選べる足種の先頭)
-    private func switchPeriodIfUnavailable() {
-        let periods = self.availablePeriods
-        if periods.contains(self.chartViewController.period) {
-            return
-        }
-        var nextPeriod = periods.first
-        if periods.contains(.intraday) {
-            nextPeriod = .intraday
-        }
-        guard let nextPeriod else {
-            return
-        }
-        self.onPeriodSelect?(nextPeriod)
-    }
-
-    /// ボタン・メニューに出す足種の名前。タブ用の名前(「月 足」)から空白を除く(「月足」)
-    private static func shortTitle(of period: ChartPeriod) -> String {
-        return period.title.replacingOccurrences(of: " ", with: "")
-    }
-
-    // MARK: - 指数名・現在値・日時
-
-    /// 下の帯の左に、指数名・現在値・日時を表示する(例:「日経平均 68309.46 10/02 15:45」。書式は ChartFooterView)
-    /// - Parameters:
-    ///   - name: 指数名(「日経平均」など)
-    ///   - price: 現在値。小数2桁で表示する(3桁区切りなし)
-    ///   - date: 現在値の日時。「MM/dd HH:mm」で表示する
-    @objc(updatePriceInfoWithName:price:date:)
-    func updatePriceInfo(name: String, price: Double, date: Date) {
-        // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
-        guard MainThread.isCurrent(orRetry: { self.updatePriceInfo(name: name, price: price, date: date) }) else {
-            return
-        }
-
-        self.loadViewIfNeeded()
-        self.footerView.updatePriceInfo(name: name, price: price, date: date)
-    }
-
-    // MARK: - データ
-
-    /// ローソク足データを設定して描画する
+    /// ローソク足データを設定して描画する。
+    /// Objective-C からは `[viewController setCandles:candles]` で呼び出せる。
+    /// - Parameter candles: 日付の古い順に並んだローソク足データ
     @objc func setCandles(_ candles: [StockCandle]) {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
         guard MainThread.isCurrent(orRetry: { self.setCandles(candles) }) else {
             return
         }
 
-        self.chartViewController.setCandles(candles)
+        self.loadViewIfNeeded()
+        self.candles = candles
+        self.reloadChart(keepsViewport: false)
     }
 
-    /// 足種を指定してローソク足データを設定し、描画する(足種ごとの指標パラメータ・日付の書式で表示する)。
-    /// 足種のボタンの表示も、この足種に合わせる
+    /// 足種を指定してローソク足データを設定し、描画する。
+    /// 足種によって、使う指標パラメータ(足種ごと)と、X軸の日付の書式・初期表示本数が変わる。足種のボタンの表示も、この足種に合わせる。
+    /// Objective-C からは `[viewController setCandles:candles period:ChartPeriodWeekly]` で呼び出せる。
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
         guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period) }) else {
             return
         }
 
-        self.chartViewController.setCandles(candles, period: period)
+        self.loadViewIfNeeded()
+        self.period = period
+
+        // 足種に合わせて見た目を変える(style を変えると描き直されるので、まとめて1回で代入する)
+        self.chartView.style = self.chartView.style.applying(period)
+
+        // テクニカルで選べる指標を足種に合わせる(1分足・日中足は 移動平均線・出来高 などだけ)。
+        // 選べない指標から切り替えたときに、新しい足種のデータで描き直されるよう、先にデータを持たせておく
+        self.candles = candles
+        self.applyIndicatorChoices()
+
+        self.setCandles(candles)
         self.updatePeriodMenu()
+    }
+
+    /// すべての足種の指標パラメータを変更して、描き直す(Swift からも使える)。
+    /// 例: viewController.updateParametersForAllPeriods { $0.rsiPeriod = 9 }
+    /// 表示中の足種だけを変える場合は parameters を、足種を指定する場合は setParameters(_:for:) を使う
+    func updateParametersForAllPeriods(_ change: (inout IndicatorParameters) -> Void) {
+        for period in ChartPeriod.allCases {
+            var target = self.parameters(for: period)
+            change(&target)
+            self.parametersByPeriod[period] = target
+        }
+        self.reloadChart(keepsViewport: true)
+    }
+
+    /// 指定した足種の指標パラメータを変更して、描き直す
+    func setParameters(_ parameters: IndicatorParameters, for period: ChartPeriod) {
+        self.parametersByPeriod[period] = parameters
+        self.reloadChart(keepsViewport: true)
+    }
+
+    /// 指定した足種の指標パラメータ
+    func parameters(for period: ChartPeriod) -> IndicatorParameters {
+        if let parameters = self.parametersByPeriod[period] {
+            return parameters
+        }
+        return period.indicatorParameters
+    }
+
+    // MARK: - 描画(Model → View)
+
+    /// 現在の状態から Model で描画内容を組み立て、View に表示させる
+    /// - Parameter keepsViewport: true の場合、可能であれば現在の表示位置・拡大率を維持する
+    func reloadChart(keepsViewport: Bool) {
+        // 指標・足種・設定値などが変わるとここを通るので、今の状態を国内/海外ごとに覚えておく
+        self.saveState()
+        guard !self.candles.isEmpty else {
+            self.chartView.clear()
+            return
+        }
+        // 日時だけの足(1分足・日中足の、値のない時間帯)は、先頭側・末尾側を X軸の日付だけに使う
+        let slots = CandleSlots(self.candles)
+        let builder = ChartContentBuilder(candles: slots.candles, parameters: self.parameters)
+        let content = builder.content(for: self.chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
+                                      market: self.market, period: self.period)
+        // 足種・指数の種類・チャートの種類が前回と同じなら、データの更新として直前の表示範囲を引き継ぐ
+        let rangeKey = VisibleRangeKey(period: self.period, market: self.market, chartType: self.chartType)
+        self.chartView.display(candles: content.candles,
+                               main: content.main,
+                               sub: content.sub,
+                               keepsViewport: keepsViewport,
+                               leadingDates: StockChartView.leadingDates(of: slots, chartType: self.chartType),
+                               trailingDates: StockChartView.trailingDates(of: slots, chartType: self.chartType),
+                               rangeKey: rangeKey)
+    }
+
+    /// 表示オプションをチャートに反映する。
+    /// どのオプションが効くか(ローソク足以外では4本値を出さない など)は Model の ChartDisplayOptions.effective が決める
+    func applyDisplayOptionsToChart() {
+        self.chartView.displayOptions = self.displayOptions.effective(for: self.chartType, market: self.market)
+        self.saveState()
+    }
+
+    // MARK: - 状態を覚える(国内/海外ごと)
+
+    /// 今の状態(チャートの種類・指標・足種・設定値・表示オプション)
+    private var currentState: ChartViewState {
+        return ChartViewState(chartType: self.chartType,
+                              mainIndicator: self.mainIndicator,
+                              subIndicator: self.subIndicator,
+                              period: self.period,
+                              parametersByPeriod: self.parametersByPeriod,
+                              displayOptions: self.displayOptions)
+    }
+
+    /// 今の状態を、今の market の種類(国内/海外)として覚える。状態を戻している最中は覚えない
+    private func saveState() {
+        guard !self.isRestoringState else {
+            return
+        }
+        ChartStateStore.save(self.currentState, for: self.market)
+    }
+
+    /// 指定した種類(国内/海外)で覚えている状態に戻す(描き直しは呼び出し側で行う)
+    private func restoreState(for market: IndexMarket) {
+        let state = ChartStateStore.state(for: market)
+        self.isRestoringState = true
+        self.chartType = state.chartType
+        self.mainIndicator = state.mainIndicator
+        self.subIndicator = state.subIndicator
+        self.period = state.period
+        self.parametersByPeriod = state.parametersByPeriod
+        self.displayOptions = state.displayOptions
+        self.isRestoringState = false
+        // 足種に合わせて見た目を変える(データは、この足種のものを setCandles(_:period:) で渡してもらう)
+        self.chartView.style = self.chartView.style.applying(self.period)
+    }
+
+    // MARK: - 指数の種類
+
+    /// 指数の種類に合わせて、選べる指標・チャートの種類・設定画面の項目を切り替え、描き直す
+    /// - Parameter previousMarket: 変える前の指数の種類(設定画面で選んでいた項目を探すのに使う)
+    private func applyMarket(previousMarket: IndexMarket) {
+        // 国内⇔海外を切り替えた場合は、切り替えた先で前回選んでいた状態(チャートの種類・指標・足種・設定値・表示オプション)に戻す。
+        // 切り替える前の状態は、変更のたびに覚えている(saveState)。国内どうし・海外どうしの切り替えでは、状態はそのまま
+        if previousMarket.isDomestic != self.market.isDomestic {
+            self.restoreState(for: self.market)
+        }
+
+        // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
+        self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
+        self.applyIndicatorChoices()
+
+        // 選べない種類だった場合は、その指数の既定の種類にする(それぞれの didSet でも描き直すが、最後にまとめて描き直す)
+        if !ChartType.choices(for: self.market).contains(self.chartType) {
+            self.chartType = ChartType.defaultType(for: self.market)
+        }
+
+        self.applyDisplayOptionsToChart()
+        self.reloadChart(keepsViewport: true)
+
+        // 設定画面の左側リストを作り直す。編集中の内容(「決定」前の値)は残す。
+        // 選んでいた項目が新しいリストにもあればその選択を残し、なければ先頭の「オプション」に戻す
+        let previousItem = self.settingsItem(at: self.selectedSettingsIndexPath, in: previousMarket)
+        self.selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
+        if let previousItem {
+            if let indexPath = self.indexPathInSettingsList(of: previousItem) {
+                self.selectedSettingsIndexPath = indexPath
+            }
+        }
+        self.reloadSettingsList()
+        self.reloadSettingsRows()
+
+        // 下の帯のボタンの表示も合わせる(足種は、国内/海外ごとに前回選んでいた足種に変わっていることがある)
+        self.updateChartTypeMenu()
+        self.updatePeriodMenu()
+    }
+
+    /// テクニカルのメニューに並べる指標を、指数の種類・足種に合わせる(MainChartIndicator / SubChartIndicator の choices)。
+    /// 選べない指標を選んでいた場合は、選べるものに切り替える
+    ///   ・メイン: 移動平均線(どの指数・足種でも選べる)
+    ///   ・サブ  : 出来高(選べない場合 = 海外指数は なし)
+    /// 例) 日足で 一目均衡表 + MACD を表示中に 1分足 にすると、移動平均線 + 出来高 になる
+    func applyIndicatorChoices() {
+        let mainChoices = MainChartIndicator.choices(for: self.market, period: self.period)
+        let subChoices = SubChartIndicator.choices(for: self.market, period: self.period)
+        self.menuView.availableMainIndicators = mainChoices
+        self.menuView.availableSubIndicators = subChoices
+
+        if !mainChoices.contains(self.mainIndicator) {
+            self.mainIndicator = .movingAverage
+        }
+        if !subChoices.contains(self.subIndicator) {
+            if subChoices.contains(.volume) {
+                self.subIndicator = .volume
+            } else {
+                self.subIndicator = .hidden
+            }
+        }
     }
 }
 
 // MARK: - API のレスポンスの描画先にする
 
-/// ChartResponseLoader の描画先にできるようにする(setCandles(_:period:) は上で定義済み)
-extension LandscapeChartViewController: StockCandleReceiving {
+/// ChartResponseLoader の描画先にできるようにする(market・setCandles(_:period:) は上で定義済み)
+extension LandscapeChartViewController: StockCandleReceiving {}
 
-    /// 指数の種類(共通チャート部品の market。設定は chartViewController.market で行う)
-    var market: IndexMarket {
-        return self.chartViewController.market
+// MARK: - Objective-C 向けのパラメータ・オプション設定
+
+/// IndicatorParameters / ChartDisplayOptions は struct のため Objective-C から直接扱えない。
+/// よく変更するものだけを @objc プロパティとして公開する。
+/// ・指標の期間: 読み出しは表示中の足種の値、設定は**すべての足種**に反映する(設定画面の「すべての足に反映」と同じ)
+/// ・表示オプション: displayOptions を読み書きしているだけ
+extension LandscapeChartViewController {
+
+    /// 短期移動平均の期間(本数)。設定するとすべての足種に反映する
+    @objc var shortMAPeriod: Int {
+        get {
+            self.parameters.shortMAPeriod
+        }
+        set {
+            self.updateParametersForAllPeriods { parameters in
+                parameters.shortMAPeriod = newValue
+            }
+        }
+    }
+
+    /// 長期移動平均の期間(本数)。設定するとすべての足種に反映する
+    @objc var longMAPeriod: Int {
+        get {
+            self.parameters.longMAPeriod
+        }
+        set {
+            self.updateParametersForAllPeriods { parameters in
+                parameters.longMAPeriod = newValue
+            }
+        }
+    }
+
+    /// 出来高移動平均の期間(本数)。設定するとすべての足種に反映する
+    @objc var volumeMAPeriod: Int {
+        get {
+            self.parameters.volumeMAPeriod
+        }
+        set {
+            self.updateParametersForAllPeriods { parameters in
+                parameters.volumeMAPeriod = newValue
+            }
+        }
+    }
+
+    /// Y軸(メイン)固定
+    @objc var isMainYAxisFixed: Bool {
+        get {
+            self.displayOptions.isMainYAxisFixed
+        }
+        set {
+            self.displayOptions.isMainYAxisFixed = newValue
+        }
+    }
+
+    /// Y軸(サブ)固定
+    @objc var isSubYAxisFixed: Bool {
+        get {
+            self.displayOptions.isSubYAxisFixed
+        }
+        set {
+            self.displayOptions.isSubYAxisFixed = newValue
+        }
+    }
+
+    /// 4本値(十字線と、その足の日付・始値・高値・安値・終値を表示する)
+    @objc var showsOHLC: Bool {
+        get {
+            self.displayOptions.showsOHLC
+        }
+        set {
+            self.displayOptions.showsOHLC = newValue
+        }
     }
 }

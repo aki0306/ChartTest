@@ -6,7 +6,7 @@
 //  ボタンで横画面のチャート画面を全画面で表示(present)する。
 //
 //  ・縦向き: StockChartView(チャートだけ。最初は日足を表示する)。この画面は縦向きだけで表示する(supportedInterfaceOrientations)
-//  ・横画面: LandscapeChartViewController(LandscapeChartViewController.storyboard。StockChartViewController で指標メニュー付き表示)。
+//  ・横画面: LandscapeChartViewController(LandscapeChartViewController.storyboard。指標メニュー・設定画面付き)。
 //           チャートの下の「横画面にする」ボタン(rotateButton)で present すると横向きになり、
 //           下の帯の「縦画面に戻す」ボタンで閉じる(dismiss)と縦向きに戻る。
 //           端末を横に向けても開き(deviceOrientationDidChange)、縦に戻すと閉じる(LandscapeChartViewController が onRotate を呼ぶ)
@@ -321,8 +321,8 @@
     //   ・国内指数: テクニカル・チャートの種類はすべて選べる
     //   ・海外指数: テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
     // market を設定すると、国内/海外ごとに前回選んでいた足種(初めてなら日足)が period に入るので、その足種のデータを渡す
-    landscapeViewController.chartViewController.market = self.currentMarket;
-    ChartPeriod initialPeriod = landscapeViewController.chartViewController.period;
+    landscapeViewController.market = self.currentMarket;
+    ChartPeriod initialPeriod = landscapeViewController.period;
     [landscapeViewController setCandles:[SampleData candlesForPeriod:initialPeriod] period:initialPeriod];
     [self updatePriceInfoOfLandscapeViewController:landscapeViewController];
 
@@ -343,7 +343,7 @@
         if (strongLandscapeViewController == nil) {
             return;
         }
-        ChartPeriod period = strongLandscapeViewController.chartViewController.period;
+        ChartPeriod period = strongLandscapeViewController.period;
         [strongLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
         [strongSelf updatePriceInfoOfLandscapeViewController:strongLandscapeViewController];
     };
@@ -359,7 +359,7 @@
 /// (サンプルなので、当日の1分足の最後の足の終値・時刻を現在値として使う。どの足種を表示していても同じ値)
 - (void)updatePriceInfoOfLandscapeViewController:(LandscapeChartViewController *)landscapeViewController {
     NSString *name = @"日経平均";
-    switch (landscapeViewController.chartViewController.market) {
+    switch (landscapeViewController.market) {
         case IndexMarketJapanStock:
             name = @"サンプル銘柄";
             break;

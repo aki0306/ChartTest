@@ -23,7 +23,7 @@
 //  ・setCandles(_:indicatorValues:) … チャートの外で計算した指標の値も渡して描画する(ChartIndicatorValues)
 //  ・setCandles(_:period:)   … 足種を指定して描画する(period も設定される。X軸の書式・移動平均の期間などが足種ごとに変わる)
 //  ・setCandles(_:mainIndicator:subIndicator:) … 指標を指定して描画する
-//  ・display(candles:main:sub:keepsViewport:) … 描画内容を指定して描画する(StockChartViewController が使う)
+//  ・display(candles:main:sub:keepsViewport:) … 描画内容を指定して描画する(LandscapeChartViewController が使う)
 //  ・clear()                 … 表示を消す
 //  ・style                   … 見た目の設定(色・フォント・初期表示本数など。StockChartStyle)
 //  ・displayOptions          … 表示オプション(Y軸固定・4本値。ChartDisplayOptions)
@@ -100,7 +100,7 @@ final class StockChartView: UIView {
     /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
     /// 変更しても描き直さないので、データを渡す前に設定する。
     /// チャートの種類(chartType)は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
-    /// (最初は国内・海外ともローソク足。横画面(StockChartViewController)の海外は、折線チャートから始まる)。
+    /// (最初は国内・海外ともローソク足。横画面(LandscapeChartViewController)の海外は、折線チャートから始まる)。
     /// chartType は market を設定したあとで設定する
     @objc var market: IndexMarket = .japanIndex {
         didSet {
@@ -729,7 +729,7 @@ extension StockChartView {
     }
 
     /// 実際に描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
-    /// (横画面の StockChartViewController.applyMarket と同じ)
+    /// (横画面の LandscapeChartViewController.applyMarket と同じ)
     @objc var effectiveChartType: ChartType {
         guard ChartType.choices(for: self.market).contains(self.chartType) else {
             return .candlestick
@@ -738,7 +738,7 @@ extension StockChartView {
     }
 
     /// 実際に描くメインチャートの指標。指数の種類・足種で選べない指標は移動平均線にする
-    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    /// (横画面の LandscapeChartViewController.applyIndicatorChoices と同じ)
     @objc var effectiveMainIndicator: MainChartIndicator {
         let choices = MainChartIndicator.choices(for: self.market, period: self.period)
         guard choices.contains(self.mainIndicator) else {
@@ -748,7 +748,7 @@ extension StockChartView {
     }
 
     /// 実際に描くサブチャートの指標。指数の種類・足種で選べない指標は出来高(出来高も選べない海外指数は なし)にする
-    /// (横画面の StockChartViewController.applyIndicatorChoices と同じ)
+    /// (横画面の LandscapeChartViewController.applyIndicatorChoices と同じ)
     @objc var effectiveSubIndicator: SubChartIndicator {
         let choices = SubChartIndicator.choices(for: self.market, period: self.period)
         if choices.contains(self.subIndicator) {

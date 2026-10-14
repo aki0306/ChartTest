@@ -2,7 +2,7 @@
 //  ChartStateStore.swift
 //  ChartTest
 //
-//  【Model】横画面のチャート(StockChartViewController)で選んだ状態を、国内・海外ごとに覚えておく場所。
+//  【Model】横画面のチャート(LandscapeChartViewController)で選んだ状態を、国内・海外ごとに覚えておく場所。
 //  ・国内(日本株・日本株価指数)と海外(リアルタイム・日次)で別々に覚える
 //  ・アプリを起動している間だけ覚える(画面を閉じて開き直しても残る。端末には保存しない)
 //

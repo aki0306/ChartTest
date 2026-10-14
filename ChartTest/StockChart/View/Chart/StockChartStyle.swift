@@ -157,7 +157,7 @@ struct StockChartStyle {
     // MARK: - 足種に合わせる
 
     /// 足種に合わせた見た目にしたコピーを返す(日付の書式・日付ラベルの置き方・初期表示本数。値は ChartPeriod)。
-    /// 縦画面(StockChartView.setCandles(_:period:))と横画面(StockChartViewController.setCandles(_:period:))の
+    /// 縦画面(StockChartView.setCandles(_:period:))と横画面(LandscapeChartViewController.setCandles(_:period:))の
     /// 両方がこれを使うので、足種ごとの見た目を変えるときはここ(と ChartPeriod)だけを直せばよい
     ///
     ///   例) 週足: 日付の書式「25/9/5」・日付ラベル 約5個・初期表示 50本・縮小の限界 250本

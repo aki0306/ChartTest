@@ -17,7 +17,7 @@
 //
 //  【責務】選択肢の表示と、タップされた指標の通知のみ。
 //  選択結果は delegate(Objective-C からも利用可)で Controller に通知し、
-//  チャートへの反映は Controller(StockChartViewController)が行う。
+//  チャートへの反映は Controller(LandscapeChartViewController)が行う。
 //
 
 import UIKit
