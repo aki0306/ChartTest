@@ -20,9 +20,10 @@
 //
 //  【ファイルの分け方】1つのクラスを、役割ごとのファイルに分けている
 //  ・LandscapeChartViewController.swift            … 状態・画面の向き・ライフサイクル・データを渡す入口・描画(このファイル)
-//  ・LandscapeChartViewController+Panels.swift     … チャート・パネル・タブの配置と、テクニカル/設定パネルの開閉
-//  ・LandscapeChartViewController+Settings.swift   … 設定画面との受け渡し
-//  ・LandscapeChartViewController+Footer.swift     … 下の帯(指数名・現在値、チャートの種類・足種のメニュー)
+//  ・LandscapeChartViewController+Panels.swift        … チャート・パネル・タブの配置と、パネルを開く・閉じるしくみ
+//  ・LandscapeChartViewController+TechnicalMenu.swift … 「テクニカル」タブ・メニューを押したとき(指標の切り替え)
+//  ・LandscapeChartViewController+Settings.swift      … 「設定」タブを押したとき・設定画面との受け渡し
+//  ・LandscapeChartViewController+Footer.swift        … 下の帯(指数名・現在値、チャートの種類・足種のメニュー)
 //  (extension は別のファイルから private のものを使えないので、ファイルをまたいで使うものは private を付けていない)
 //
 //  ・下の帯(LandscapeChartViewController.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
@@ -59,6 +60,12 @@
 //      [viewController setCandles:candles period:viewController.period];
 //      [viewController updatePriceInfoWithName:@"日経平均" price:68309.46 date:date];
 //      [self presentViewController:viewController animated:YES completion:nil];
+//
+//  チャートの外(サーバーなど)で計算した指標の値を渡す場合(Objective-C):
+//      ChartIndicatorPeriods *periods = viewController.indicatorPeriods;   // この期間で計算する(凡例の「期間(14)」などと合わせるため)
+//      ChartIndicatorValues *values = [[ChartIndicatorValues alloc] init];
+//      values.rsi = rsiValues;                                              // 値を入れた指標は、チャートでは計算しない
+//      [viewController setCandles:candles period:ChartPeriodDaily indicatorValues:values];
 //
 //  API のレスポンス(足種ごと)を渡す場合(Objective-C):
 //      [ChartResponseLoader setResponse:responseArray period:ChartPeriodDaily to:viewController];   // 辞書の配列(NSMutableArray のままでよい)
@@ -112,6 +119,12 @@ final class LandscapeChartViewController: UIViewController {
     /// 表示中のローソク足データ(古い順)
     private var candles: [StockCandle] = []
 
+    /// チャートの外で計算した指標の値(setCandles(_:period:indicatorValues:) で渡されたもの)。
+    /// 値が入っている指標は計算せずにこの値で描く。nil ならすべてチャートが計算する。
+    /// 新しいデータを値なしで渡したとき・指標の期間が変わったとき(設定画面の「決定」など)は捨てる
+    /// (古いデータや違う期間で計算した値のまま描くと、線や凡例の「期間(14)」と合わなくなるため)
+    private var indicatorValues: ChartIndicatorValues?
+
     /// 表示中のデータの足種。使う指標パラメータ(足種ごと)と、設定画面を開いたときのタブを決める。
     /// setCandles(_:period:) で設定する(setCandles(_:) の場合は今の足種のまま)。
     /// 最初は、国内で前回選んでいた足種(初めてなら日足)。market を国内⇔海外で切り替えると、切り替えた先で前回選んでいた足種になる
@@ -154,7 +167,14 @@ final class LandscapeChartViewController: UIViewController {
 
     /// 足種ごとの指標の計算パラメータ。設定画面で足種ごとに変えられる。
     /// 初期値は足種に合わせたもの(週足の移動平均は 13/26 など。ChartPeriod.indicatorParameters)
-    var parametersByPeriod = LandscapeChartViewController.initialState.parametersByPeriod
+    var parametersByPeriod = LandscapeChartViewController.initialState.parametersByPeriod {
+        didSet {
+            // 期間が変わったら、チャートの外で計算した値は使わない(違う期間で計算した値なので)
+            if self.parametersByPeriod != oldValue {
+                self.indicatorValues = nil
+            }
+        }
+    }
 
     /// 表示中の足種の指標パラメータ。変更すると再描画する
     var parameters: IndicatorParameters {
@@ -180,7 +200,9 @@ final class LandscapeChartViewController: UIViewController {
 
     /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。
     /// ローソク足以外では、テクニカル指標とサブチャートは表示せず、テクニカルのメニューは「なし」だけにする。
-    /// 4本値は、オンにしていてもローソク足のときだけ表示する
+    /// 4本値は、オンにしていてもローソク足のときだけ表示する。
+    /// コードから変える場合は、その種類で使える足種のデータを渡す(VWAP は日中足、新値足・折線チャートは1分足以外。
+    /// 下の帯のメニューで選んだときは、使えない足種なら使える足種に切り替える。+Footer.swift の switchPeriodIfUnavailable)
     @objc var chartType: ChartType = LandscapeChartViewController.initialState.chartType {
         didSet {
             guard self.chartType != oldValue else {
@@ -205,6 +227,7 @@ final class LandscapeChartViewController: UIViewController {
     }
 
     /// メインチャートに表示する指標。変更すると表示位置を保ったまま再描画する
+    /// (テクニカルのメニューで選ばれたときも、ここを通る。+TechnicalMenu.swift)
     @objc var mainIndicator: MainChartIndicator = LandscapeChartViewController.initialState.mainIndicator {
         didSet {
             guard self.mainIndicator != oldValue else {
@@ -219,6 +242,7 @@ final class LandscapeChartViewController: UIViewController {
     }
 
     /// サブチャートに表示する指標。.hidden にするとサブチャートを隠す
+    /// (テクニカルのメニューで選ばれたときも、ここを通る。+TechnicalMenu.swift)
     @objc var subIndicator: SubChartIndicator = LandscapeChartViewController.initialState.subIndicator {
         didSet {
             guard self.subIndicator != oldValue else {
@@ -243,7 +267,7 @@ final class LandscapeChartViewController: UIViewController {
 
     // MARK: - 操作されたときの処理(外から設定する)
 
-    /// 足種のメニューで足種が選ばれたときに呼ばれる処理(選ばれた足種が渡される)。
+    /// 足種のメニューで足種が選ばれたときに呼ばれる処理(選ばれた足種が渡される。流れは +Footer.swift の先頭)。
     /// その足種のデータを取得して setCandles(_:period:) で渡すと、チャートとボタンの表示が切り替わる。
     /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
     @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
@@ -406,6 +430,7 @@ final class LandscapeChartViewController: UIViewController {
         }
 
         self.loadViewIfNeeded()
+        self.indicatorValues = nil
         self.candles = candles
         self.reloadChart(keepsViewport: false)
     }
@@ -417,8 +442,24 @@ final class LandscapeChartViewController: UIViewController {
     ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
     ///   - period: 足種
     @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod) {
+        self.setCandles(candles, period: period, indicatorValues: nil)
+    }
+
+    /// 足種を指定してローソク足データと、チャートの外(サーバーなど)で計算した指標の値を渡し、描画する。
+    /// 値が入っている指標は計算せずにその値で描き、入っていない指標はチャートが計算する(ChartIndicatorValues)。
+    ///
+    ///   指標の値は、indicatorPeriods の期間で計算しておく(凡例の「期間(14)」などと合わせるため)。
+    ///   値は、メニューで指標を切り替えても使う(使う指標の分だけ入れておけばよい)。
+    ///   設定画面などで期間が変わったときは捨てて、チャートが計算する(新しい期間の値は、次に setCandles で渡す)
+    ///
+    /// Objective-C からは `[viewController setCandles:candles period:ChartPeriodDaily indicatorValues:values]` で呼び出せる。
+    /// - Parameters:
+    ///   - candles: 日付の古い順に並んだローソク足データ(その足種のデータ)
+    ///   - period: 足種
+    ///   - indicatorValues: チャートの外で計算した指標の値(candles と同じ並び)。nil ならすべてチャートが計算する
+    @objc func setCandles(_ candles: [StockCandle], period: ChartPeriod, indicatorValues: ChartIndicatorValues?) {
         // メインスレッドでなければ、メインスレッドで呼び直す(通信の完了処理から直接呼ばれても安全にする。MainThread)
-        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period) }) else {
+        guard MainThread.isCurrent(orRetry: { self.setCandles(candles, period: period, indicatorValues: indicatorValues) }) else {
             return
         }
 
@@ -430,11 +471,18 @@ final class LandscapeChartViewController: UIViewController {
 
         // テクニカルで選べる指標を足種に合わせる(1分足・日中足は 移動平均線・出来高 などだけ)。
         // 選べない指標から切り替えたときに、新しい足種のデータで描き直されるよう、先にデータを持たせておく
+        // 計算済みの値も、データと一緒に先に入れておく(指標の切り替えで途中で描き直すときに、古い値で描かないように)
         self.candles = candles
+        self.indicatorValues = indicatorValues
         self.applyIndicatorChoices()
 
-        self.setCandles(candles)
+        self.reloadChart(keepsViewport: false)
         self.updatePeriodMenu()
+    }
+
+    /// 指標の計算に使う期間など(表示中の足種の値)。チャートの外で指標を計算するときは、この値で計算する
+    @objc var indicatorPeriods: ChartIndicatorPeriods {
+        return ChartIndicatorPeriods(parameters: self.parameters)
     }
 
     /// すべての足種の指標パラメータを変更して、描き直す(Swift からも使える)。
@@ -476,7 +524,8 @@ final class LandscapeChartViewController: UIViewController {
         }
         // 日時だけの足(1分足・日中足の、値のない時間帯)は、先頭側・末尾側を X軸の日付だけに使う
         let slots = CandleSlots(self.candles)
-        let builder = ChartContentBuilder(candles: slots.candles, parameters: self.parameters)
+        var builder = ChartContentBuilder(candles: slots.candles, parameters: self.parameters)
+        builder.precomputed = self.indicatorValues
         let content = builder.content(for: self.chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
                                       market: self.market, period: self.period)
         // 足種・指数の種類・チャートの種類が前回と同じなら、データの更新として直前の表示範囲を引き継ぐ
@@ -570,29 +619,6 @@ final class LandscapeChartViewController: UIViewController {
         // 下の帯のボタンの表示も合わせる(足種は、国内/海外ごとに前回選んでいた足種に変わっていることがある)
         self.updateChartTypeMenu()
         self.updatePeriodMenu()
-    }
-
-    /// テクニカルのメニューに並べる指標を、指数の種類・足種に合わせる(MainChartIndicator / SubChartIndicator の choices)。
-    /// 選べない指標を選んでいた場合は、選べるものに切り替える
-    ///   ・メイン: 移動平均線(どの指数・足種でも選べる)
-    ///   ・サブ  : 出来高(選べない場合 = 海外指数は なし)
-    /// 例) 日足で 一目均衡表 + MACD を表示中に 1分足 にすると、移動平均線 + 出来高 になる
-    func applyIndicatorChoices() {
-        let mainChoices = MainChartIndicator.choices(for: self.market, period: self.period)
-        let subChoices = SubChartIndicator.choices(for: self.market, period: self.period)
-        self.menuView.availableMainIndicators = mainChoices
-        self.menuView.availableSubIndicators = subChoices
-
-        if !mainChoices.contains(self.mainIndicator) {
-            self.mainIndicator = .movingAverage
-        }
-        if !subChoices.contains(self.subIndicator) {
-            if subChoices.contains(.volume) {
-                self.subIndicator = .volume
-            } else {
-                self.subIndicator = .hidden
-            }
-        }
     }
 }
 

@@ -12,6 +12,20 @@
 //  ・見た目は帯(ChartFooterView)が決め、ここではメニューの中身と、押されたときの処理だけを渡す
 //  ・足種・更新・縦画面に戻すは、データの取得や画面を閉じる処理が必要なので、onPeriodSelect・onReload・onRotate で呼び出し側に任せる
 //
+//  【足種を切り替えたときの流れ】
+//   ① 「日足 ▼」でメニューを開き、「週足」を押す
+//   ② periodMenuSelected が呼ばれ、onPeriodSelect でアプリに知らせる(データの取得はアプリの仕事なので、ここでは描き直さない)
+//   ③ アプリ(Sample/ViewController.swift の presentLandscapeChart)が週足のデータを用意して、setCandles(_:period:) を呼ぶ
+//   ④ setCandles(LandscapeChartViewController.swift)でチャートを描き直し、updatePeriodMenu で足種のボタンを「週足」にする
+//
+//  【チャートの種類を切り替えたときの流れ】
+//   ① 「ローソク足 ▼」でメニューを開き、「折線チャート」を押す
+//   ② chartTypeMenuSelected が、次の2つを順に行う
+//      1. chartType を変える(データはそのままなので、アプリには知らせない)
+//         → chartType の didSet(LandscapeChartViewController.swift)でチャートを描き直し、ボタンの文字を合わせる
+//      2. 表示中の足種がその種類で使えなければ(1分足のまま新値足・日足のまま VWAP など)、使える足種に切り替える
+//         → 足種の切り替えと同じく onPeriodSelect でアプリに知らせる(このあとは【足種を切り替えたときの流れ】の ③・④)
+//
 
 import UIKit
 
@@ -33,15 +47,13 @@ extension LandscapeChartViewController {
 
     // MARK: - チャートの種類
 
-    /// チャートの種類が変わったとき(メニューからでも、コードから chartType を変えた場合でも)。
-    /// ボタンの表示を合わせ、表示中の足種がその種類では選べない場合(新値足の1分足)は、選べる足種に切り替える
+    /// チャートの種類が変わったとき(メニューからでも、コードから chartType を変えた場合でも)。ボタンの文字を合わせる
     func chartTypeDidChange() {
         // 画面を読み込む前は、帯がまだない(viewDidLoad の configureFooter で合わせる)
         guard self.isViewLoaded else {
             return
         }
         self.updateChartTypeMenu()
-        self.switchPeriodIfUnavailable()
     }
 
     /// 「チャートの種類」ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
@@ -56,7 +68,7 @@ extension LandscapeChartViewController {
             var actions: [UIAction] = []
             for chartType in ChartType.choices(for: self.market) {
                 let action = UIAction(title: chartType.title) { [weak self] _ in
-                    self?.chartType = chartType  // ボタンの表示は chartTypeDidChange で更新される
+                    self?.chartTypeMenuSelected(chartType)
                 }
                 if chartType == selectedType {
                     action.state = .on
@@ -70,7 +82,22 @@ extension LandscapeChartViewController {
         self.footerView.setChartTypeMenu(title: self.chartType.title, candidates: candidates, menu: UIMenu(children: [items]))
     }
 
+    /// チャートの種類のメニューで種類が選ばれたとき(流れの②)
+    private func chartTypeMenuSelected(_ chartType: ChartType) {
+        // 1. 種類を変える(didSet でチャートを描き直し、ボタンの文字も合わせる)
+        self.chartType = chartType
+        // 2. 表示中の足種がこの種類で使えなければ、使える足種に切り替えるようアプリに頼む
+        self.switchPeriodIfUnavailable()
+    }
+
     // MARK: - 足種
+
+    /// 足種のメニューで足種が選ばれたとき(流れの②)。
+    /// データの取得はアプリの仕事なので、ここでは onPeriodSelect でアプリに知らせるだけ。
+    /// アプリがその足種のデータを setCandles(_:period:) で渡すと、チャートと足種のボタンが切り替わる
+    private func periodMenuSelected(_ period: ChartPeriod) {
+        self.onPeriodSelect?(period)
+    }
 
     /// 「足種」ボタンの文字とメニュー(表示中の足種にチェック)を、表示中の足種に合わせる。
     /// メニューの中身は開くたびに作るので、指数の種類(海外指数は 日足・週足・月足 だけ)・
@@ -89,7 +116,7 @@ extension LandscapeChartViewController {
             var actions: [UIAction] = []
             for period in self.availablePeriods {
                 let action = UIAction(title: Self.shortTitle(of: period)) { [weak self] _ in
-                    self?.onPeriodSelect?(period)
+                    self?.periodMenuSelected(period)
                 }
                 if period == selectedPeriod {
                     action.state = .on
@@ -110,7 +137,8 @@ extension LandscapeChartViewController {
     }
 
     /// 表示中の足種が今のチャートの種類では選べない場合(1分足のまま新値足・折線チャートにした・日足のまま VWAP にした など)、
-    /// 選べる足種に切り替える。データの取得はアプリの仕事なので、足種のメニューで選んだときと同じく onPeriodSelect を呼ぶ
+    /// 選べる足種に切り替える(チャートの種類のメニューで選んだときの 2.)。
+    /// データの取得はアプリの仕事なので、足種のメニューで選んだときと同じく onPeriodSelect を呼ぶ
     /// (日中足を選べるなら 日中足 に切り替える。日中足も選べなければ、選べる足種の先頭)
     private func switchPeriodIfUnavailable() {
         let periods = self.availablePeriods

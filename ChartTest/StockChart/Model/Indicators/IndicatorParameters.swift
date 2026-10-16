@@ -11,7 +11,7 @@
 
 import Foundation
 
-struct IndicatorParameters {
+struct IndicatorParameters: Equatable {
 
     // MARK: 移動平均線
 

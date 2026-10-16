@@ -3,7 +3,9 @@
 //  ChartTest
 //
 //  【Controller】横画面のチャート画面(LandscapeChartViewController)のうち、
-//  チャート・パネル・タブの配置と、テクニカル/設定パネルの開閉を担当する部分。
+//  チャート・パネル・タブの配置と、パネルを開く・閉じるしくみ(フェード・タブの移動)を担当する部分。
+//  タブを押したときの処理は、それぞれのパネルのファイルにある
+//  (「テクニカル」は +TechnicalMenu.swift、「設定」は +Settings.swift)。
 //
 //   ┌──┬──────────────────────┐        ┌──────────┬──┬─────────┐
 //   │テ│                      │  開く   │          │テ│▒▒▒▒▒▒▒▒▒│
@@ -77,16 +79,10 @@ extension LandscapeChartViewController {
         // 左右はセーフエリアの内側(横画面のノッチを避ける)
         let safeArea = self.view.safeAreaLayoutGuide
 
-        // 指標の選択メニュー: 画面の左側に幅 45% で表示
+        // 指標の選択メニュー: 画面の左側に幅 45% で表示(中身の設定は +TechnicalMenu.swift)
         self.menuView.translatesAutoresizingMaskIntoConstraints = false
         self.menuView.isHidden = true
-        self.menuView.delegate = self
-        self.menuView.selectedMainIndicator = self.mainIndicator
-        self.menuView.selectedSubIndicator = self.subIndicator
-        self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
-        self.menuView.availableMainIndicators = MainChartIndicator.choices(for: self.market, period: self.period)
-        self.menuView.availableSubIndicators = SubChartIndicator.choices(for: self.market, period: self.period)
-        self.menuView.accessibilityIdentifier = "chart.technicalMenu"  // UI テストで探すための名前
+        self.configureTechnicalMenu()
         self.view.addSubview(self.menuView)
 
         // 設定画面: 画面の左側に幅 75% で表示(左側リスト + 右側パネル)
@@ -158,16 +154,6 @@ extension LandscapeChartViewController {
 
     // MARK: - パネルの開閉
 
-    /// 「テクニカル」タブがタップされたら、指標の選択メニューを開閉する
-    @objc private func technicalTabTapped() {
-        self.togglePanel(.technical)
-    }
-
-    /// 「設定」タブがタップされたら、設定画面を開閉する
-    @objc private func settingsTabTapped() {
-        self.togglePanel(.settings)
-    }
-
     /// 背景のグレーの部分がタップされたら、開いているパネルを閉じる
     @objc private func dimmingViewTapped() {
         self.closePanels()
@@ -179,8 +165,8 @@ extension LandscapeChartViewController {
         self.setOpenPanel(nil, animated: true)
     }
 
-    /// 指定したパネルが開いていれば閉じ、閉じていれば開く
-    private func togglePanel(_ panel: Panel) {
+    /// 指定したパネルが開いていれば閉じ、閉じていれば開く(タブを押したときに呼ぶ)
+    func togglePanel(_ panel: Panel) {
         if self.openPanel == panel {
             self.setOpenPanel(nil, animated: true)
         } else {
@@ -301,18 +287,5 @@ extension LandscapeChartViewController {
         if !self.isPanelOpen {
             self.dimmingView.isHidden = true
         }
-    }
-}
-
-// MARK: - TechnicalMenuViewDelegate(指標の選択を状態に反映する)
-
-extension LandscapeChartViewController: TechnicalMenuViewDelegate {
-
-    func technicalMenuView(_ menuView: TechnicalMenuView, didSelectMainIndicator indicator: MainChartIndicator) {
-        self.mainIndicator = indicator
-    }
-
-    func technicalMenuView(_ menuView: TechnicalMenuView, didSelectSubIndicator indicator: SubChartIndicator) {
-        self.subIndicator = indicator
     }
 }

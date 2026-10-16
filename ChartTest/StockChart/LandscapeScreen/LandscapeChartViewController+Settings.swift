@@ -4,6 +4,11 @@
 //
 //  【Controller】横画面のチャート画面(LandscapeChartViewController)のうち、設定画面(ChartSettingsView)との受け渡しを担当する部分。
 //
+//  【流れ】
+//   「設定」タブを押す → settingsTabTapped → togglePanel(+Panels)で設定画面を開く
+//   → 操作(リスト・タブ・トグル・数値・下のボタン)は ChartSettingsViewDelegate で受け取る
+//   → 「決定」で parametersByPeriod に反映して描き直し(reloadChart)、設定画面を閉じる
+//
 //  ・Model → 設定画面: 左側リスト(指数の種類で変わる)・足種のタブ・右側の行(トグル/数値)を作って渡す
 //  ・設定画面 → Model: 操作(ChartSettingsViewDelegate)を受け取り、状態を更新する
 //  ・指標のパラメータは、設定画面を開くたびに編集用のコピー(draftParametersByPeriod)を作り、
@@ -13,6 +18,14 @@
 import UIKit
 
 extension LandscapeChartViewController {
+
+    // MARK: - 「設定」タブを押したとき
+
+    /// 「設定」タブがタップされたら、設定画面を開閉する。
+    /// 開くときは、今のパラメータから編集用のコピーを作り直す(setOpenPanel → beginSettingsEditing)
+    @objc func settingsTabTapped() {
+        self.togglePanel(.settings)
+    }
 
     // MARK: - 設定画面(Model → 設定画面)
 

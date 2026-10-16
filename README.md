@@ -449,8 +449,8 @@ API のレスポンスを `ChartResponseLoader` で渡す場合は、`kTurnover`
 ```
 StockCandle の配列
    │
-   ▼ ChartContentBuilder.subContent(for:)       … 選ばれた指標の中身を作る(出来高は volumeContent)
-   │    計算は TechnicalIndicators(RSI・MACD など)
+   ▼ ChartContentBuilder.subContent(for:)       … 選ばれた指標の中身を作る
+   │    指標ごとのファイル(Model/Indicators/Sub/。出来高は Volume.swift の volumeContent)で、計算と描く内容を作る
    ▼
 SubChartContent                                 … 線(series)・棒(bars)・基準線(referenceLines)・Y軸の範囲・書式
    │
@@ -463,7 +463,7 @@ SubChartContent                                 … 線(series)・棒(bars)・�
 | 変えたいこと | 見るところ |
 |---|---|
 | 出来高移動平均の本数(5・週足 13) | `Model/Indicators/IndicatorParameters.swift` の `volumeMAPeriod` |
-| 凡例の文言 | `Model/Content/ChartContentBuilder.swift` の `volumeContent`、足種ごとの「出来高(平均)」は `Model/Display/ChartPeriod.swift` |
+| 凡例の文言 | `Model/Indicators/Sub/Volume.swift` の `volumeContent`、足種ごとの「出来高(平均)」は `Model/Display/ChartPeriod.swift` |
 | 棒・線の色 | `StockChartStyle` の `volumeColor` / `volumeAverageColor` |
 | `StockChartView` のサブチャートを出来高以外にする | `subIndicator` を設定する(「[2. チャートだけを置く](#2-チャートだけを置くstockchartview)」) |
 | 横画面で選べる指標 | `Model/Indicators/ChartIndicatorType.swift` の `SubChartIndicator.choices(for:period:)` |
@@ -595,7 +595,7 @@ NSArray<StockCandle *> *candles = @[candle /* , … */];
 | ストキャス・DMI | 高値・安値・終値 | 期間中の高値・安値と終値から計算 | ― |
 
 - 出来高が 0 のデータでは、出来高の棒は描けません(凡例だけを表示します)。`vwap` がないデータでは、VWAP は描けません(凡例と「表示できる情報はありません」を表示します)
-- 計算式の詳細は [`TechnicalIndicators.swift`](ChartTest/StockChart/Model/Indicators/TechnicalIndicators.swift)、期間などの設定値は [`IndicatorParameters.swift`](ChartTest/StockChart/Model/Indicators/IndicatorParameters.swift) にあります
+- 計算式の詳細は指標ごとのファイル([`Model/Indicators/Main/`](ChartTest/StockChart/Model/Indicators/Main)・[`Model/Indicators/Sub/`](ChartTest/StockChart/Model/Indicators/Sub)。移動平均は [`TechnicalIndicators.swift`](ChartTest/StockChart/Model/Indicators/TechnicalIndicators.swift))、期間などの設定値は [`IndicatorParameters.swift`](ChartTest/StockChart/Model/Indicators/IndicatorParameters.swift) にあります
 
 動作確認用のダミーデータは `SampleData` で作れます。
 
@@ -706,6 +706,41 @@ landscape.chartType = ChartTypeCandlestick;  // チャートの種類
 [landscape setCandles:candles period:ChartPeriodDaily];  // 足種ごとの設定で描画する
 [self presentViewController:landscape animated:YES completion:nil];
 ```
+
+#### 計算済みの指標の値を渡す場合
+
+指標の値は、ふだんはチャートがローソク足から計算します。サーバーなど、チャートの外で計算した値を使いたい場合は、`ChartIndicatorValues` に入れてデータと一緒に渡します。
+値を入れた指標は計算せずにその値で描き、入れていない指標は今までどおりチャートが計算します。凡例・色・軸の見た目は、どちらの場合も同じです。
+
+```objc
+// Objective-C: 横画面
+ChartIndicatorPeriods *periods = landscape.indicatorPeriods;   // この期間で計算する(凡例の「期間(14)」などと合わせるため)
+ChartIndicatorValues *values = [[ChartIndicatorValues alloc] init];
+values.rsi = rsiValues;                       // NSArray<NSNumber *> *。ローソク足と同じ並び(値がない足は @(NAN))
+values.macd = macdValues;
+values.macdSignal = signalValues;
+[landscape setCandles:candles period:ChartPeriodDaily indicatorValues:values];
+
+// Objective-C: チャートだけ(StockChartView。期間は chartView.indicatorPeriods)
+[chartView setCandles:candles indicatorValues:values];
+```
+
+```swift
+// Swift: 横画面
+let periods = landscape.indicatorPeriods
+let values = ChartIndicatorValues()
+values.rsi = rsiValues.map { NSNumber(value: $0) }   // 値がない足は .nan
+landscape.setCandles(candles, period: .daily, indicatorValues: values)
+```
+
+| 決まり | 内容 |
+|---|---|
+| 値の並び | 渡すローソク足と同じ並び(日付の古い順・1本につき1つ)。値がない足は NaN。一目均衡表の先行スパンだけは、右端より先の分を後ろに続けてよい |
+| 計算に使う期間 | `indicatorPeriods`(横画面は表示中の足種の値)で計算する |
+| 入れられる指標 | `ChartIndicatorValues` のプロパティ(移動平均線・多重移動平均線・ボリンジャーバンド・一目均衡表・パラボリック・新値足・出来高移動平均・移動平均乖離率・RSI・サイコロジカル・ストキャスティクス・MACD・DMI)。使う指標の分だけ入れればよい |
+| 横画面で値が捨てられるとき | 新しいデータを値なしで渡したとき(`setCandles(_:period:)`・`ChartResponseLoader` など)と、設定画面などで指標の期間が変わったとき(違う期間で計算した値なので、チャートが計算し直す)。メニューで指標を切り替えただけでは捨てない |
+
+足種のメニュー(`onPeriodSelect`)・更新ボタン(`onReload`)でデータを取得し直すときも、計算済みの値を使う場合は `setCandles(_:period:indicatorValues:)` で一緒に渡します。
 
 #### 海外指数の場合
 
@@ -883,7 +918,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 「テクニカル」「設定」タブ | [`LandscapeChartViewController+Panels.swift`](ChartTest/StockChart/LandscapeScreen/LandscapeChartViewController+Panels.swift) | `configureTabButton` |
 | 4本値の枠(文字の大きさ・背景) | [`OHLCInfoView.swift`](ChartTest/StockChart/View/Crosshair/OHLCInfoView.swift) | 先頭の「見た目」(余白・行間・角の丸み・フォント) |
 | 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartNumberFormatter.swift`](ChartTest/StockChart/View/Chart/ChartNumberFormatter.swift) | `ChartNumberFormatter` |
-| 凡例の文言(「短期移動平均(5)」など) | [`ChartContentBuilder.swift`](ChartTest/StockChart/Model/Content/ChartContentBuilder.swift) | 各指標の `label` / `legendTitle` |
+| 凡例の文言(「短期移動平均(5)」など) | 指標ごとのファイル([`Model/Indicators/Main/`](ChartTest/StockChart/Model/Indicators/Main)・[`Model/Indicators/Sub/`](ChartTest/StockChart/Model/Indicators/Sub)) | 各指標の `label` / `legendTitle` |
 
 ### Swift と Objective-C で使えるものの違い
 
@@ -893,7 +928,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`setCandles:indicatorValues:`、`indicatorPeriods`、`effectiveChartType`・`effectiveMainIndicator`・`effectiveSubIndicator`、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
-| `LandscapeChartViewController` | `instantiate`、`setCandles`(足種の指定あり/なし)、`updatePriceInfo`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`chartInsets`、`chartView`、`onPeriodSelect`、`onReload`、`onRotate`、`closePanels`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onPanelVisibilityChange` |
+| `LandscapeChartViewController` | `instantiate`、`setCandles`(足種の指定あり/なし)、`setCandles:period:indicatorValues:`、`indicatorPeriods`、`updatePriceInfo`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`chartInsets`、`chartView`、`onPeriodSelect`、`onReload`、`onRotate`、`closePanels`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onPanelVisibilityChange` |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
 `LandscapeChartViewController` の `shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod` は、設定すると**すべての足種**に反映されます(読み出すと表示中の足種の値)。足種ごとに変えたい場合は、設定画面か Swift の `setParameters(_:for:)` を使います。
@@ -1173,10 +1208,24 @@ ChartTest/
    │   │   ├─ ChartIndicatorType.swift          指標の種類(移動平均線・RSI など)
    │   │   ├─ ChartIndicatorValues.swift        チャートの外で計算した指標の値・計算に使う期間
    │   │   ├─ IndicatorParameters.swift         指標のパラメータ(期間など)
-   │   │   └─ TechnicalIndicators.swift         指標の計算式
+   │   │   ├─ TechnicalIndicators.swift         指標の計算の入れ物と、共通の計算(移動平均)・新値足
+   │   │   ├─ Main/                             ★ メインチャートの指標(1つの指標 = 1つのファイル。計算と描く内容)
+   │   │   │   ├─ MovingAverage.swift               移動平均線
+   │   │   │   ├─ MultipleMovingAverage.swift       多重移動平均線
+   │   │   │   ├─ BollingerBands.swift              ボリンジャーバンド
+   │   │   │   ├─ Ichimoku.swift                    一目均衡表
+   │   │   │   └─ Parabolic.swift                   パラボリック
+   │   │   └─ Sub/                              ★ サブチャートの指標(1つの指標 = 1つのファイル。計算と描く内容)
+   │   │       ├─ Volume.swift                      出来高
+   │   │       ├─ MovingAverageDeviation.swift      移動平均乖離率
+   │   │       ├─ RSI.swift                         RSI
+   │   │       ├─ Psychological.swift               サイコロジカルライン
+   │   │       ├─ Stochastics.swift                 ストキャスティクス
+   │   │       ├─ MACD.swift                        MACD
+   │   │       └─ DMI.swift                         DMI
    │   └─ Content/                          「何を描くか」
    │       ├─ ChartContent.swift                「何を描くか」を表すデータ
-   │       └─ ChartContentBuilder.swift         データ + 指標 → 「何を描くか」を組み立てる
+   │       └─ ChartContentBuilder.swift         データ + 指標 → 「何を描くか」を組み立てる(指標を選ぶ入口・チャートの種類)
    │
    ├─ View/                             画面の部品
    │   ├─ Chart/                            チャート本体
@@ -1210,8 +1259,9 @@ ChartTest/
    │
    ├─ LandscapeScreen/                  横画面だけで使うもの(横画面を使わなければフォルダごと削除してよい)
    │   ├─ LandscapeChartViewController.swift / .storyboard ★ 横画面(状態・データを渡す入口)
-   │   ├─ LandscapeChartViewController+Panels.swift   テクニカル/設定パネルの開閉
-   │   ├─ LandscapeChartViewController+Settings.swift 設定画面との受け渡し
+   │   ├─ LandscapeChartViewController+Panels.swift   チャート・パネル・タブの配置と、パネルの開閉のしくみ
+   │   ├─ LandscapeChartViewController+TechnicalMenu.swift 「テクニカル」タブ・メニューを押したとき
+   │   ├─ LandscapeChartViewController+Settings.swift 「設定」タブを押したとき・設定画面との受け渡し
    │   ├─ LandscapeChartViewController+Footer.swift   下の帯のメニュー
    │   ├─ LandscapeChartTransition.swift     横画面を開く・閉じるときの回転のアニメーション
    │   └─ ChartFooterView.swift / .xib      横画面の下の帯
@@ -1239,14 +1289,15 @@ docs/images/                            README の画像
 |---|---|
 | 色・フォント・余白を変えたい | `View/Chart/StockChartStyle.swift` |
 | 足種ごとの移動平均の期間・初期表示本数を変えたい | `Model/Display/ChartPeriod.swift` |
-| 指標の計算式を確かめたい | `Model/Indicators/TechnicalIndicators.swift` |
-| サブチャート(出来高など)の中身・凡例を変えたい | `Model/Content/ChartContentBuilder.swift`(`subContent(for:)`)。詳しくは [サブチャート(出来高など)](#サブチャート出来高など) |
-| 凡例の文言(「短期移動平均(5)」など)を変えたい | `Model/Content/ChartContentBuilder.swift` |
+| 指標の計算式・描き方(線の色・凡例)を確かめたい | 指標ごとのファイル(`Model/Indicators/Main/`・`Model/Indicators/Sub/`。例: RSI は `Sub/RSI.swift`) |
+| サブチャート(出来高など)の中身・凡例を変えたい | `Model/Indicators/Sub/` の指標ごとのファイル(指標を選ぶ入口は `Model/Content/ChartContentBuilder.swift` の `subContent(for:)`)。詳しくは [サブチャート(出来高など)](#サブチャート出来高など) |
+| 凡例の文言(「短期移動平均(5)」など)を変えたい | 指標ごとのファイル(`Model/Indicators/Main/`・`Model/Indicators/Sub/`) |
 | API のレスポンスのキーの名前・日付の形式を合わせたい | `Response/StockCandleResponseParser.swift` |
 | 設定画面に並べる項目・値の範囲を変えたい | `SettingsScreen/ChartSettingsCatalog.swift` |
 | 設定画面・下の帯の配置を変えたい | `SettingsScreen/ChartSettingsView.xib`(行は `ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`)・`LandscapeScreen/ChartFooterView.xib`(Interface Builder で開く) |
 | 4本値(十字線)の動きを変えたい | `View/Crosshair/StockChartView+Crosshair.swift` |
 | テクニカル/設定パネルの開き方を変えたい | `LandscapeScreen/LandscapeChartViewController+Panels.swift` |
+| テクニカルを押したとき・指標を選んだときの動きを変えたい | `LandscapeScreen/LandscapeChartViewController+TechnicalMenu.swift` |
 | 横画面の下の帯のボタンの動きを変えたい | `LandscapeScreen/LandscapeChartViewController+Footer.swift` |
 
 ### Model(`StockChart/Model/`)
@@ -1254,7 +1305,8 @@ docs/images/                            README の画像
 | ファイル | 内容 |
 |---|---|
 | `StockCandle.swift` | ローソク足1本分のデータ(日付・始値・高値・安値・終値・出来高) |
-| `TechnicalIndicators.swift` | 指標の計算(移動平均・ボリンジャーバンド・一目均衡表・RSI・MACD・VWAP・新値足 など) |
+| `TechnicalIndicators.swift` | 指標の計算の入れ物と、いくつもの指標で使う移動平均(`sma`・`ema`)・新値足の計算 |
+| `Indicators/Main/*.swift`・`Indicators/Sub/*.swift` | 指標ごとの計算(`TechnicalIndicators` の extension)と描く内容(`ChartContentBuilder` の extension)。1つの指標 = 1つのファイル |
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
 | `ChartIndicatorValues.swift` | チャートの外(Objective-C など)で計算した指標の値(`ChartIndicatorValues`)と、計算に使う期間(`ChartIndicatorPeriods`)。値がある指標はチャートが計算しない |
@@ -1262,7 +1314,7 @@ docs/images/                            README の画像
 | `IndexMarket.swift` | 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次)と、種類ごとに選べる足種・スクロールできる本数 |
 | `IndicatorParameters.swift` | 指標の計算パラメータ(期間など) |
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |
-| `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる |
+| `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる(指標を選ぶ入口と、折線チャート・VWAP・新値足。各指標の中身は指標ごとのファイル) |
 | `ChartDisplayOptions.swift` | 表示オプション(Y軸固定・4本値) |
 | `ChartStateStore.swift` | 横画面のチャートで選んだ状態(チャートの種類・指標・足種・設定値・表示オプション)を、国内/海外ごとにアプリの起動中だけ覚える |
 
@@ -1311,8 +1363,9 @@ docs/images/                            README の画像
 | ファイル | 内容 |
 |---|---|
 | `LandscapeChartViewController.swift` | 横画面(チャート + テクニカル/設定タブ + 下の帯)。足種・チャートの種類・選択中の指標・パラメータ(足種ごと)・表示オプションを持ち、メニューや設定画面の操作を受けてチャートを描き直す。`LandscapeChartViewController.storyboard` から作る |
-| `LandscapeChartViewController+Panels.swift` | チャート・パネル・タブの配置と、テクニカル/設定パネルの開閉 |
-| `LandscapeChartViewController+Settings.swift` | 設定画面(`ChartSettingsView`)との受け渡し |
+| `LandscapeChartViewController+Panels.swift` | チャート・パネル・タブの配置と、パネルを開く・閉じるしくみ(フェード・タブの移動) |
+| `LandscapeChartViewController+TechnicalMenu.swift` | 「テクニカル」タブを押したとき(メニューの開閉)と、メニューで指標を選んだとき(指標の切り替え) |
+| `LandscapeChartViewController+Settings.swift` | 「設定」タブを押したときと、設定画面(`ChartSettingsView`)との受け渡し |
 | `LandscapeChartViewController+Footer.swift` | 下の帯(指数名・現在値、チャートの種類・足種のメニュー) |
 | `LandscapeChartViewController.storyboard` | 横画面のレイアウト(Interface Builder で開いて編集する) |
 | `LandscapeChartTransition.swift` | 横画面を開く・閉じるときの回転のアニメーション(開く前の画面のスナップショットと横画面を一緒に回しながら入れ替える) |
@@ -1340,7 +1393,7 @@ docs/images/                            README の画像
 StockCandle の配列(ローソク足データ)
    │
    ▼  ChartContentBuilder(Model)
-   │    TechnicalIndicators で指標を計算し、
+   │    指標ごとのファイル(Model/Indicators/Main/・Sub/)で指標を計算し、
    │    「どの線を・どの名前で・どの色の役割で描くか」を決める
    ▼
 MainChartContent / SubChartContent(何を描くか)
@@ -1395,12 +1448,13 @@ MainChartContent / SubChartContent(何を描くか)
 ## 初めて読むときのおすすめの順番
 
 1. `StockChart/Model/Data/StockCandle.swift` と `ChartContent.swift` … 扱うデータの形
-2. `StockChart/Model/Content/ChartContentBuilder.swift` … 指標から「何を描くか」を作るところ
+2. `StockChart/Model/Content/ChartContentBuilder.swift` … 指標から「何を描くか」を作るところ(入口)。
+   各指標の中身は `Model/Indicators/Main/`・`Sub/` の指標ごとのファイル(例: `Sub/RSI.swift`)
 3. `StockChart/View/Chart/StockChartView.swift` … チャート本体の入口(冒頭のコメントに全体図があります)
 4. 同じフォルダの `StockChartView+Layout.swift` → `+Rendering.swift` → `+AxisRange.swift` → `View/Crosshair/StockChartView+Crosshair.swift`
 5. `StockChart/LandscapeScreen/LandscapeChartViewController.swift` … 横画面の状態とメニュー・設定の制御
 
-指標の計算式を知りたいときは `TechnicalIndicators.swift` を見てください(各関数のコメントに式があります)。
+指標の計算式を知りたいときは、指標ごとのファイル(`Model/Indicators/Main/`・`Sub/`)を見てください(各関数のコメントに式があります)。
 
 ## コードの書き方の約束
 
