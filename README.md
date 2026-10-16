@@ -1278,6 +1278,7 @@ ChartTest/
        └─ MainThread.swift                  データを受け取る入口を、必ずメインスレッドで動かす
 
 ChartTestUITests/                       UI テスト(画面を自動で操作して確かめる。詳しくは「UI テスト」)
+ChartTestTests/                         スナップショットテスト(チャートの見た目を画像で比べる。詳しくは「スナップショットテスト」)
 docs/images/                            README の画像
 ```
 
@@ -1444,6 +1445,28 @@ MainChartContent / SubChartContent(何を描くか)
 | `settings.list`・`settings.applyToAllButton`・`settings.resetButton`・`settings.confirmButton` | 設定画面の左のリストと下のボタン | `SettingsScreen/ChartSettingsView.swift` |
 
 ボタンの文字を変えた場合は、テストの文字(足種名・指標名など)も合わせて変えます。
+
+## スナップショットテスト
+
+`ChartTestTests/ChartSnapshotTests.swift` に、チャートの見た目を画像で比べるテストがあります(Swift Testing + [swift-snapshot-testing](https://github.com/pointfreeco/swift-snapshot-testing)。Flutter のゴールデンテストと同じ考え方です)。
+指標・足種・チャートの種類は `@Test(arguments:)` で渡しているので、1つずつ別のテストとして結果が出ます(例: `testSubIndicators` の `rsi`)。
+決まったデータ(`SampleData`。乱数のシードが固定なので毎回同じ形)でチャートを描き、保存しておいた画像(`ChartTestTests/__Snapshots__/ChartSnapshotTests/`)と同じになるかを比べます。
+指標の計算や描き方を直したときに、見た目が意図せず変わっていないかを確かめるのに使います。
+
+| テスト | 撮るもの |
+|---|---|
+| `testMainIndicators` | メインチャートの指標ごと(移動平均線・多重移動平均線・ボリンジャーバンド・一目均衡表・パラボリック・なし) |
+| `testSubIndicators` | サブチャートの指標ごと(出来高・移動平均乖離率・RSI・サイコロジカル・ストキャス・MACD・DMI・なし) |
+| `testPeriods` | 足種ごと(1分足〜月足) |
+| `testChartTypes` | チャートの種類ごと(折線チャート・新値足・VWAP：線・VWAP：点) |
+| `testOverseasMarket` | 海外指数(ローソク足・折線チャート) |
+| `testLandscapeScreen` | 横画面(テクニカル/設定タブ・下の帯付き) |
+
+- **実行のしかた**: Xcode で ⌘U(UI テストと一緒に動く)。スナップショットテストだけなら、テストナビゲーター(⌘6)で `ChartTestTests` を実行する
+- **見た目が変わったとき**: テストが失敗し、テスト結果に「保存した画像」「今の画像」「違い」の画像が添付される
+- **見た目をわざと変えたとき**: `ChartSnapshotTests.swift` の `@Suite(.serialized, .snapshots(record: .missing))` の `record` を `.all` にして1回実行すると、画像が作り直される(そのときテストは失敗になる)。確認したら `.missing` に戻し、作り直した画像もコミットする
+- **新しいテストを足したとき**: `arguments` に1件足すだけでよい。画像がまだないテストは、1回目の実行で画像を作る(そのときテストは失敗になる。2回目から比べる)
+- **実行する環境**: 画像は、シミュレータの機種・iOS のバージョン・Mac のタイムゾーン(X軸の日付)で少し変わる。画像を作ったのと同じ環境(iPhone 17e・iOS 26.5・日本時間)で実行する
 
 ## 初めて読むときのおすすめの順番
 

@@ -35,6 +35,17 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "1F20A5C03068700000000006"
+               BuildableName = "ChartTestTests.xctest"
+               BlueprintName = "ChartTestTests"
+               ReferencedContainer = "container:ChartTest.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "1F20A5B03068700000000006"
                BuildableName = "ChartTestUITests.xctest"
                BlueprintName = "ChartTestUITests"
