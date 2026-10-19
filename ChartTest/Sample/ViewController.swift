@@ -273,6 +273,14 @@ class ViewController: UIViewController {
         landscapeViewController.onPeriodSelect = { [weak landscapeViewController] period in
             landscapeViewController?.setCandles(SampleData.candles(for: period), period: period)
         }
+        // チャートの種類が選ばれたら、表示中の足種のデータを渡す(チャートが消えているので、描き直す)
+        landscapeViewController.onChartTypeSelect = { [weak landscapeViewController] _ in
+            guard let landscapeViewController else {
+                return
+            }
+            let period = landscapeViewController.period
+            landscapeViewController.setCandles(SampleData.candles(for: period), period: period)
+        }
         // 更新: 表示中の足種のデータを読み込み直し、現在値も更新する
         landscapeViewController.onReload = { [weak self, weak landscapeViewController] in
             guard let self else {

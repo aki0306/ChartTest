@@ -10,7 +10,8 @@
 //     updatePriceInfo                 チャートの種類  足種    更新   縦画面に戻す
 //
 //  ・見た目は帯(ChartFooterView)が決め、ここではメニューの中身と、押されたときの処理だけを渡す
-//  ・足種・更新・縦画面に戻すは、データの取得や画面を閉じる処理が必要なので、onPeriodSelect・onReload・onRotate で呼び出し側に任せる
+//  ・チャートの種類・足種・更新・縦画面に戻すは、データの取得や画面を閉じる処理が必要なので、
+//    onChartTypeSelect・onPeriodSelect・onReload・onRotate で呼び出し側に任せる
 //
 //  【足種を切り替えたときの流れ】
 //   ① 「日足 ▼」でメニューを開き、「週足」を押す
@@ -22,11 +23,15 @@
 //
 //  【チャートの種類を切り替えたときの流れ】
 //   ① 「ローソク足 ▼」でメニューを開き、「折線チャート」を押す
-//   ② chartTypeMenuSelected が、次の2つを順に行う
-//      1. chartType を変える(データはそのままなので、アプリには知らせない)
-//         → chartType の didSet(LandscapeChartViewController.swift)でチャートを描き直し、ボタンの文字を合わせる
-//      2. 表示中の足種がその種類で使えなければ(1分足のまま新値足・日足のまま VWAP など)、使える足種に切り替える
+//   ② chartTypeMenuSelected が、次の3つを順に行う
+//      1. chartType を変える
+//         → chartType の didSet(LandscapeChartViewController.swift)でチャートを描き直し、ボタンの文字を「折線チャート」にする
+//      2. 表示中の足種がその種類で使えなければ(1分足のまま新値足・日足のまま VWAP など)、使える足種に切り替えて終わる
 //         → 足種の切り替えと同じく selectPeriod で切り替える(このあとは【足種を切り替えたときの流れ】の ②・③・④)
+//      3. clearChartUntilNewCandles(LandscapeChartViewController.swift)でチャートを消し、
+//         onChartTypeSelect で表示中の足種のデータの取得を頼む(onChartTypeSelect がなければ、1. のまま終わる)
+//   ③ onChartTypeSelect(Sample/ViewController.swift の presentLandscapeChart)が表示中の足種のデータを用意して、setCandles(_:period:) を呼ぶ
+//   ④ setCandles(LandscapeChartViewController.swift)で、そのデータを折線チャートで描く
 //
 
 import UIKit
@@ -86,10 +91,23 @@ extension LandscapeChartViewController {
 
     /// チャートの種類のメニューで種類が選ばれたとき(流れの②)
     private func chartTypeMenuSelected(_ chartType: ChartType) {
+        // 選んでいる種類をもう一度選んだときは、何もしない
+        guard chartType != self.chartType else {
+            return
+        }
         // 1. 種類を変える(didSet でチャートを描き直し、ボタンの文字も合わせる)
         self.chartType = chartType
-        // 2. 表示中の足種がこの種類で使えなければ、使える足種に切り替えるようアプリに頼む
-        self.switchPeriodIfUnavailable()
+        // 2. 表示中の足種がこの種類で使えなければ、使える足種に切り替える(データの取得は onPeriodSelect に頼む)
+        if self.switchPeriodIfUnavailable() {
+            return
+        }
+        // 3. チャートを消し、onChartTypeSelect で表示中の足種のデータの取得を頼む。
+        //    onChartTypeSelect がなければ、1. で今のデータのまま描き直したところで終わる
+        guard let onChartTypeSelect = self.onChartTypeSelect else {
+            return
+        }
+        self.clearChartUntilNewCandles()
+        onChartTypeSelect(chartType)
     }
 
     // MARK: - 足種
@@ -148,19 +166,21 @@ extension LandscapeChartViewController {
     /// 選べる足種に切り替える(チャートの種類のメニューで選んだときの 2.)。
     /// 足種のメニューで選んだときと同じく selectPeriod で切り替える
     /// (日中足を選べるなら 日中足 に切り替える。日中足も選べなければ、選べる足種の先頭)
-    private func switchPeriodIfUnavailable() {
+    /// - Returns: true = 足種を切り替えた(データの取得を onPeriodSelect に頼んだ)
+    private func switchPeriodIfUnavailable() -> Bool {
         let periods = self.availablePeriods
         if periods.contains(self.period) {
-            return
+            return false
         }
         var nextPeriod = periods.first
         if periods.contains(.intraday) {
             nextPeriod = .intraday
         }
         guard let nextPeriod else {
-            return
+            return false
         }
         self.selectPeriod(nextPeriod)
+        return true
     }
 
     /// ボタン・メニューに出す足種の名前。タブ用の名前(「月 足」)から空白を除く(「月足」)

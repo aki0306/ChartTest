@@ -29,7 +29,9 @@
 //  ・下の帯(LandscapeChartViewController.storyboard の Footer View。中身は ChartFooterView / ChartFooterView.xib)
 //      左     : 指数名・現在値・日時(updatePriceInfo(name:price:date:) で設定する)
 //      ローソク足▼: チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート)を切り替える。
-//                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない
+//                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない。
+//                  選ばれると、ボタンがすぐその種類になってチャートが消え、onChartTypeSelect が呼ばれるので、
+//                  表示中の足種のデータを取得して setCandles(_:period:) で渡す(onChartTypeSelect がなければ、今のデータのまま描き直す)
 //      月足▼ : 足種を選ぶ。選ばれると、ボタンがすぐその足種になってチャートが消え、onPeriodSelect が呼ばれるので、
 //              その足種のデータを取得して setCandles(_:period:) で渡す
 //      ↻     : 更新。onReload が呼ばれるので、表示中の足種のデータを取得し直して渡す
@@ -46,6 +48,7 @@
 //      let viewController = LandscapeChartViewController.instantiate()
 //      viewController.market = .overseasRealtime             // 海外指数(移動平均線・ローソク足/折線チャートだけ)
 //      viewController.onPeriodSelect = { [weak viewController] period in /* その足種のデータを取得して viewController?.setCandles(_:period:) */ }
+//      viewController.onChartTypeSelect = { [weak viewController] chartType in /* 表示中の足種(period)のデータを取得して viewController?.setCandles(_:period:) */ }
 //      viewController.onReload = { [weak self] in /* 表示中の足種(period)のデータを取得し直す */ }
 //      viewController.onRotate = { [weak viewController] in viewController?.dismiss(animated: true) }   // 閉じる
 //      viewController.setCandles(candles, period: viewController.period)
@@ -56,6 +59,7 @@
 //      LandscapeChartViewController *viewController = [LandscapeChartViewController instantiate];
 //      __weak LandscapeChartViewController *weakViewController = viewController;   // ブロックの中では weak で使う
 //      viewController.onPeriodSelect = ^(ChartPeriod period) { ... [weakViewController setCandles:candles period:period]; };
+//      viewController.onChartTypeSelect = ^(ChartType chartType) { ... [weakViewController setCandles:candles period:weakViewController.period]; };
 //      viewController.onReload = ^{ ... };
 //      viewController.onRotate = ^{ [weakViewController dismissViewControllerAnimated:YES completion:nil]; };
 //      [viewController setCandles:candles period:viewController.period];
@@ -272,6 +276,11 @@ final class LandscapeChartViewController: UIViewController {
     /// 呼ばれる前に、ボタンはその足種になり、チャートは消えている。その足種のデータを取得して setCandles(_:period:) で渡すと、チャートを描く。
     /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
     @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
+    /// チャートの種類のメニューで種類が選ばれたときに呼ばれる処理(選ばれた種類が渡される。流れは +Footer.swift の先頭)。
+    /// 呼ばれる前に、ボタンはその種類になり、チャートは消えている。表示中の足種(period)のデータを取得して setCandles(_:period:) で渡すと、チャートを描く。
+    /// 設定しない場合は、チャートを消さずに、今のデータのままその種類で描き直す。
+    /// 種類を変えたことで足種も変わったときは、これは呼ばれず onPeriodSelect が呼ばれる(データの取得を1回にするため)
+    @objc var onChartTypeSelect: ((ChartType) -> Void)?
     /// 更新ボタンが押されたときに呼ばれる処理。表示中の足種(period)のデータを取得し直して渡す
     @objc var onReload: (() -> Void)?
     /// 縦画面に戻すボタンが押されたとき・端末を縦に向けたときに呼ばれる処理。present で表示した場合は、ここで dismiss する
@@ -495,6 +504,15 @@ final class LandscapeChartViewController: UIViewController {
 
         self.reloadChart(keepsViewport: false)
         self.updatePeriodMenu()
+    }
+
+    /// 新しいデータが届くまでチャートを消す(チャートの種類のメニューで選ばれたとき。+Footer.swift)。
+    /// データは setCandles(_:period:) で渡されたときに描く
+    func clearChartUntilNewCandles() {
+        self.loadViewIfNeeded()
+        self.candles = []
+        self.indicatorValues = nil
+        self.reloadChart(keepsViewport: false)
     }
 
     /// 指標の計算に使う期間など(表示中の足種の値)。チャートの外で指標を計算するときは、この値で計算する

@@ -349,7 +349,7 @@ final class MyChartViewController: UIViewController {
 | 部品 | 動き | 使うもの |
 |---|---|---|
 | 指数名・現在値・日時 | 「日経平均 68309.46 10/02 15:45」のように表示する(現在値は小数2桁・3桁区切りなし、日時は MM/dd HH:mm) | `updatePriceInfo(name:price:date:)`(Objective-C は `updatePriceInfoWithName:price:date:`) |
-| ローソク足 ▼ | チャートの種類のメニュー(下の「横画面のチャートの種類」) | `chartType` |
+| ローソク足 ▼ | チャートの種類のメニュー(下の「横画面のチャートの種類」)。選ばれると、ボタンの文字がすぐその種類に変わってチャートが消え、`onChartTypeSelect` が呼ばれるので、表示中の足種(`period`)のデータを取得して `setCandles(_:period:)` で渡す。渡すとチャートを描く。`onChartTypeSelect` を設定しない場合は、今のデータのままその種類で描き直す。種類を変えたことで足種も変わったときは、`onChartTypeSelect` ではなく `onPeriodSelect` が呼ばれる | `chartType`、`onChartTypeSelect` |
 | 月足 ▼ | 足種のメニュー(国内指数は 1分足〜月足、海外指数は 日足・週足・月足。VWAP のときは 日中足 だけ、新値足・折線チャートのときは 1分足 を除く。`ChartType.periods(in:)`)。選ばれると、ボタンの文字がすぐその足種に変わってチャートが消え、`onPeriodSelect` が呼ばれるので、その足種のデータを取得して `setCandles(_:period:)` で渡す。渡すとチャートを描く | `onPeriodSelect` |
 | ↻(更新) | `onReload` が呼ばれるので、表示中の足種(`period`)のデータと現在値を取得し直して渡す | `onReload` |
 | ⤾(縦画面に戻す) | `onRotate` が呼ばれるので、画面を閉じる(`dismiss`)。閉じると、開く前の画面の向き(縦)に戻る | `onRotate` |
@@ -359,6 +359,13 @@ final class MyChartViewController: UIViewController {
 landscape.onPeriodSelect = { [weak landscape] period in
     // その足種のデータを API から取得して渡す(ChartResponseLoader で渡してもよい)
     landscape?.setCandles(candles, period: period)
+}
+landscape.onChartTypeSelect = { [weak landscape] chartType in
+    // 表示中の足種(landscape.period)のデータを API から取得して渡す
+    guard let landscape else {
+        return
+    }
+    landscape.setCandles(candles, period: landscape.period)
 }
 landscape.onReload = { [weak self] in /* 表示中の足種のデータを取得し直して setCandles(_:period:)・updatePriceInfo を呼ぶ */ }
 landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }   // 閉じる(縦画面に戻る)
@@ -370,6 +377,10 @@ landscape.updatePriceInfo(name: "日経平均", price: 68309.46, date: date)
 __weak LandscapeChartViewController *weakLandscape = landscape;
 landscape.onPeriodSelect = ^(ChartPeriod period) {
     [ChartResponseLoader setResponse:responseArray period:period to:weakLandscape];
+};
+landscape.onChartTypeSelect = ^(ChartType chartType) {
+    // 表示中の足種(weakLandscape.period)のデータを取得して渡す
+    [ChartResponseLoader setResponse:responseArray period:weakLandscape.period to:weakLandscape];
 };
 landscape.onReload = ^{ /* 取得し直す */ };
 landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES completion:nil]; };   // 閉じる(縦画面に戻る)
@@ -491,7 +502,7 @@ LandscapeChartViewController(横画面: チャート + テクニカル/設定タ
 | 画面への置き方 | `addSubview` | `present` で全画面に表示する(横向きになる) |
 | 指標・パラメータ | コードで設定する | テクニカル/設定タブで切り替えられる(`mainIndicator` などコードでも設定できる) |
 | チャートの種類・足種 | `chartType`・`period` をコードで設定する | 下の帯のメニューで切り替えられる |
-| データの渡し方 | `setCandles(_:period:)` などで渡す | 足種・更新・縦画面に戻すが押されると `onPeriodSelect`・`onReload`・`onRotate` が呼ばれるので、アプリ側でデータを取得して `setCandles(_:period:)` で渡す |
+| データの渡し方 | `setCandles(_:period:)` などで渡す | チャートの種類・足種・更新・縦画面に戻すが押されると `onChartTypeSelect`・`onPeriodSelect`・`onReload`・`onRotate` が呼ばれるので、アプリ側でデータを取得して `setCandles(_:period:)` で渡す |
 | 指数名・現在値の表示 | なし | `updatePriceInfo(name:price:date:)` |
 | フォルダ | `StockChart/View/Chart/` | `StockChart/LandscapeScreen/`(使わなければフォルダごと削除してよい) |
 
@@ -928,7 +939,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
 | `StockChartView` | `setCandles`(3種類)、`setCandles:indicatorValues:`、`indicatorPeriods`、`effectiveChartType`・`effectiveMainIndicator`・`effectiveSubIndicator`、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
-| `LandscapeChartViewController` | `instantiate`、`setCandles`(足種の指定あり/なし)、`setCandles:period:indicatorValues:`、`indicatorPeriods`、`updatePriceInfo`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`chartInsets`、`chartView`、`onPeriodSelect`、`onReload`、`onRotate`、`closePanels`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onPanelVisibilityChange` |
+| `LandscapeChartViewController` | `instantiate`、`setCandles`(足種の指定あり/なし)、`setCandles:period:indicatorValues:`、`indicatorPeriods`、`updatePriceInfo`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`chartInsets`、`chartView`、`onPeriodSelect`、`onChartTypeSelect`、`onReload`、`onRotate`、`closePanels`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onPanelVisibilityChange` |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
 `LandscapeChartViewController` の `shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod` は、設定すると**すべての足種**に反映されます(読み出すと表示中の足種の値)。足種ごとに変えたい場合は、設定画面か Swift の `setParameters(_:for:)` を使います。
@@ -1131,6 +1142,7 @@ let period = landscape.period         // 前回選んでいた足種(初めて�
 landscape.setCandles(candles, period: period)             // その足種のデータ(古い順)
 landscape.updatePriceInfo(name: "日経平均", price: price, date: date)
 landscape.onPeriodSelect = { [weak landscape] period in /* その足種のデータを取得して landscape?.setCandles(_:period:) */ }
+landscape.onChartTypeSelect = { [weak landscape] chartType in /* 表示中の足種のデータを取得して landscape?.setCandles(_:period:) */ }
 landscape.onReload = { [weak landscape] in /* 表示中の足種のデータを取得し直す */ }
 landscape.onRotate = { [weak landscape] in landscape?.dismiss(animated: true) }
 present(landscape, animated: true)
@@ -1145,6 +1157,7 @@ ChartPeriod period = landscape.period;      // 前回選んでいた足種(初�
 [landscape updatePriceInfoWithName:@"日経平均" price:price date:date];
 __weak LandscapeChartViewController *weakLandscape = landscape;
 landscape.onPeriodSelect = ^(ChartPeriod period) { /* その足種のデータを取得して [weakLandscape setCandles:period:] */ };
+landscape.onChartTypeSelect = ^(ChartType chartType) { /* 表示中の足種のデータを取得して [weakLandscape setCandles:period:] */ };
 landscape.onReload = ^{ /* 表示中の足種のデータを取得し直す */ };
 landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES completion:nil]; };
 [self presentViewController:landscape animated:YES completion:nil];
