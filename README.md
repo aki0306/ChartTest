@@ -350,7 +350,7 @@ final class MyChartViewController: UIViewController {
 |---|---|---|
 | 指数名・現在値・日時 | 「日経平均 68309.46 10/02 15:45」のように表示する(現在値は小数2桁・3桁区切りなし、日時は MM/dd HH:mm) | `updatePriceInfo(name:price:date:)`(Objective-C は `updatePriceInfoWithName:price:date:`) |
 | ローソク足 ▼ | チャートの種類のメニュー(下の「横画面のチャートの種類」) | `chartType` |
-| 月足 ▼ | 足種のメニュー(国内指数は 1分足〜月足、海外指数は 日足・週足・月足。VWAP のときは 日中足 だけ、新値足・折線チャートのときは 1分足 を除く。`ChartType.periods(in:)`)。選ばれると `onPeriodSelect` が呼ばれるので、その足種のデータを取得して `setCandles(_:period:)` で渡す。ボタンの文字は、渡した足種に変わる | `onPeriodSelect` |
+| 月足 ▼ | 足種のメニュー(国内指数は 1分足〜月足、海外指数は 日足・週足・月足。VWAP のときは 日中足 だけ、新値足・折線チャートのときは 1分足 を除く。`ChartType.periods(in:)`)。選ばれると、ボタンの文字がすぐその足種に変わってチャートが消え、`onPeriodSelect` が呼ばれるので、その足種のデータを取得して `setCandles(_:period:)` で渡す。渡すとチャートを描く | `onPeriodSelect` |
 | ↻(更新) | `onReload` が呼ばれるので、表示中の足種(`period`)のデータと現在値を取得し直して渡す | `onReload` |
 | ⤾(縦画面に戻す) | `onRotate` が呼ばれるので、画面を閉じる(`dismiss`)。閉じると、開く前の画面の向き(縦)に戻る | `onRotate` |
 

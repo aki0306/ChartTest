@@ -30,7 +30,8 @@
 //      左     : 指数名・現在値・日時(updatePriceInfo(name:price:date:) で設定する)
 //      ローソク足▼: チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート)を切り替える。
 //                  ローソク足以外では、テクニカルのメニューは「なし」だけになり、4本値は表示しない
-//      月足▼ : 足種を選ぶ。選ばれると onPeriodSelect が呼ばれるので、その足種のデータを取得して setCandles(_:period:) で渡す
+//      月足▼ : 足種を選ぶ。選ばれると、ボタンがすぐその足種になってチャートが消え、onPeriodSelect が呼ばれるので、
+//              その足種のデータを取得して setCandles(_:period:) で渡す
 //      ↻     : 更新。onReload が呼ばれるので、表示中の足種のデータを取得し直して渡す
 //      ⤾     : 縦画面に戻す。onRotate が呼ばれるので、画面を閉じる(dismiss)
 //    データの取得・画面を閉じる処理は、呼び出し側(アプリ)の仕事にしている(API の取得は非同期のことが多いため)
@@ -268,7 +269,7 @@ final class LandscapeChartViewController: UIViewController {
     // MARK: - 操作されたときの処理(外から設定する)
 
     /// 足種のメニューで足種が選ばれたときに呼ばれる処理(選ばれた足種が渡される。流れは +Footer.swift の先頭)。
-    /// その足種のデータを取得して setCandles(_:period:) で渡すと、チャートとボタンの表示が切り替わる。
+    /// 呼ばれる前に、ボタンはその足種になり、チャートは消えている。その足種のデータを取得して setCandles(_:period:) で渡すと、チャートを描く。
     /// この画面がクロージャを持ち続けるので、中でこの画面や呼び出し元を使うときは [weak ...] で受ける(循環参照を防ぐ)
     @objc var onPeriodSelect: ((ChartPeriod) -> Void)?
     /// 更新ボタンが押されたときに呼ばれる処理。表示中の足種(period)のデータを取得し直して渡す
@@ -474,6 +475,22 @@ final class LandscapeChartViewController: UIViewController {
         // 計算済みの値も、データと一緒に先に入れておく(指標の切り替えで途中で描き直すときに、古い値で描かないように)
         self.candles = candles
         self.indicatorValues = indicatorValues
+        self.applyIndicatorChoices()
+
+        self.reloadChart(keepsViewport: false)
+        self.updatePeriodMenu()
+    }
+
+    /// 足種を切り替え、新しいデータが届くまでチャートを消す(足種のメニューで選ばれたとき。+Footer.swift)。
+    /// 足種のボタンはすぐこの足種になり、この足種のデータは setCandles(_:period:) で渡されたときに描く
+    func switchPeriodAndClearChart(to period: ChartPeriod) {
+        self.loadViewIfNeeded()
+        self.period = period
+        self.chartView.style = self.chartView.style.applying(period)
+
+        // 前の足種のデータは使わない(データがないので、reloadChart でチャートが消える)
+        self.candles = []
+        self.indicatorValues = nil
         self.applyIndicatorChoices()
 
         self.reloadChart(keepsViewport: false)

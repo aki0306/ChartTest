@@ -14,9 +14,11 @@
 //
 //  【足種を切り替えたときの流れ】
 //   ① 「日足 ▼」でメニューを開き、「週足」を押す
-//   ② periodMenuSelected が呼ばれ、onPeriodSelect でアプリに知らせる(データの取得はアプリの仕事なので、ここでは描き直さない)
-//   ③ アプリ(Sample/ViewController.swift の presentLandscapeChart)が週足のデータを用意して、setCandles(_:period:) を呼ぶ
-//   ④ setCandles(LandscapeChartViewController.swift)でチャートを描き直し、updatePeriodMenu で足種のボタンを「週足」にする
+//   ② periodMenuSelected → selectPeriod が、次の2つを順に行う
+//      1. switchPeriodAndClearChart(LandscapeChartViewController.swift)で、足種のボタンを「週足」にし、チャートを消す
+//      2. onPeriodSelect で、週足のデータの取得を頼む
+//   ③ onPeriodSelect(Sample/ViewController.swift の presentLandscapeChart)が週足のデータを用意して、setCandles(_:period:) を呼ぶ
+//   ④ setCandles(LandscapeChartViewController.swift)で、週足のデータでチャートを描く
 //
 //  【チャートの種類を切り替えたときの流れ】
 //   ① 「ローソク足 ▼」でメニューを開き、「折線チャート」を押す
@@ -24,7 +26,7 @@
 //      1. chartType を変える(データはそのままなので、アプリには知らせない)
 //         → chartType の didSet(LandscapeChartViewController.swift)でチャートを描き直し、ボタンの文字を合わせる
 //      2. 表示中の足種がその種類で使えなければ(1分足のまま新値足・日足のまま VWAP など)、使える足種に切り替える
-//         → 足種の切り替えと同じく onPeriodSelect でアプリに知らせる(このあとは【足種を切り替えたときの流れ】の ③・④)
+//         → 足種の切り替えと同じく selectPeriod で切り替える(このあとは【足種を切り替えたときの流れ】の ②・③・④)
 //
 
 import UIKit
@@ -92,10 +94,16 @@ extension LandscapeChartViewController {
 
     // MARK: - 足種
 
-    /// 足種のメニューで足種が選ばれたとき(流れの②)。
-    /// データの取得はアプリの仕事なので、ここでは onPeriodSelect でアプリに知らせるだけ。
-    /// アプリがその足種のデータを setCandles(_:period:) で渡すと、チャートと足種のボタンが切り替わる
+    /// 足種のメニューで足種が選ばれたとき(流れの②)
     private func periodMenuSelected(_ period: ChartPeriod) {
+        self.selectPeriod(period)
+    }
+
+    /// 足種を切り替える(足種のメニューで選んだとき・チャートの種類で使えない足種になったとき)。
+    /// 足種のボタンをすぐこの足種にしてチャートを消し、onPeriodSelect でこの足種のデータを取得してもらう。
+    /// データが setCandles(_:period:) で渡されると、チャートを描く
+    private func selectPeriod(_ period: ChartPeriod) {
+        self.switchPeriodAndClearChart(to: period)
         self.onPeriodSelect?(period)
     }
 
@@ -138,7 +146,7 @@ extension LandscapeChartViewController {
 
     /// 表示中の足種が今のチャートの種類では選べない場合(1分足のまま新値足・折線チャートにした・日足のまま VWAP にした など)、
     /// 選べる足種に切り替える(チャートの種類のメニューで選んだときの 2.)。
-    /// データの取得はアプリの仕事なので、足種のメニューで選んだときと同じく onPeriodSelect を呼ぶ
+    /// 足種のメニューで選んだときと同じく selectPeriod で切り替える
     /// (日中足を選べるなら 日中足 に切り替える。日中足も選べなければ、選べる足種の先頭)
     private func switchPeriodIfUnavailable() {
         let periods = self.availablePeriods
@@ -152,7 +160,7 @@ extension LandscapeChartViewController {
         guard let nextPeriod else {
             return
         }
-        self.onPeriodSelect?(nextPeriod)
+        self.selectPeriod(nextPeriod)
     }
 
     /// ボタン・メニューに出す足種の名前。タブ用の名前(「月 足」)から空白を除く(「月足」)
