@@ -1127,11 +1127,11 @@ NSMutableArray *responseArray = [NSMutableArray array];
 
 縦画面のボタンなどから、横画面のチャートを `present` で全画面に表示します。このアプリの `ViewController.swift`(`presentLandscapeChart`)と同じ方法です。
 
-- `LandscapeChartViewController` は横向きだけに対応している(`supportedInterfaceOrientations`)ので、開くと横向きになり、閉じると開く前の画面の向きに戻ります。自分で向きを変える処理(`requestGeometryUpdate`)はいりません
+- `LandscapeChartViewController` は、縦向きのまま開き、開き終わったら自分で横向きに回します(`requestEnterLandscape`。`requestGeometryUpdate` で横向きを頼む)。回し終わるまでは、チャート・下の帯・タブを隠しておき、回し終わったらフェードで表示します。回したあとは横向きだけに対応し(`supportedInterfaceOrientations`)、閉じると開く前の画面の向きに戻ります。呼び出し側で向きを変える処理はいりません
 - 全画面でないと向きが変わらないので、`instantiate()` で `modalPresentationStyle` を `.fullScreen` にしてあります
-- 開く・閉じるときは、端末を回したときと同じ回転のアニメーションが付きます(`LandscapeChartTransition`。開く前の画面のスナップショットと横画面を一緒に回しながら入れ替える)。`instantiate()` で `transitioningDelegate` に設定してあるので、`present(animated: true)` で呼ぶだけでよく、iPad の画面分割中など向きが変わらないときはフェードだけになります
+- 回転のアニメーションは iOS が付けます(実機では、画面全体を一度小さくして回し、元の大きさに戻す)
 - 閉じる操作は、下の帯の「縦画面に戻す」ボタンが押されたら呼ばれる `onRotate` で `dismiss` します
-- 端末を縦に向けたときも、「縦画面に戻す」ボタンと同じく `onRotate` が呼ばれます(横向きから縦向きに変わったときだけ。机に置いて持ち上げただけでは呼ばれません)
+- 端末を縦に向けたときも、「縦画面に戻す」ボタンと同じく `onRotate` が呼ばれます。向きが変わってから 0.5 秒待って、まだ縦向きのときだけ呼びます(傾けている途中の一瞬の縦では閉じません)。横向きから縦向きに変わったときだけで、机に置いて持ち上げただけでは呼ばれません。この画面の上にアラートなどを表示している間も呼ばれません
 - 端末を横に向けて開く場合は、開く画面で端末の向きの変化(`UIDevice.orientationDidChangeNotification`)を受け取り、縦から横に変わったら `present` します(`ViewController.swift` の `deviceOrientationDidChange`)。開く向きは、端末を傾けた向きに合わせます
 
 ```swift
@@ -1276,7 +1276,6 @@ ChartTest/
    │   ├─ LandscapeChartViewController+TechnicalMenu.swift 「テクニカル」タブ・メニューを押したとき
    │   ├─ LandscapeChartViewController+Settings.swift 「設定」タブを押したとき・設定画面との受け渡し
    │   ├─ LandscapeChartViewController+Footer.swift   下の帯のメニュー
-   │   ├─ LandscapeChartTransition.swift     横画面を開く・閉じるときの回転のアニメーション
    │   └─ ChartFooterView.swift / .xib      横画面の下の帯
    │
    ├─ Response/                         API のレスポンスをチャートに渡す
@@ -1382,7 +1381,6 @@ docs/images/                            README の画像
 | `LandscapeChartViewController+Settings.swift` | 「設定」タブを押したときと、設定画面(`ChartSettingsView`)との受け渡し |
 | `LandscapeChartViewController+Footer.swift` | 下の帯(指数名・現在値、チャートの種類・足種のメニュー) |
 | `LandscapeChartViewController.storyboard` | 横画面のレイアウト(Interface Builder で開いて編集する) |
-| `LandscapeChartTransition.swift` | 横画面を開く・閉じるときの回転のアニメーション(開く前の画面のスナップショットと横画面を一緒に回しながら入れ替える) |
 | `ChartFooterView.swift` / `.xib` | 横画面の下の帯(指数名・現在値、チャートの種類・足種・更新・縦画面に戻すのボタン)。配置は XIB で編集する |
 
 ### API のレスポンス(`StockChart/Response/`)

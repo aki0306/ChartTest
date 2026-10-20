@@ -38,9 +38,13 @@
 //      ⤾     : 縦画面に戻す。onRotate が呼ばれるので、画面を閉じる(dismiss)
 //    データの取得・画面を閉じる処理は、呼び出し側(アプリ)の仕事にしている(API の取得は非同期のことが多いため)
 //  ・縦画面から present で全画面に表示する(instantiate で modalPresentationStyle を .fullScreen にしてある)。
-//    この画面は横向きだけに対応しているので(supportedInterfaceOrientations)、開くと横向きになり、閉じると元の画面の向きに戻る。
-//    開く・閉じるときの回転のアニメーションは LandscapeChartTransition が付ける(instantiate で transitioningDelegate に設定)
-//  ・端末を縦に向けたときも、縦画面に戻すボタンと同じく onRotate が呼ばれる(deviceOrientationDidChange)
+//    開くとき: 縦向きのまま開き、開き終わったら requestGeometryUpdate で横向きに回す(requestEnterLandscape)。
+//             回し終わるまでは、チャート・下の帯・タブを隠しておき、回し終わったらフェードで表示する
+//             (縦向きのレイアウトのチャートが見えないように)。回し終わったあとは横向きだけに対応する(supportedInterfaceOrientations)
+//    閉じるとき: 閉じると、元の画面の向きに戻る
+//  ・端末を縦に向けたときも、縦画面に戻すボタンと同じく onRotate が呼ばれる(deviceOrientationDidChange)。
+//    向きが変わってから 0.5 秒待って、まだ縦なら呼ぶ(傾けている途中の一瞬の縦では閉じない)。
+//    この画面の上にアラートなどを表示している間は呼ばない
 //  ・チャートは chartInsets で内側(帯の上)に置く。テクニカル/設定を開いている間は、パネルが画面の上端〜セーフエリアの下端まで、
 //    背景のグレーが画面全体(下の帯の上にも)に広がる
 //
@@ -90,34 +94,41 @@ final class LandscapeChartViewController: UIViewController {
         }
         // present したときに全画面で表示する(全画面でないと、画面の向きが横に変わらない)
         viewController.modalPresentationStyle = .fullScreen
-        // 開く・閉じるときの回転のアニメーション(transitioningDelegate は weak なので、この画面が持っておく)
-        viewController.transitioningDelegate = viewController.transition
         return viewController
     }
 
     // MARK: - 画面の向き(present で表示したとき)
 
-    /// 横向きだけで表示する。present で表示すると横向きになり、閉じると元の画面の向きに戻る
+    /// 縦向きのまま開いて、まだ横向きに回していないか(開いた直後だけ true。requestEnterLandscape で false にする)
+    private var isEnteringLandscape = true
+
+    /// 端末を縦に向けたときに閉じる確かめを、向きが変わってから何秒待って行うか
+    private static let portraitCheckDelay: TimeInterval = 0.5
+
+    /// 最後に分かった端末の向き(縦か横だけを覚える。机に置いたときなどの向きは無視する)
+    private var lastDeviceOrientation = UIDeviceOrientation.unknown
+
+    /// 表示できる向き。開いた直後(横向きに回す前)は縦向き、回したあとは横向きだけ
     /// (アプリの対応する向き(Info.plist)に、Landscape Left / Right が入っている必要がある)
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        if self.isEnteringLandscape {
+            return .portrait
+        }
         return .landscape
     }
 
-    /// 開いたときの向き。端末を横に傾けて開いたときは、傾けた向きに合わせる
-    /// (端末の向き UIDeviceOrientation.landscapeRight は、画面の向き UIInterfaceOrientation.landscapeLeft になる)。
-    /// 端末が縦のまま(ボタンで開いたときなど)は landscapeRight
+    /// 開いたときの向き。縦向きのまま開いて、開き終わってから横向きに回す(requestEnterLandscape)
     override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        if self.isEnteringLandscape {
+            return .portrait
+        }
+        // 右に傾けているときに逆さまにならないよう、逆向きの横画面にする
+        // (端末の向き UIDeviceOrientation.landscapeRight は、画面の向き UIInterfaceOrientation.landscapeLeft になる)
         if UIDevice.current.orientation == .landscapeRight {
             return .landscapeLeft
         }
         return .landscapeRight
     }
-
-    /// 開く・閉じるときの回転のアニメーション(LandscapeChartTransition)
-    private let transition = LandscapeChartTransition()
-
-    /// 最後に分かった端末の向き(縦か横だけを覚える。机に置いたときなどの向きは無視する)
-    private var lastDeviceOrientation = UIDeviceOrientation.unknown
 
     // MARK: - 状態(Model の状態)
 
@@ -396,6 +407,18 @@ final class LandscapeChartViewController: UIViewController {
         // self.parameters.rsiPeriod = 9            // 指標のパラメータ(Model)
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // 開くとき: 横向きに回し終わるまで、チャート・下の帯・タブを隠しておく(縦向きのレイアウトのチャートが見えないように)
+        guard self.isEnteringLandscape else {
+            return
+        }
+        guard self.isBeingPresented else {
+            return
+        }
+        self.setContentVisible(false, animated: false)
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         // 端末を縦に向けたら閉じられるよう、端末の向きの変化を受け取る
@@ -403,29 +426,112 @@ final class LandscapeChartViewController: UIViewController {
         UIDevice.current.beginGeneratingDeviceOrientationNotifications()
         NotificationCenter.default.addObserver(self, selector: #selector(self.deviceOrientationDidChange),
                                                name: UIDevice.orientationDidChangeNotification, object: nil)
+
+        // 開き終わったら、横向きに回す
+        if self.isEnteringLandscape {
+            self.requestEnterLandscape()
+        }
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        // 横向きに回し終わったら、隠していたチャート・下の帯・タブを表示する
+        coordinator.animate(alongsideTransition: nil) { context in
+            guard !context.isCancelled else {
+                return
+            }
+            guard size.width > size.height else {
+                return
+            }
+            self.setContentVisible(true, animated: true)
+        }
+    }
+
+    /// 横向きに回す(開き終わったときに1回だけ呼ぶ)。
+    /// 横向きだけに対応するよう切り替えてから、シーンに横向きを頼む。
+    /// すでに横向きのとき・回せなかったとき(iPad の画面分割中など)は、回さずにそのまま表示する
+    private func requestEnterLandscape() {
+        self.isEnteringLandscape = false
+        self.setNeedsUpdateOfSupportedInterfaceOrientations()
+
+        // present 以外で表示した場合(子として埋め込んだ場合など)は、向きは変えない
+        guard self.presentingViewController != nil else {
+            self.setContentVisible(true, animated: false)
+            return
+        }
+        guard let windowScene = self.view.window?.windowScene else {
+            self.setContentVisible(true, animated: false)
+            return
+        }
+        if windowScene.effectiveGeometry.interfaceOrientation.isLandscape {
+            self.setContentVisible(true, animated: false)
+            return
+        }
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscape)) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.setContentVisible(true, animated: true)
+            }
+        }
+    }
+
+    /// チャート・下の帯・タブを表示する・隠す(パネルと背景のグレーは、閉じている間はもともと隠れている)
+    private func setContentVisible(_ isVisible: Bool, animated: Bool) {
+        var alpha: CGFloat = 0
+        if isVisible {
+            alpha = 1
+        }
+        let views: [UIView] = [self.chartView, self.footerView, self.tabStack]
+        if animated {
+            UIView.animate(withDuration: 0.2) {
+                for view in views {
+                    view.alpha = alpha
+                }
+            }
+        } else {
+            for view in views {
+                view.alpha = alpha
+            }
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         NotificationCenter.default.removeObserver(self, name: UIDevice.orientationDidChangeNotification, object: nil)
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        // 頼んでいた縦向きの確かめは取り消す(閉じたあとに onRotate が呼ばれないように)
+        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(self.checkPortraitAndClose), object: nil)
     }
 
-    /// 端末の向きが変わったとき。横から縦に変わったら、縦画面に戻すボタンと同じく onRotate を呼ぶ
+    /// 端末の向きが変わったとき。横から縦に変わったら、0.5 秒待ってからもう一度確かめる(checkPortraitAndClose)
     /// (縦のままボタンで開いたあと、机に置いて持ち上げただけで閉じないよう、横を経由したときだけにする)
     @objc private func deviceOrientationDidChange() {
         let orientation = UIDevice.current.orientation
         if orientation == .portrait {
             let wasLandscape = self.lastDeviceOrientation.isLandscape
             self.lastDeviceOrientation = orientation
-            if wasLandscape {
-                self.onRotate?()
+            guard wasLandscape else {
+                return
             }
+            // 傾けている途中の一瞬の縦では閉じないよう、少し待ってから確かめる(前に頼んだ確かめは取り消す)
+            NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(self.checkPortraitAndClose), object: nil)
+            self.perform(#selector(self.checkPortraitAndClose), with: nil, afterDelay: Self.portraitCheckDelay)
             return
         }
         if orientation.isLandscape {
             self.lastDeviceOrientation = orientation
         }
+    }
+
+    /// 端末がまだ縦向きなら、縦画面に戻すボタンと同じく onRotate を呼ぶ(閉じる処理は onRotate に任せる)。
+    /// この画面の上にアラートなどを表示している間は呼ばない
+    @objc private func checkPortraitAndClose() {
+        guard UIDevice.current.orientation == .portrait else {
+            return
+        }
+        guard self.presentedViewController == nil else {
+            return
+        }
+        self.onRotate?()
     }
 
     // MARK: - 外から呼ぶ入口
