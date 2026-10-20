@@ -96,7 +96,7 @@ struct ChartContentBuilder {
 
     /// 新値足の転換に使う本数(3本新値)
     static let newPriceReversalCount = 3
-    /// 新値足の表示本数(本数が少ないときは右寄せで表示する)
+    /// 新値足の表示本数(本数が少ないときは、ある本数だけで画面いっぱいに表示する)
     static let newPriceVisibleCount = 50
     /// 新値足のスクロールできる本数(直近のこの本数だけを並べ、少ないときは左側を空けてこの本数分の幅にする)
     static let newPriceScrollCount = 250
@@ -214,12 +214,17 @@ struct ChartContentBuilder {
         }
         // スクロールできるのは直近 newPriceScrollCount 本だけ
         lineCandles = Array(lineCandles.suffix(Self.newPriceScrollCount))
+        // 表示本数より少ない(日中足・月足など)ときは、日足と同じく画面いっぱいに並ぶよう、ある本数だけを表示する
+        var visibleCount = Self.newPriceVisibleCount
+        if !lineCandles.isEmpty {
+            visibleCount = min(lineCandles.count, Self.newPriceVisibleCount)
+        }
         let main = MainChartContent(
             priceStyle: .newPrice,
             // 全角スペースで区切った1つの文字列
             legendItems: [ChartLegendItem(text: "\(ChartType.newPrice.legendTitle)　■陰線　□陽線", colorRole: .newPrice)],
             currentPrice: self.candles.last?.close,
-            fixedVisibleCount: Self.newPriceVisibleCount,
+            fixedVisibleCount: visibleCount,
             minimumScrollCount: Self.newPriceScrollCount)
         return ChartContent(candles: lineCandles, main: main, sub: nil)
     }
