@@ -9,7 +9,8 @@
 
 import UIKit
 
-struct StockChartStyle {
+/// Equatable: 同じ見た目を代入したときは描き直さない(StockChartView.style)ために比べる
+struct StockChartStyle: Equatable {
 
     // MARK: - 表示範囲
 
