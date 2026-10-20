@@ -88,9 +88,13 @@ final class StockChartView: UIView {
 
     // MARK: - 設定(外から変更する)
 
-    /// 見た目の設定。変更すると現在の内容を再描画する(表示位置は初期状態に戻る)
+    /// 見た目の設定。変更すると現在の内容を再描画する(表示位置は初期状態に戻る)。
+    /// 同じ見た目を代入したとき(同じ足種のデータの更新など)は、表示位置を保つため描き直さない
     var style = StockChartStyle() {
         didSet {
+            guard self.style != oldValue else {
+                return
+            }
             self.applyStyle()
             self.render(keepingMatrix: nil)
         }
