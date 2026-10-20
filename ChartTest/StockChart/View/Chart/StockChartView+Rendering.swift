@@ -150,8 +150,8 @@ extension StockChartView {
                 chart.fitScreen()
                 // 表示本数の指定があり、全体の本数より少ない場合だけ、拡大して右端に寄せる(それ以外は全件表示)
                 if let visibleCount = self.effectiveVisibleCount {
-                    // X軸全体の本数(日付だけを並べる時間帯を含む)
-                    let axisCount = self.totalCount + self.leadingDates.count
+                    // X軸全体の本数(日付だけを並べる時間帯と、本数が足りないときに左側を空ける本数を含む)
+                    let axisCount = self.totalCount + self.leadingBlankCount
                     if visibleCount < axisCount {
                         // 縮小の限界を visibleCount 本にすると、その本数まで拡大された状態になる(初期表示の拡大率)
                         chart.setVisibleXRangeMaximum(Double(visibleCount))
