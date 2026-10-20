@@ -14,6 +14,9 @@
 //    ボタンに出す名前の候補は、使う側(Controller)が setChartTypeMenu / setPeriodMenu で渡す
 //  ・ボタンの幅は、名前の候補のうち一番長いものが1行で入る幅にする(文字は縮小しない。
 //    選んでいる名前に合わせると、選ぶたびに幅が変わってほかのボタンが動くため、一番長い名前に合わせて固定する)
+//  ・「チャートの種類」「足種」のボタンの背景は画像(ChartFooterMenuButtonBackground。枠線・角丸・▼ 入り)。
+//    幅に合わせて伸ばすのは真ん中の無地の部分だけで、文字は左に揃え、右の ▼ の部分には置かない。
+//    押している間は、背景画像と文字を少し暗くする
 //  ・更新・縦画面に戻すボタンが押されたら onReload / onRotate を呼ぶ(何をするかは使う側が決める)
 //
 //  【レイアウト】ChartFooterView.xib(Interface Builder で開いて編集する)
@@ -89,17 +92,30 @@ final class ChartFooterView: UIView {
             self.contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
         ])
 
-        // ボタンの見た目
+        // チャート種類変更ボタン
         self.chartTypeButton.configuration = Self.menuButtonConfiguration()
+        self.chartTypeButton.configurationUpdateHandler = { button in
+            Self.updateMenuButtonAppearance(button)
+        }
+        self.chartTypeButton.contentHorizontalAlignment = .leading  // 文字を左に揃える(▼ は背景画像で右端に固定)
         self.chartTypeButton.showsMenuAsPrimaryAction = true
-        self.periodButton.configuration = Self.menuButtonConfiguration()
-        self.periodButton.showsMenuAsPrimaryAction = true
-        // メニューは上に開くので、標準(.automatic)だと1つ目の項目(ローソク足・1分足)がボタンに近い一番下になる。
-        // 渡した順のまま上から並べる
         self.chartTypeButton.preferredMenuElementOrder = .fixed
+
+        // 足種変更ボタン
+        self.periodButton.configuration = Self.menuButtonConfiguration()
+        self.periodButton.configurationUpdateHandler = { button in
+            Self.updateMenuButtonAppearance(button)
+        }
+        self.periodButton.contentHorizontalAlignment = .leading
+        self.periodButton.showsMenuAsPrimaryAction = true
         self.periodButton.preferredMenuElementOrder = .fixed
+
+        // 更新ボタン
         self.reloadButton.configuration = Self.iconButtonConfiguration(systemName: "arrow.clockwise")
+
+        // 画面回転ボタン
         self.rotateButton.configuration = Self.iconButtonConfiguration(systemName: "rectangle.portrait.rotate")
+
         self.priceInfoLabel.text = nil  // updatePriceInfo で設定されるまでは空にする
 
         // UI テストで探すための名前
@@ -107,6 +123,90 @@ final class ChartFooterView: UIView {
         self.periodButton.accessibilityIdentifier = "footer.periodButton"
         self.reloadButton.accessibilityIdentifier = "footer.reloadButton"
         self.rotateButton.accessibilityIdentifier = "footer.rotateButton"
+    }
+
+    // MARK: - ボタンの見た目
+
+    /// メニューのボタンの文字のフォント
+    private static let menuTitleFont = UIFont.boldSystemFont(ofSize: 15)
+    /// メニューのボタンの幅に足す余裕(枠線の太さ・計算の誤差で文字が折り返されないように)
+    private static let menuButtonExtraWidth: CGFloat = 4
+
+    /// 背景画像の角丸の半径(左・上・下は、ここまでを伸ばさない)
+    private static let menuBackgroundCornerWidth: CGFloat = 6
+    /// 背景画像の右端から ▼ の左までの幅(ここは伸ばさず、文字も置かない)
+    private static let menuArrowAreaWidth: CGFloat = 20
+    /// 左の枠線から文字までの余白
+    private static let menuTitleLeadingPadding: CGFloat = 10
+    /// 文字と ▼ の間
+    private static let menuTitleArrowSpacing: CGFloat = 6
+
+    /// メニューのボタンの背景画像(枠線・角丸・▼ 入り)。角丸と ▼ は伸ばさず、真ん中の無地の部分だけを伸ばす
+    private static let menuBackgroundImage: UIImage = {
+        let capInsets = UIEdgeInsets(top: ChartFooterView.menuBackgroundCornerWidth,
+                                     left: ChartFooterView.menuBackgroundCornerWidth,
+                                     bottom: ChartFooterView.menuBackgroundCornerWidth,
+                                     right: ChartFooterView.menuArrowAreaWidth)
+        return UIImage(resource: .chartFooterMenuButtonBackground)
+            .resizableImage(withCapInsets: capInsets, resizingMode: .stretch)
+    }()
+
+    /// 押している間の背景画像(元の画像を少し暗くする)
+    private static let menuBackgroundHighlightedImage = UIButton.pressedImage(from: ChartFooterView.menuBackgroundImage)
+
+    /// メニューを開くボタンの見た目(枠線・角丸・▼ 入りの背景画像 + 左に揃えた青い文字)
+    private static func menuButtonConfiguration() -> UIButton.Configuration {
+        var configuration = UIButton.Configuration.plain()  // 枠線・角丸は画像にあるので、ボタンでは描かない
+        configuration.background.image = self.menuBackgroundImage
+        configuration.background.imageContentMode = .scaleToFill
+        // 標準ではボタンの背景を角丸に切り抜くので、画像の角丸と枠線が切れないよう、切り抜かないようにする
+        configuration.cornerStyle = .fixed
+        configuration.background.cornerRadius = 0
+        // 右は ▼ の部分をよけて、文字が重ならないようにする
+        configuration.contentInsets = NSDirectionalEdgeInsets(
+            top: 0, leading: self.menuTitleLeadingPadding,
+            bottom: 0, trailing: self.menuArrowAreaWidth + self.menuTitleArrowSpacing)
+        configuration.titleLineBreakMode = .byClipping  // 1行で表示する(幅は一番長い名前に合わせてある)
+        configuration.titleTextAttributesTransformer = self.menuTitleAttributesTransformer(
+            color: UIColor(resource: .chartFooterButtonForeground))
+        return configuration
+    }
+
+    /// メニューのボタンの見た目を、押されているかに合わせる(押されたとき・離されたときにボタンから呼ばれる)
+    private static func updateMenuButtonAppearance(_ button: UIButton) {
+        guard var configuration = button.configuration else {
+            return
+        }
+
+        var titleColor = UIColor(resource: .chartFooterButtonForeground)
+        if button.isPressed {
+            configuration.background.image = self.menuBackgroundHighlightedImage
+            titleColor = UIButton.pressedColor(from: titleColor)
+        } else {
+            configuration.background.image = self.menuBackgroundImage
+        }
+        configuration.titleTextAttributesTransformer = self.menuTitleAttributesTransformer(color: titleColor)
+        button.configuration = configuration
+    }
+
+    /// メニューのボタンの文字のフォントと色
+    /// (色をここで決めて、標準の「押すと文字が薄くなる」を止める。押したときは updateMenuButtonAppearance で暗くする)
+    private static func menuTitleAttributesTransformer(color: UIColor) -> UIConfigurationTextAttributesTransformer {
+        let font = self.menuTitleFont
+        return UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            attributes.font = font
+            attributes.foregroundColor = color
+            return attributes
+        }
+    }
+
+    /// アイコンだけのボタンの見た目(白地・灰色の枠・青いアイコン)
+    private static func iconButtonConfiguration(systemName: String) -> UIButton.Configuration {
+        var configuration = self.baseButtonConfiguration()
+        configuration.image = UIImage(systemName: systemName,
+                                      withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold))
+        return configuration
     }
 
     // MARK: - 更新・縦画面に戻すボタン
@@ -152,7 +252,7 @@ final class ChartFooterView: UIView {
     }
 
     /// 名前の候補のうち、一番長いものが1行で入るボタンの幅
-    ///   = 文字の幅 + ▼ の幅 + 文字と ▼ の間 + 左右の余白(ボタンの見た目の設定から計算する)
+    ///   = 文字の幅 + 左右の余白(右の余白は、背景画像の ▼ の部分 + 文字と ▼ の間。ボタンの見た目の設定から計算する)
     private func widthFittingLongestTitle(of button: UIButton, candidates: [String]) -> CGFloat {
         guard let configuration = button.configuration else {
             return 0
@@ -166,10 +266,9 @@ final class ChartFooterView: UIView {
             longestTitleWidth = max(longestTitleWidth, width)
         }
 
-        // ▼ の幅と、左右の余白
-        let imageWidth = configuration.image?.size.width ?? 0
+        // 左右の余白
         let insets = configuration.contentInsets
-        let width = longestTitleWidth + imageWidth + configuration.imagePadding + insets.leading + insets.trailing
+        let width = longestTitleWidth + insets.leading + insets.trailing
         return ceil(width) + Self.menuButtonExtraWidth
     }
 
@@ -198,39 +297,6 @@ final class ChartFooterView: UIView {
         formatter.dateFormat = "MM/dd HH:mm"
         return formatter
     }()
-
-    // MARK: - ボタンの見た目
-
-    /// メニューのボタンの文字のフォント
-    private static let menuTitleFont = UIFont.boldSystemFont(ofSize: 15)
-    /// メニューのボタンの幅に足す余裕(枠線の太さ・計算の誤差で文字が折り返されないように)
-    private static let menuButtonExtraWidth: CGFloat = 4
-
-    /// メニューを開くボタンの見た目(白地・灰色の枠・青い文字 + 右に ▼)
-    private static func menuButtonConfiguration() -> UIButton.Configuration {
-        var configuration = self.baseButtonConfiguration()
-        configuration.image = UIImage(systemName: "arrowtriangle.down.fill",
-                                      withConfiguration: UIImage.SymbolConfiguration(pointSize: 11))
-        configuration.imagePlacement = .trailing
-        configuration.imagePadding = 6
-        configuration.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 6, bottom: 0, trailing: 6)
-        configuration.titleLineBreakMode = .byClipping  // 1行で表示する(幅は一番長い名前に合わせてある)
-        let font = self.menuTitleFont
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-            var attributes = attributes
-            attributes.font = font
-            return attributes
-        }
-        return configuration
-    }
-
-    /// アイコンだけのボタンの見た目(白地・灰色の枠・青いアイコン)
-    private static func iconButtonConfiguration(systemName: String) -> UIButton.Configuration {
-        var configuration = self.baseButtonConfiguration()
-        configuration.image = UIImage(systemName: systemName,
-                                      withConfiguration: UIImage.SymbolConfiguration(pointSize: 18, weight: .semibold))
-        return configuration
-    }
 
     /// 帯のボタンの共通の見た目(白地・灰色の枠・青)
     private static func baseButtonConfiguration() -> UIButton.Configuration {
