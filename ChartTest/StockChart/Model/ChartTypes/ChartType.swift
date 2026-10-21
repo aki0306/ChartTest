@@ -15,6 +15,8 @@
 //  Objective-C からも使えるよう @objc enum(Int)にしている(Objective-C での名前は ChartTypeNewPrice など)。
 //  指数の種類によって、選べる種類が変わる(choices(for:)。海外指数は ローソク足・折線チャート だけ)。
 //  チャートの種類によって、選べる足種が変わる(periods(in:)。VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を選べない)。
+//  種類ごとの描く内容は、同じフォルダの種類ごとのファイル(VWAP.swift・NewPrice.swift・LineChart.swift)にある
+//  (ローソク足はメイン・サブの指標を組み合わせるだけなので、ChartContentBuilder.swift)。
 //
 
 import Foundation

@@ -8,9 +8,12 @@
 //  ・指標の計算そのものは TechnicalIndicators に任せ、ここでは
 //    「どの計算結果を、どの名前・どの色の役割で描くか」を決める。
 //  ・各指標の描く内容(movingAverageContent・rsiContent など)は、指標ごとのファイル
-//    (Model/Indicators/Main/・Sub/)に extension で書いている。このファイルには、指標を選ぶ入口(mainContent・subContent)と、
-//    チャートの種類(折線チャート・VWAP・新値足)と、指標のファイルで共通に使う部品(closes・precomputedValues・oscillatorContent など)を置いている。
-//    (extension は別のファイルから private のものを使えないので、指標のファイルで使うものは private を付けていない)
+//    (Model/Indicators/Main/・Sub/)に extension で書いている。
+//  ・ローソク足以外のチャートの種類の描く内容(vwapContent・newPriceContent・lineChartContent など)は、
+//    種類ごとのファイル(Model/ChartTypes/)に extension で書いている。
+//  ・このファイルには、チャートの種類を選ぶ入口(content(for:…))・指標を選ぶ入口(mainContent・subContent)と、
+//    指標・種類のファイルで共通に使う部品(closes・precomputedValues・oscillatorContent など)を置いている。
+//    (extension は別のファイルから private のものを使えないので、ほかのファイルで使うものは private を付けていない)
 //  ・チャートの外(Objective-C など)で計算した値(precomputed)がある指標は、計算せずにその値を使う
 //    (凡例・色・軸の設定は同じ。ChartIndicatorValues)
 //  ・UIKit / DGCharts には依存しない。
@@ -59,17 +62,6 @@ struct ChartContentBuilder {
         return self.candles.map { candle in candle.low }
     }
 
-    /// 折線チャートに描く終値。値が読めなかった足(埋めた足)は nil にして、前後の足を線でつなぐ
-    /// (指標の計算には埋めた値を使う)
-    private var drawnCloses: [Double?] {
-        self.candles.map { candle in
-            if candle.isFilled {
-                return nil
-            }
-            return candle.close
-        }
-    }
-
     // MARK: - チャートの外で計算した値
 
     /// チャートの外で計算した値(ローソク足と同じ長さにそろえたもの)。ない場合は nil
@@ -94,14 +86,8 @@ struct ChartContentBuilder {
 
     // MARK: - チャート種類
 
-    /// 新値足の転換に使う本数(3本新値)
-    static let newPriceReversalCount = 3
-    /// 新値足の表示本数(本数が少ないときは右寄せで表示する)
-    static let newPriceVisibleCount = 50
-    /// 新値足のスクロールできる本数(直近のこの本数だけを並べ、少ないときは左側を空けてこの本数分の幅にする)
-    static let newPriceScrollCount = 250
-
-    /// チャート種類に合わせて、表示する内容一式を作る
+    /// チャート種類に合わせて、表示する内容一式を作る。
+    /// ローソク足以外の種類の描く内容は、Model/ChartTypes/ の種類ごとのファイルにある
     /// - Parameters:
     ///   - chartType: チャートの種類
     ///   - mainIndicator: メインチャートの指標(ローソク足・海外指数の折線チャートのときだけ使う)
@@ -111,7 +97,7 @@ struct ChartContentBuilder {
     func content(for chartType: ChartType, mainIndicator: MainChartIndicator,
                  subIndicator: SubChartIndicator, market: IndexMarket, period: ChartPeriod) -> ChartContent {
         var content = self.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator, market: market)
-        // 新値足は newPriceContent で決めている
+        // 新値足は newPriceContent(NewPrice.swift)で決めている
         if content.main.minimumScrollCount == nil {
             content.main.minimumScrollCount = market.minimumScrollCount(for: period)
         }
@@ -153,95 +139,6 @@ struct ChartContentBuilder {
             return emptyContent
         }
         return content
-    }
-
-    /// 折線チャートの内容(ローソク足は描かず、終値を線で結ぶ。サブチャートなし)
-    ///
-    ///   凡例:「折線チャート」(線の色)
-    ///   現在値(最新の足の終値)の位置に破線を引く
-    private func lineChartContent() -> ChartContent {
-        let main = MainChartContent(
-            series: [ChartSeries(label: ChartType.lineChart.legendTitle, values: self.drawnCloses, colorRole: .closeLine)],
-            priceStyle: .hidden,
-            currentPrice: self.candles.last?.close)
-        return ChartContent(candles: self.candles, main: main, sub: nil)
-    }
-
-    /// VWAP の内容(ローソク足は描かず、VWAP の線または点だけを描く。サブチャートなし)。
-    /// API が計算した VWAP(StockCandle.vwap。kVWAP)だけで描き、チャートでは計算しない。
-    /// 値が読めなかった足(埋めた足)は描かない(線は前後の足をつなぐ)。
-    /// ※ kVWAP が空・0 の足は、0 として描くと線が 0 まで落ちてしまうので描かない(前後をつなぐ)
-    private func vwapContent(title: String, style: ChartSeries.Style) -> ChartContent {
-        let values: [Double?] = self.candles.map { candle in
-            if candle.isFilled {
-                return nil
-            }
-            return candle.vwap
-        }
-        let main = MainChartContent(
-            series: [ChartSeries(label: title, values: values, colorRole: .vwap, style: style)],
-            priceStyle: .hidden)
-
-        // API の VWAP が1件もないデータは描けないので、
-        // 凡例だけ残して「表示できる情報はありません」と表示する
-        let hasValue = values.contains { value in value != nil }
-        guard hasValue else {
-            return ChartContent(candles: [], main: main, sub: nil)
-        }
-        return ChartContent(candles: self.candles, main: main, sub: nil)
-    }
-
-    /// 新値足の内容(新値足の1本を1つの足として並べる。サブチャートなし)
-    ///
-    ///   凡例:「新値足　■陰線　□陽線」(新値足の色)
-    ///   現在値(最新の足の終値)の位置に破線を引く
-    private func newPriceContent() -> ChartContent {
-        // 新値足の1本 = ローソク足の「始値 = 始点、終値 = 終点」として並べる(ヒゲはないので高値・安値は線の両端)。
-        // チャートの外で計算した線があれば、それを使う
-        var lineCandles: [StockCandle] = []
-        if let precomputedCandles = self.precomputed?.newPriceCandles {
-            lineCandles = precomputedCandles
-        } else {
-            // 値が読めた足だけで作る(埋めた足は除く)
-            let validCandles = self.candles.filter { candle in !candle.isFilled }
-            let dates = validCandles.map { candle in candle.date }
-            let closes = validCandles.map { candle in candle.close }
-            let lines = TechnicalIndicators.newPriceLines(dates: dates, closes: closes,
-                                                          reversalCount: Self.newPriceReversalCount)
-            lineCandles = lines.map { line in
-                StockCandle(date: line.date, open: line.start, high: line.high, low: line.low, close: line.end, volume: 0)
-            }
-        }
-        // スクロールできるのは直近 newPriceScrollCount 本だけ
-        lineCandles = Array(lineCandles.suffix(Self.newPriceScrollCount))
-        let main = MainChartContent(
-            priceStyle: .newPrice,
-            // 全角スペースで区切った1つの文字列
-            legendItems: [ChartLegendItem(text: "\(ChartType.newPrice.legendTitle)　■陰線　□陽線", colorRole: .newPrice)],
-            currentPrice: self.candles.last?.close,
-            fixedVisibleCount: Self.newPriceVisibleCount,
-            minimumScrollCount: Self.newPriceScrollCount)
-        return ChartContent(candles: lineCandles, main: main, sub: nil)
-    }
-
-    // MARK: - 終値の折れ線 + 指標(海外指数の横画面の折線チャート)
-
-    /// ローソク足の代わりに終値を折れ線で描き、指定した指標を重ねる内容を作る(サブチャートなし)。
-    /// 海外指数の横画面の折線チャートで使う。
-    /// 凡例は指標のもの(「移動平均 短期移動平均(5) 長期移動平均(25)」など)で、終値の線は凡例に出さない
-    /// - Parameters:
-    ///   - indicator: 重ねる指標
-    ///   - showsCurrentPrice: 現在値(最新の終値)に破線を引くか(横画面の折線チャートでは引く)
-    func closeLineContent(with indicator: MainChartIndicator, showsCurrentPrice: Bool = false) -> ChartContent {
-        var main = self.mainContent(for: indicator)
-        main.priceStyle = .hidden
-        if showsCurrentPrice {
-            main.currentPrice = self.candles.last?.close
-        }
-        // 終値の線は凡例に出さない(label: nil)。指標の線より下に描くよう先頭に入れる
-        let closeLine = ChartSeries(label: nil, values: self.drawnCloses, colorRole: .closeLine)
-        main.series.insert(closeLine, at: 0)
-        return ChartContent(candles: self.candles, main: main, sub: nil)
     }
 
     // MARK: - メインチャート
