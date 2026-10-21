@@ -188,12 +188,7 @@ extension StockChartView {
 
         // 拡大の限界(最小の表示本数)
         if let minimumVisibleCount = self.style.minimumVisibleCount {
-            var minimumCount = min(Double(minimumVisibleCount), axisWidth)
-            // 表示本数が決まっていて、それが限界より少ない(本数の少ない新値足)ときは、その本数まで拡大できるようにする
-            // (画面いっぱいに並べるため)
-            if let fixedVisibleCount = self.mainContent.fixedVisibleCount {
-                minimumCount = min(minimumCount, Double(fixedVisibleCount))
-            }
+            let minimumCount = min(Double(minimumVisibleCount), axisWidth)
             chart.setVisibleXRangeMinimum(minimumCount)
         }
     }
@@ -519,9 +514,8 @@ extension StockChartView {
     /// ローソク足・出来高の棒の1本の幅の上限を決める割り数。上限 = 描画領域の幅 ÷ 20(切り上げ)
     static let maximumBarWidthDivisor: CGFloat = 20
 
-    /// ローソク足・出来高の棒の1本の幅が、上限(描画領域の幅 ÷ 20)を超えないようにする。
+    /// ローソク足(新値足を含む)・出来高の棒の1本の幅が、上限(描画領域の幅 ÷ 20)を超えないようにする。
     /// 足が少ないとき(寄り付き直後・上場直後など)に太くなりすぎないようにする。
-    /// 新値足は、本数が少なくても隙間なしで画面いっぱいに並べるので、上限をかけない
     /// 表示範囲が変わるたび(拡大・縮小・データの変更)に呼ぶ
     ///
     ///   1本分の幅 × 0.6 ≦ 上限 → そのまま(隙間 0.2)
@@ -540,24 +534,20 @@ extension StockChartView {
             return
         }
 
-        // ローソク足: 隙間(barSpace)を広げて、実体の幅を上限までにする(新値足は隙間なしのまま)
+        // ローソク足・新値足: 隙間(barSpace)を広げて、実体の幅を上限までにする
         if let candleData = self.priceChartView.combinedData?.candleData {
             var baseSpace = Self.candleBarSpace
-            var limitsWidth = true
             if self.mainContent.priceStyle == .newPrice {
                 baseSpace = Self.newPriceBarSpace
-                limitsWidth = false
             }
             var space = baseSpace
             // 実体の幅 = 1本分の幅 × (1 − 2 × 隙間)(隙間は実体の左右に1つずつ空く)
             let bodyWidth = slotWidth * (1 - 2 * baseSpace)
-            if limitsWidth {
-                if bodyWidth > maximumWidth {
-                    // 実体の幅が上限ちょうどになる隙間を求める
-                    //   slotWidth × (1 − 2 × space) = maximumWidth
-                    //   → space = 0.5 − maximumWidth ÷ (2 × slotWidth)
-                    space = 0.5 - maximumWidth / (2 * slotWidth)
-                }
+            if bodyWidth > maximumWidth {
+                // 実体の幅が上限ちょうどになる隙間を求める
+                //   slotWidth × (1 − 2 × space) = maximumWidth
+                //   → space = 0.5 − maximumWidth ÷ (2 × slotWidth)
+                space = 0.5 - maximumWidth / (2 * slotWidth)
             }
             for case let candleSet as CandleChartDataSet in candleData.dataSets {
                 candleSet.barSpace = space
