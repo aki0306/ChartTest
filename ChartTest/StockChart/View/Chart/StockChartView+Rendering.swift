@@ -443,12 +443,21 @@ extension StockChartView {
         return set
     }
 
-    /// 点(パラボリック)用のデータセットを作る
+    /// 点の直径(パラボリック)
+    static let dotSize: CGFloat = 3
+    /// VWAP:点 の点の直径(点だけで線を表すので、パラボリックより大きくする)
+    static let vwapDotSize: CGFloat = 5
+
+    /// 点(パラボリック・VWAP:点)用のデータセットを作る
     private func makeScatterSet(_ series: ChartSeries) -> ScatterChartDataSet {
         let set = ScatterChartDataSet(entries: self.makeEntries(series.values), label: series.label ?? "")
         set.axisDependency = .right
         set.setScatterShape(.circle)
-        set.scatterShapeSize = 3
+        var size = Self.dotSize
+        if series.colorRole == .vwap {
+            size = Self.vwapDotSize
+        }
+        set.scatterShapeSize = size
         set.setColor(self.style.color(for: series.colorRole))
         set.drawValuesEnabled = false
         set.highlightEnabled = false
