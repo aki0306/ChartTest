@@ -1211,17 +1211,16 @@ ChartTest/
    ├─ Model/                            計算とデータ(画面の部品には依存しない)
    │   ├─ Data/                             元になるデータ
    │   │   └─ StockCandle.swift                 ローソク足1本分のデータ
-   │   ├─ Display/                          チャートの種類・足種・表示の設定
+   │   ├─ Display/                          足種・表示の設定
    │   │   ├─ ChartPeriod.swift                 足種(1分足〜月足)
    │   │   ├─ IndexMarket.swift                 銘柄・指数の種類(国内/海外)
-   │   │   ├─ ChartType.swift                   チャートの種類(ローソク足・折線チャート など)
    │   │   ├─ ChartDisplayOptions.swift         表示オプション(Y軸固定・4本値)
    │   │   └─ ChartStateStore.swift             横画面で選んだ状態を国内/海外ごとに覚える
-   │   ├─ Indicators/                       テクニカル指標
+   │   ├─ Indicators/                       テクニカル指標(テクニカルのメニューで選ぶもの)
    │   │   ├─ ChartIndicatorType.swift          指標の種類(移動平均線・RSI など)
    │   │   ├─ ChartIndicatorValues.swift        チャートの外で計算した指標の値・計算に使う期間
    │   │   ├─ IndicatorParameters.swift         指標のパラメータ(期間など)
-   │   │   ├─ TechnicalIndicators.swift         指標の計算の入れ物と、共通の計算(移動平均)・新値足
+   │   │   ├─ TechnicalIndicators.swift         指標の計算の入れ物と、共通の計算(移動平均)
    │   │   ├─ Main/                             ★ メインチャートの指標(1つの指標 = 1つのファイル。計算と描く内容)
    │   │   │   ├─ MovingAverage.swift               移動平均線
    │   │   │   ├─ MultipleMovingAverage.swift       多重移動平均線
@@ -1236,9 +1235,14 @@ ChartTest/
    │   │       ├─ Stochastics.swift                 ストキャスティクス
    │   │       ├─ MACD.swift                        MACD
    │   │       └─ DMI.swift                         DMI
+   │   ├─ ChartTypes/                       ★ チャートの種類(下の帯の「ローソク足 ▼」で選ぶもの。1つの種類 = 1つのファイル。ローソク足は ChartContentBuilder.swift)
+   │   │   ├─ ChartType.swift                   チャートの種類(ローソク足・VWAP・新値足・折線チャート)
+   │   │   ├─ VWAP.swift                        VWAP：線・VWAP：点
+   │   │   ├─ NewPrice.swift                    新値足(計算と描く内容)
+   │   │   └─ LineChart.swift                   折線チャート(国内・海外)
    │   └─ Content/                          「何を描くか」
    │       ├─ ChartContent.swift                「何を描くか」を表すデータ
-   │       └─ ChartContentBuilder.swift         データ + 指標 → 「何を描くか」を組み立てる(指標を選ぶ入口・チャートの種類)
+   │       └─ ChartContentBuilder.swift         データ + 指標 → 「何を描くか」を組み立てる(チャートの種類・指標を選ぶ入口)
    │
    ├─ View/                             画面の部品
    │   ├─ Chart/                            チャート本体
@@ -1318,16 +1322,17 @@ docs/images/                            README の画像
 | ファイル | 内容 |
 |---|---|
 | `StockCandle.swift` | ローソク足1本分のデータ(日付・始値・高値・安値・終値・出来高) |
-| `TechnicalIndicators.swift` | 指標の計算の入れ物と、いくつもの指標で使う移動平均(`sma`・`ema`)・新値足の計算 |
+| `TechnicalIndicators.swift` | 指標の計算の入れ物と、いくつもの指標で使う移動平均(`sma`・`ema`) |
 | `Indicators/Main/*.swift`・`Indicators/Sub/*.swift` | 指標ごとの計算(`TechnicalIndicators` の extension)と描く内容(`ChartContentBuilder` の extension)。1つの指標 = 1つのファイル |
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
+| `ChartTypes/*.swift` | ローソク足以外のチャートの種類ごとの描く内容(`ChartContentBuilder` の extension)。1つの種類 = 1つのファイル(`VWAP.swift`・`NewPrice.swift`・`LineChart.swift`)。新値足は計算(`TechnicalIndicators` の extension)も同じファイル |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
 | `ChartIndicatorValues.swift` | チャートの外(Objective-C など)で計算した指標の値(`ChartIndicatorValues`)と、計算に使う期間(`ChartIndicatorPeriods`)。値がある指標はチャートが計算しない |
 | `ChartPeriod.swift` | 足種(1分足〜月足)と足種ごとの表示の違い |
 | `IndexMarket.swift` | 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次)と、種類ごとに選べる足種・スクロールできる本数 |
 | `IndicatorParameters.swift` | 指標の計算パラメータ(期間など) |
 | `ChartContent.swift` | チャートに「何を描くか」を表すデータ(線・棒・雲・凡例の文字) |
-| `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる(指標を選ぶ入口と、折線チャート・VWAP・新値足。各指標の中身は指標ごとのファイル) |
+| `ChartContentBuilder.swift` | ローソク足 + チャートの種類 + 指標 + パラメータ → `ChartContent` を組み立てる(チャートの種類・指標を選ぶ入口。種類・指標の中身はそれぞれのファイル) |
 | `ChartDisplayOptions.swift` | 表示オプション(Y軸固定・4本値) |
 | `ChartStateStore.swift` | 横画面のチャートで選んだ状態(チャートの種類・指標・足種・設定値・表示オプション)を、国内/海外ごとにアプリの起動中だけ覚える |
 
