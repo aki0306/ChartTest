@@ -186,6 +186,8 @@ class ViewController: UIViewController {
 
     /// 縦向きのチャートを、表示中の足種・指数の種類のデータで描き直す
     private func showPortraitChart() {
+        // 銘柄コードは、データを渡す前に設定する(折線チャートだけで表示する銘柄かが変わるため)
+        self.portraitChartView.qCode = self.qCode(for: self.currentMarket)
         self.portraitChartView.setCandles(SampleData.candles(for: self.portraitPeriod), period: self.portraitPeriod,
                                           market: self.currentMarket)
     }
@@ -243,7 +245,8 @@ class ViewController: UIViewController {
 
     /// 縦向きのチャートを、指定した指数の種類で表示し直す(海外指数で選べない足種なら日足にする)。
     ///   ・国内指数: ローソク足 + 移動平均線 + 出来高
-    ///   ・海外指数(R・D とも同じ): 折線チャート + 移動平均線(サブチャートなし)
+    ///   ・海外指数(R): ローソク足 + 移動平均線(サブチャートなし)
+    ///   ・海外指数(D): 折線チャート + 移動平均線(サブチャートなし。折線チャートだけで表示する銘柄にしている。qCode(for:))
     /// 横画面のチャートは、開くときにこの種類で表示する(presentLandscapeChart)
     /// (サンプルなので、海外指数でも同じダミーデータを使う)
     private func showPortraitChart(for market: IndexMarket) {
@@ -265,6 +268,8 @@ class ViewController: UIViewController {
         //   ・海外指数: テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
         // market を設定すると、国内/海外ごとに前回選んでいた足種(初めてなら日足)が period に入るので、その足種のデータを渡す
         landscapeViewController.market = self.currentMarket
+        // 銘柄コードも、データを渡す前に設定する(折線チャートだけで表示する銘柄なら、チャートの種類が 折線チャート だけになる)
+        landscapeViewController.qCode = self.qCode(for: self.currentMarket)
         let initialPeriod = landscapeViewController.period
         landscapeViewController.setCandles(SampleData.candles(for: initialPeriod), period: initialPeriod)
         self.updatePriceInfo(of: landscapeViewController)
@@ -299,6 +304,21 @@ class ViewController: UIViewController {
         }
 
         self.present(landscapeViewController, animated: true)
+    }
+
+    /// 銘柄・指数の種類ごとの、サンプルの銘柄コード(仮のコード)。
+    /// 海外(D) は、折線チャートだけで表示する銘柄にしている(AppDelegate で LineChartOnlyCodes に入れている)
+    private func qCode(for market: IndexMarket) -> String {
+        switch market {
+        case .japanStock:
+            return "SAMPLE_STOCK"
+        case .japanIndex:
+            return "SAMPLE_INDEX"
+        case .overseasRealtime:
+            return "SAMPLE_OVERSEAS"
+        case .overseasDaily:
+            return "SAMPLE_LINE_ONLY"
+        }
     }
 
     /// 横画面の下の帯に、指数名・現在値・日時を表示する

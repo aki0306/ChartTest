@@ -14,6 +14,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        // 折線チャートだけで表示する海外の銘柄コード(サンプルなので仮のコード。海外(D) の銘柄に使う。ViewController.qCode(for:))
+        LineChartOnlyCodes.codes = ["SAMPLE_LINE_ONLY"]
         return true
     }
 

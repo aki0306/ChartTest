@@ -17,8 +17,6 @@
 //
 //  ・この enum を使わないアプリに持っていく場合は、このファイルと DGChartEnum.swift を削除すればよい
 //    (ほかのファイルはこの enum に依存しない)
-//  ・qCode(銘柄コード)は、ほかのプロパティと違って置き換え先がないので、このファイルの中で値を持つ
-//    (extension にはプロパティの値を置けないため、Objective-C の関連オブジェクト(objc_setAssociatedObject)で持つ)
 //
 
 import Foundation
@@ -167,26 +165,6 @@ extension StockChartView {
         }
     }
 
-    /// 銘柄コード(Objective-C では NSString *。nil = 未設定)。チャートの描き方には使わず、持っておくだけ。
-    /// 呼び出し側が、データを取得するときなどに使う
-    ///
-    ///   Objective-C:
-    ///       self.chartView.qCode = qCode;
-    ///       NSString *code = self.chartView.qCode;
-    @objc var qCode: String? {
-        get {
-            return objc_getAssociatedObject(self, &AssociatedKeys.qCode) as? String
-        }
-        set {
-            // 銘柄が変わったら、次にデータを渡したときは直前の表示範囲を引き継がずに初期表示にする
-            if newValue != self.qCode {
-                self.resetVisibleRange()
-            }
-            // NSString の copy プロパティと同じく、コピーして持つ
-            objc_setAssociatedObject(self, &AssociatedKeys.qCode, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC)
-        }
-    }
-
     // MARK: - DGChartEnum の enum → StockChartView の enum
 
     /// メインチャート → メインチャートの指標
@@ -302,12 +280,4 @@ extension StockChartView {
             return .overseasDaily
         }
     }
-}
-
-// MARK: - 関連オブジェクトのキー
-
-/// extension で値を持つための、関連オブジェクトのキー(変数のアドレスをキーに使う。値そのものは使わない)
-private enum AssociatedKeys {
-    /// qCode のキー
-    nonisolated(unsafe) static var qCode: UInt8 = 0
 }

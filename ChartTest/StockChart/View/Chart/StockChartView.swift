@@ -18,7 +18,7 @@
 //  ・period / market         … 足種・指数の種類(先に設定しておく。足種を設定すると足種に合った見た目に切り替わる)
 //  ・chartType / mainIndicator / subIndicator … チャートの種類・指標(先に設定しておく。既定はローソク足・移動平均線 + 出来高)
 //  ・qCodeType / chartData / chartCategory / mainChart / subChart … 上のプロパティを DGChartEnum の enum で設定する(StockChartView+DGChartEnum.swift)
-//  ・qCode                   … 銘柄コード(チャートでは使わず、持っておくだけ。StockChartView+DGChartEnum.swift)
+//  ・qCode                   … 銘柄コード(折線チャートだけで表示する銘柄か(LineChartOnlyCodes)を決めるのに使う)
 //  ・setCandles(_:)          … データを渡すだけで、上のプロパティの設定で描画する
 //  ・setCandles(_:indicatorValues:) … チャートの外で計算した指標の値も渡して描画する(ChartIndicatorValues)
 //  ・setCandles(_:period:)   … 足種を指定して描画する(period も設定される。X軸の書式・移動平均の期間などが足種ごとに変わる)
@@ -37,7 +37,7 @@
 //  ・StockChartView+Rendering.swift      … データを DGCharts の形に変換して描画する・凡例の文字列を作る
 //  ・StockChartView+AxisRange.swift      … スクロール/ズームの同期と、表示範囲に合わせたY軸範囲の調整
 //  ・StockChartView+HighLowLabels.swift  … 表示中の範囲の最高値・最安値の文字
-//  ・StockChartView+DGChartEnum.swift    … DGChartEnum の enum で設定するプロパティ(mainChart・subChart など)と銘柄コード
+//  ・StockChartView+DGChartEnum.swift    … DGChartEnum の enum で設定するプロパティ(mainChart・subChart など)
 //  ・StockChartStyle.swift               … 見た目の設定(色・フォント・余白など)
 //  ・ChartAxisFormatters.swift           … 軸ラベルの書式
 //  ・ChartNumberFormatter.swift          … 価格などの数値の書式
@@ -101,10 +101,10 @@ final class StockChartView: UIView {
     }
 
     /// 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次。描き方は国内/海外の2通り)。setCandles(_:period:) での描き方が変わる
-    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: 折線チャート + 移動平均線・サブなし)。
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
     /// 変更しても描き直さないので、データを渡す前に設定する。
     /// チャートの種類(chartType)は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
-    /// (最初は国内がローソク足、海外が折線チャート。initialChartType(for:))。
+    /// (最初は国内・海外ともローソク足。横画面(LandscapeChartViewController)の海外は、折線チャートから始まる)。
     /// chartType は market を設定したあとで設定する
     @objc var market: IndexMarket = .japanIndex {
         didSet {
@@ -112,22 +112,28 @@ final class StockChartView: UIView {
                 return
             }
             self.chartTypeByMarket[oldValue] = self.chartType
-            self.chartType = self.chartTypeByMarket[self.market] ?? Self.initialChartType(for: self.market)
-        }
-    }
-
-    /// 指数の種類ごとの、最初のチャートの種類(国内はローソク足、海外は折線チャート)
-    private static func initialChartType(for market: IndexMarket) -> ChartType {
-        switch market {
-        case .japanStock, .japanIndex:
-            return .candlestick
-        case .overseasRealtime, .overseasDaily:
-            return .lineChart
+            self.chartType = self.chartTypeByMarket[self.market] ?? .candlestick
         }
     }
 
     /// 指数の種類ごとに覚えておくチャートの種類(market を切り替えたときに戻す)
     private var chartTypeByMarket: [IndexMarket: ChartType] = [:]
+
+    /// 銘柄コード(Objective-C では NSString *。nil = 未設定)。
+    /// 折線チャートだけで表示する銘柄か(LineChartOnlyCodes)を決めるのに使う。呼び出し側が、データを取得するときなどに使ってもよい。
+    /// 変更しても描き直さないので、データを渡す前に設定する
+    ///
+    ///   Objective-C:
+    ///       self.chartView.qCode = qCode;
+    ///       NSString *code = self.chartView.qCode;
+    @objc var qCode: String? {
+        didSet {
+            // 銘柄が変わったら、次にデータを渡したときは直前の表示範囲を引き継がずに初期表示にする
+            if self.qCode != oldValue {
+                self.resetVisibleRange()
+            }
+        }
+    }
 
     /// 足種。設定すると、足種に合った見た目(日付の書式・日付ラベルの置き方・初期表示本数。ChartPeriod)に切り替わる。
     /// setCandles(_:) は、この足種の移動平均の期間・出来高の凡例名で描く。
@@ -150,7 +156,8 @@ final class StockChartView: UIView {
 
     /// チャートの種類(ローソク足・VWAP・新値足・折線チャート)。setCandles(_:) / setCandles(_:period:) で使う。
     /// 変更しても描き直さないので、データを渡す前に設定する。
-    /// 指数の種類で選べない種類(海外指数の VWAP・新値足)は、ローソク足で描く(ChartType.choices)
+    /// 指数の種類で選べない種類(海外指数の VWAP・新値足)は、ローソク足で描く(ChartType.choices)。
+    /// 折線チャートだけで表示する銘柄(LineChartOnlyCodes)は、この値に関係なく折線チャートで描く(effectiveChartType)
     /// 指標を使わない種類(VWAP・新値足・国内の折線チャート)にすると、メイン・サブとも「なし」になる
     /// (ローソク足に戻しても「なし」のまま)
     @objc var chartType: ChartType = .candlestick {
@@ -742,9 +749,14 @@ extension StockChartView {
         return ChartIndicatorPeriods(parameters: self.period.indicatorParameters)
     }
 
-    /// 実際に描くチャートの種類。指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
+    /// 実際に描くチャートの種類。
+    /// ・折線チャートだけで表示する銘柄(LineChartOnlyCodes)は、折線チャートにする
+    /// ・指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
     /// (横画面の LandscapeChartViewController.applyMarket と同じ)
     @objc var effectiveChartType: ChartType {
+        if LineChartOnlyCodes.contains(self.qCode, market: self.market) {
+            return .lineChart
+        }
         guard ChartType.choices(for: self.market).contains(self.chartType) else {
             return .candlestick
         }

@@ -64,7 +64,8 @@ extension LandscapeChartViewController {
     }
 
     /// 「チャートの種類」ボタンの文字とメニュー(選択中の種類にチェック)を、選択中のチャートの種類に合わせる。
-    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)が後から変わっても反映される
+    /// メニューの中身は開くたびに作るので、指数の種類(海外指数は ローソク足・折線チャート だけ)や
+    /// 銘柄コード(折線チャートだけで表示する銘柄は 折線チャート だけ。LineChartOnlyCodes)が後から変わっても反映される
     func updateChartTypeMenu() {
         let items = UIDeferredMenuElement.uncached { [weak self] completion in
             guard let self else {
@@ -73,7 +74,7 @@ extension LandscapeChartViewController {
             }
             let selectedType = self.chartType
             var actions: [UIAction] = []
-            for chartType in ChartType.choices(for: self.market) {
+            for chartType in self.chartTypeChoices {
                 let action = UIAction(title: chartType.title) { [weak self] _ in
                     self?.chartTypeMenuSelected(chartType)
                 }
