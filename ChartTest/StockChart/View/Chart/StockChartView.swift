@@ -101,10 +101,10 @@ final class StockChartView: UIView {
     }
 
     /// 銘柄・指数の種類(日本株・日本株価指数・海外リアルタイム・海外日次。描き方は国内/海外の2通り)。setCandles(_:period:) での描き方が変わる
-    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: ローソク足 + 移動平均線・サブなし)。
+    /// (国内: ローソク足 + 移動平均線・サブに出来高 / 海外: 折線チャート + 移動平均線・サブなし)。
     /// 変更しても描き直さないので、データを渡す前に設定する。
     /// チャートの種類(chartType)は指数の種類ごとに覚えておき、切り替えるとその種類に戻る
-    /// (最初は国内・海外ともローソク足。横画面(LandscapeChartViewController)の海外は、折線チャートから始まる)。
+    /// (最初は国内がローソク足、海外が折線チャート。initialChartType(for:))。
     /// chartType は market を設定したあとで設定する
     @objc var market: IndexMarket = .japanIndex {
         didSet {
@@ -112,7 +112,17 @@ final class StockChartView: UIView {
                 return
             }
             self.chartTypeByMarket[oldValue] = self.chartType
-            self.chartType = self.chartTypeByMarket[self.market] ?? .candlestick
+            self.chartType = self.chartTypeByMarket[self.market] ?? Self.initialChartType(for: self.market)
+        }
+    }
+
+    /// 指数の種類ごとの、最初のチャートの種類(国内はローソク足、海外は折線チャート)
+    private static func initialChartType(for market: IndexMarket) -> ChartType {
+        switch market {
+        case .japanStock, .japanIndex:
+            return .candlestick
+        case .overseasRealtime, .overseasDaily:
+            return .lineChart
         }
     }
 

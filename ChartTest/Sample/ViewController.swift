@@ -243,7 +243,7 @@ class ViewController: UIViewController {
 
     /// 縦向きのチャートを、指定した指数の種類で表示し直す(海外指数で選べない足種なら日足にする)。
     ///   ・国内指数: ローソク足 + 移動平均線 + 出来高
-    ///   ・海外指数(R・D とも同じ): ローソク足 + 移動平均線(サブチャートなし)
+    ///   ・海外指数(R・D とも同じ): 折線チャート + 移動平均線(サブチャートなし)
     /// 横画面のチャートは、開くときにこの種類で表示する(presentLandscapeChart)
     /// (サンプルなので、海外指数でも同じダミーデータを使う)
     private func showPortraitChart(for market: IndexMarket) {

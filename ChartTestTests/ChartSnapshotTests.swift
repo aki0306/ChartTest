@@ -148,6 +148,8 @@ struct ChartSnapshotTests {
                                mainIndicator: MainChartIndicator = .movingAverage,
                                subIndicator: SubChartIndicator = .volume) -> StockChartView {
         let chartView = StockChartView(frame: CGRect(origin: .zero, size: self.chartSize))
+        // market を変えると chartType がその指数の種類の値に戻るので、market を先に設定する
+        chartView.market = market
         chartView.chartType = chartType
         chartView.mainIndicator = mainIndicator
         chartView.subIndicator = subIndicator
