@@ -57,6 +57,8 @@ struct UpdateChartDataTests {
         second.market = .japanIndex
         #expect(second.chartType == .vwapLine)
         #expect(second.period == .intraday)
+        // DGChartData で読んでも日中足(縦画面の足種ではない)
+        #expect(second.chartData == .midDay)
 
         second.updateChartData(response)
         #expect(second.period == .intraday)

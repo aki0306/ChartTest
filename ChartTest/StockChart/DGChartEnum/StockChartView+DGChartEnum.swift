@@ -15,8 +15,8 @@
 //    | chartData     | period(1分足〜月足)               |
 //    | qCodeType     | market(4つが1対1で対応。日本株 → .japanStock、日本株価指数 → .japanIndex、海外 R・D → .overseasRealtime・.overseasDaily) |
 //
-//  ・この enum を使わないアプリに持っていく場合は、このファイルと DGChartEnum.swift を削除すればよい
-//    (ほかのファイルはこの enum に依存しない)
+//  ・この enum を使わないアプリに持っていく場合は、DGChartEnum フォルダごと削除すればよい
+//    (ほかのファイルはこの enum に依存しない。横画面の chartData は LandscapeChartViewController+DGChartEnum.swift)
 //
 
 import Foundation
@@ -118,23 +118,7 @@ extension StockChartView {
     /// 足種(1分足〜月足)。設定すると、足種に合った見た目に切り替わる(period)
     @objc var chartData: DGChartData {
         get {
-            switch self.period {
-            case .oneMinute:
-                // 1分足
-                return .min
-            case .intraday:
-                // 日中足
-                return .midDay
-            case .daily:
-                // 日足
-                return .day
-            case .weekly:
-                // 週足
-                return .week
-            case .monthly:
-                // 月足
-                return .month
-            }
+            return DGChartData(period: self.period)
         }
         set {
             self.period = Self.period(for: newValue)
@@ -278,6 +262,32 @@ extension StockChartView {
         case .overseasDaily:
             // 海外株価指数(日次)
             return .overseasDaily
+        }
+    }
+}
+
+// MARK: - StockChartView の enum → DGChartEnum の enum
+
+extension DGChartData {
+
+    /// 足種 → チャートデータ(StockChartView・LandscapeChartViewController の chartData で使う)
+    init(period: ChartPeriod) {
+        switch period {
+        case .oneMinute:
+            // 1分足
+            self = .min
+        case .intraday:
+            // 日中足
+            self = .midDay
+        case .daily:
+            // 日足
+            self = .day
+        case .weekly:
+            // 週足
+            self = .week
+        case .monthly:
+            // 月足
+            self = .month
         }
     }
 }
