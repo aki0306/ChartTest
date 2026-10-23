@@ -20,6 +20,10 @@
 //  使い方(Swift):
 //      ChartResponseLoader.setResponse(response, period: .daily, to: chartView)
 //
+//  今の足種のデータとして渡す場合(縦画面・横画面のどちらでも同じ書き方。Objective-C):
+//      id<StockCandleReceiving> target = self.chartView;      // 横画面を表示しているときは landscapeViewController
+//      [target updateChartData:responseArray];
+//
 //  ・辞書 → StockCandle の変換(キーの名前・値の型・日付の形式・並べ替え)は StockCandleResponseParser(Model)が行う
 //  ・海外指数の場合は、描画先の market を先に .overseasRealtime / .overseasDaily にしておく
 //    (レスポンスの読み方も market で変わる。海外は終値だけの件も足にするが、国内(.japanIndex など)のままだとその件が値なしになる)
@@ -37,6 +41,9 @@ import Foundation
     var market: IndexMarket { get }
     /// 足種を指定してローソク足(日付の古い順)を渡し、描画する
     func setCandles(_ candles: [StockCandle], period: ChartPeriod)
+    /// API のレスポンス(辞書の配列)を、今の足種のデータとして渡して描画する。
+    /// 縦画面・横画面のどちらを表示していても、この型(Objective-C: id<StockCandleReceiving>)の変数に入れて同じように呼べる
+    func updateChartData(_ chartData: [[String: Any]])
 }
 
 extension StockChartView: StockCandleReceiving {}
