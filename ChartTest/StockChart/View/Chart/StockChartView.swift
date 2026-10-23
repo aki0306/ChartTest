@@ -710,6 +710,19 @@ extension StockChartView {
         self.render(candles, indicatorValues: indicatorValues)
     }
 
+    /// API のレスポンス(辞書の配列)を渡して描画する。足種・指数の種類は、プロパティ(period・market)の設定。
+    /// 辞書 → ローソク足の変換(日付の読み方・値のない件・海外の終値だけの件)は StockCandleResponseParser が行う
+    /// (ChartResponseLoader.setResponse(_:period:to:) に、今の足種を渡すのと同じ)
+    ///
+    ///   Objective-C:
+    ///       self.chartView.chartData = DGChartDataDay;   // 足種(period でもよい)
+    ///       [self.chartView updateChartData:responseArray];
+    ///
+    /// - Parameter chartData: chartDataFromResponse:… の結果(中身は NSDictionary。NSMutableArray のままでよい)
+    @objc func updateChartData(_ chartData: [[String: Any]]) {
+        ChartResponseLoader.setResponse(chartData, period: self.period, to: self)
+    }
+
     /// プロパティの設定で、描画内容を組み立てて表示する。
     /// 日時だけの足(StockCandle.hasValue = false)は、先頭側・末尾側を X軸の日付だけに使い、指標の計算には使わない
     private func render(_ candles: [StockCandle], indicatorValues: ChartIndicatorValues?) {

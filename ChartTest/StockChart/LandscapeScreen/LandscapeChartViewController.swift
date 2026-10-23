@@ -585,6 +585,20 @@ final class LandscapeChartViewController: UIViewController {
         self.reloadChart(keepsViewport: false)
     }
 
+    /// API のレスポンス(辞書の配列)を、表示中の足種(period)のデータとして渡して描画する。
+    /// 開いたときの period は前回選んでいた足種なので(ChartStateStore)、その足種のデータを渡す。
+    /// 辞書 → ローソク足の変換は StockCandleResponseParser が行う(ChartResponseLoader.setResponse(_:period:to:) に period を渡すのと同じ)
+    ///
+    ///   Objective-C:
+    ///       landscapeViewController.market = IndexMarketJapanIndex;   // 先に設定する(前回選んでいた状態になる)
+    ///       ChartPeriod period = landscapeViewController.period;      // この足種のデータを取得する
+    ///       [landscapeViewController updateChartData:responseArray];
+    ///
+    /// - Parameter chartData: chartDataFromResponse:… の結果(中身は NSDictionary。NSMutableArray のままでよい)
+    @objc func updateChartData(_ chartData: [[String: Any]]) {
+        ChartResponseLoader.setResponse(chartData, period: self.period, to: self)
+    }
+
     /// 足種を指定してローソク足データを設定し、描画する。
     /// 足種によって、使う指標パラメータ(足種ごと)と、X軸の日付の書式・初期表示本数が変わる。足種のボタンの表示も、この足種に合わせる。
     /// Objective-C からは `[viewController setCandles:candles period:ChartPeriodWeekly]` で呼び出せる。

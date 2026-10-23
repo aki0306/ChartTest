@@ -1048,6 +1048,19 @@ NSMutableArray *responseArray = [NSMutableArray array];
 [ChartResponseLoader setResponse:responseArray period:ChartPeriodDaily to:self.chartView];            // チャートだけ(StockChartView)
 ```
 
+足種を指定せずに、描画先の今の足種(`period`)のデータとして渡す場合は、`updateChartData:` を使います(中では `setResponse:period:to:` に `period` を渡しています)。
+
+```objc
+// チャートだけ(StockChartView): 足種を設定してから渡す
+self.chartView.period = ChartPeriodDaily;
+[self.chartView updateChartData:responseArray];
+
+// 横画面: 開いたときの period は前回選んでいた足種(VWAP：線を選んでいたら日中足)なので、その足種のデータを取得して渡す
+landscapeViewController.market = IndexMarketJapanIndex;   // 先に設定する(前回選んでいた状態になる)
+ChartPeriod period = landscapeViewController.period;      // この足種のデータを取得する
+[landscapeViewController updateChartData:responseArray];
+```
+
 海外指数の場合は、描画先の `market` を先に `.overseasRealtime` / `.overseasDaily` にしておきます(`StockChartView` は `chartView.market`、横画面は `landscape.market`)。海外指数は終値だけの件も足にするので、国内(`.japanIndex` など)のままだと、その件が値なしになります。
 
 辞書 → `StockCandle` の変換は [`StockCandleResponseParser`](ChartTest/StockChart/Response/StockCandleResponseParser.swift)が行います。
