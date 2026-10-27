@@ -781,10 +781,25 @@ final class LandscapeChartViewController: UIViewController {
     /// 指数の種類に合わせて、選べる指標・チャートの種類・設定画面の項目を切り替え、描き直す
     /// - Parameter previousMarket: 変える前の指数の種類(設定画面で選んでいた項目を探すのに使う)
     private func applyMarket(previousMarket: IndexMarket) {
+        // 設定画面の左側リストで選んでいた位置を、新しいリストに合わせる。
+        // 選んでいた項目が新しいリストにもあればその位置、なければ先頭の「オプション」にする。
+        // 状態を戻す(restoreState)と表示オプションの didSet で選択中の項目を読むので、その前に合わせておく
+        // (古い位置のままだと、項目の少ない海外のリストで範囲外になる)
+        let previousItem = self.settingsItem(at: self.selectedSettingsIndexPath, in: previousMarket)
+        self.selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
+        if let previousItem {
+            if let indexPath = self.indexPathInSettingsList(of: previousItem) {
+                self.selectedSettingsIndexPath = indexPath
+            }
+        }
+
         // 国内⇔海外を切り替えた場合は、切り替えた先で前回選んでいた状態(チャートの種類・指標・足種・設定値・表示オプション)に戻す。
         // 切り替える前の状態は、変更のたびに覚えている(saveState)。国内どうし・海外どうしの切り替えでは、状態はそのまま
         if previousMarket.isDomestic != self.market.isDomestic {
             self.restoreState(for: self.market)
+            // 設定画面で編集中の値も、切り替えた先の設定値から作り直す
+            // (切り替える前の値のまま「決定」すると、切り替えた先の設定値を上書きしてしまうため)
+            self.draftParametersByPeriod = self.parametersByPeriod
         }
 
         // テクニカルのメニューに並べる指標(海外指数の折線チャートは指標を重ねられるので、「なし」だけにするかも変わる)
@@ -798,15 +813,8 @@ final class LandscapeChartViewController: UIViewController {
         self.applyDisplayOptionsToChart()
         self.reloadChart(keepsViewport: true)
 
-        // 設定画面の左側リストを作り直す。編集中の内容(「決定」前の値)は残す。
-        // 選んでいた項目が新しいリストにもあればその選択を残し、なければ先頭の「オプション」に戻す
-        let previousItem = self.settingsItem(at: self.selectedSettingsIndexPath, in: previousMarket)
-        self.selectedSettingsIndexPath = IndexPath(row: 0, section: 0)
-        if let previousItem {
-            if let indexPath = self.indexPathInSettingsList(of: previousItem) {
-                self.selectedSettingsIndexPath = indexPath
-            }
-        }
+        // 設定画面の左側リストと右側の行を作り直す(選んでいた位置は先頭で合わせてある)。
+        // 国内どうし・海外どうしの切り替えでは、編集中の内容(「決定」前の値)は残す
         self.reloadSettingsList()
         self.reloadSettingsRows()
 
