@@ -284,7 +284,10 @@ extension StockChartView {
         chart.dragEnabled = true
         chart.setScaleEnabled(true)
         chart.scaleYEnabled = false
-        chart.pinchZoomEnabled = false
+        // true でも、scaleYEnabled が false なので横方向だけ拡大・縮小する。
+        // false にすると、ピンチ開始時に DGCharts が2本目の指の位置を読むので、
+        // 指が2本そろっていないピンチ(指が1本残ったとき・トラックパッドのピンチ)でクラッシュする(SafePinchCombinedChartView)
+        chart.pinchZoomEnabled = true
         chart.doubleTapToZoomEnabled = false
         chart.highlightPerTapEnabled = false
         chart.highlightPerDragEnabled = false
