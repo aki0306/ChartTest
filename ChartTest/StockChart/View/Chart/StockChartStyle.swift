@@ -134,21 +134,9 @@ struct StockChartStyle: Equatable {
 
     // MARK: - 4本値(十字線)
 
-    /// 4本値の枠に表示する日付の書式(足種ごとの値は ChartPeriod.ohlcDateFormat)
+    /// 4本値の枠に表示する日付の書式(足種ごとの値は ChartPeriod.ohlcDateFormat)。
+    /// 4本値のほかの見た目(色・薄くするまでの秒数・濃さ)は CrosshairOverlayView で決める
     var ohlcDateFormat = "yyyy/MM/dd"
-    /// 4本値(十字線・マーカー・4本値の枠)を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
-    var crosshairFadeDelay: TimeInterval = 3
-    /// 4本値を薄く表示するときの、4本値の枠・値のマーカー・矢印の不透明度(0 = 見えない 〜 1 = 元の濃さ)。
-    /// また動かすと元の濃さに戻る。50%
-    var crosshairFadedAlpha: CGFloat = 0.5
-    /// 4本値を薄く表示するときの、十字線(縦線・横線)の不透明度。30%
-    var crosshairFadedLineAlpha: CGFloat = 0.3
-    /// 4本値の日付のマーカー(下の日付ラベルの欄の、縦線を指す赤い矢印)の画像。
-    /// nil なら、increasingColor で上向き矢印の形を塗る。画像はそのままの大きさで表示する
-    var dateMarkerImage: UIImage?
-    /// 4本値の価格のマーカー(右の価格ラベルの欄の、横線の位置を指す赤い矢印)の画像。
-    /// nil なら、increasingColor で左向き矢印の形を塗る。画像はそのままの大きさで表示する
-    var yAxisMarkerImage: UIImage?
 
     // MARK: - 文言
 

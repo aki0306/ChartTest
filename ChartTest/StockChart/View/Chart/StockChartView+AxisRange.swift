@@ -104,7 +104,7 @@ extension StockChartView {
 
         // Y軸範囲が変わると十字線の横線の位置も変わるので更新する
         // (スクロール・ズーム時もここを通るので、十字線が足に追従する)
-        self.updateCrosshair()
+        self.crosshairView.update()
     }
 
     /// メインチャートのY軸範囲を調整する
