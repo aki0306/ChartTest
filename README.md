@@ -320,7 +320,7 @@ final class MyChartViewController: UIViewController {
 線は、指がその線を動かせる場所にある間だけ動きます(横線はメインチャートの高さ、縦線は枠の左右の幅の中。外れたところで止まります)。
 縦線は指の位置のまま止まり、足の中心には合わせません。4本値・日付は、縦線に一番近い足のものです。
 値のない日時(値が空の足、1分足・日中足の値のない時間帯)を指したときは、4本値を空欄にします(データの範囲の外では日付も空欄)。
-十字線を動かさないまま 3 秒経つと薄くなります(4本値の枠・値のマーカー・矢印は 50%、線は 30%。もう一度動かすと元の濃さに戻ります。秒数と濃さは `style` の `crosshairFadeDelay`・`crosshairFadedAlpha`・`crosshairFadedLineAlpha` で変えられます)。
+十字線を動かさないまま 3 秒経つと薄くなります(4本値の枠・値のマーカー・矢印は 50%、線は 30%。もう一度動かすと元の濃さに戻ります。秒数と濃さは [`CrosshairOverlayView.swift`](ChartTest/StockChart/View/Crosshair/CrosshairOverlayView.swift) の先頭の「見た目」で決めています)。
 
 枠の内側は、4本値がオンの間もチャートのスクロール(1本指)・拡大(ピンチ)に使えます(交点・ラベルの欄からなぞったときは、十字線だけが動き、チャートはスクロールしません)。
 
@@ -856,7 +856,7 @@ Xcode で色セットを選び、右側の **Attributes インスペクタ**(⌥
 | フォルダ | 色セット | 使う場所 |
 |---|---|---|
 | `Chart` | `ChartIncreasing`・`ChartLine0`〜`ChartLine4`・`ChartGrid` など | `StockChartStyle` の各色の初期値(名前は下の表の項目名に対応) |
-| `Crosshair` | `ChartCrosshairLine`・`ChartOHLCBackground`・`ChartOHLCText`・`ChartMarkerFill`・`ChartValueMarkerFill`・`ChartMarkerText` | 十字線・4本値の枠・値のマーカー |
+| `Crosshair` | `ChartCrosshairLine`・`ChartOHLCBackground`・`ChartOHLCText`・`ChartMarkerText`、画像 `ChartValueMarker`・`ChartDateMarker`・`ChartYAxisMarker` | 十字線・4本値の枠・マーカー(マーカーの形は画像。値のマーカーは文字の長さに合わせて真ん中を伸ばす) |
 | `Panel` | `ChartPanelTab`・`ChartPanelTabText`・`ChartDimming` | 「テクニカル」「設定」タブと、パネルを開いたときの後ろの暗さ |
 | `Menu` | `ChartMenuHeader`・`ChartMenuRow`・`ChartMenuSelectedRow` など | 設定画面の左リストとテクニカルのメニュー(両方で同じ色セットを使う)・設定画面のボタンの枠線 |
 | `PeriodTab` | `ChartPeriodTabSelected`・`ChartPeriodTabNormal`・`ChartPeriodTabDisabled` など | 設定画面の足種タブ |
@@ -915,11 +915,6 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 最高値・最安値の表示 | `showsHighLowLabels`(表示中の範囲の最高値・最安値を、その足の上・下に表示する。ローソク足のときだけ。Objective-C は `chartView.showsHighLowLabels`) | false(横画面では true) |
 | 最高値・最安値の文字のフォント | `highLowLabelFont` | 12pt |
 | 4本値の枠の日付の書式 | `ohlcDateFormat`(足種に合わせて `ChartPeriod.ohlcDateFormat` が入る) | 日足・週足 `yyyy/MM/dd`、月足 `yyyy/MM`、1分足・日中足 `HH:mm` |
-| 4本値を薄くするまでの秒数 | `crosshairFadeDelay`(十字線を動かしてからこの秒数が経つと、十字線・マーカー・4本値の枠を薄くする。また動かすと元の濃さに戻る。0 以下なら薄くしない) | 3秒 |
-| 4本値を薄くしたときの濃さ(4本値の枠・マーカー・矢印) | `crosshairFadedAlpha`(0 = 見えない 〜 1 = 元の濃さ) | 0.5 |
-| 4本値を薄くしたときの濃さ(十字線) | `crosshairFadedLineAlpha` | 0.3 |
-| 4本値の日付のマーカーの画像 | `dateMarkerImage`(下の日付ラベルの欄の、縦線を指す赤い矢印の代わりに描く画像。そのままの大きさで、矢印の先を外枠の下端に合わせる) | nil(`increasingColor` で矢印の形を塗る) |
-| 4本値の価格のマーカーの画像 | `yAxisMarkerImage`(右端の赤い矢印の代わりに描く画像。そのままの大きさで、横線の高さに中心を合わせる) | nil(`increasingColor` で矢印の形を塗る) |
 | メインの凡例の位置(上端) | `legendTopInset`(外枠の上端からの距離) | 3pt |
 | サブの凡例の位置(上端) | `subLegendTopInset`(区切り線からの距離) | 2pt |
 | 凡例の位置(左端) | `legendLeadingInset`(外枠の左端からの距離) | 8pt |
@@ -934,19 +929,6 @@ chartView.increasingColor = UIColor.systemRedColor;
 
 - 凡例の文字の色は、線の色と同じになります(凡例だけの色はありません)。線の色を変えると、凡例の文字の色も変わります
 - 凡例の位置やフォントを変えても、チャートの線が凡例と重ならないよう、Y軸の上側の余白は自動で調整されます
-- 4本値のマーカーを画像にする場合は、Assets に画像を追加して次のように設定します(Objective-C も同じプロパティ名で、`chartView` から設定できます)。
-
-  ```swift
-  let chartView = landscapeViewController.chartView
-  chartView.dateMarkerImage = UIImage(named: "dateMarker")
-  chartView.yAxisMarkerImage = UIImage(named: "priceMarker")
-  ```
-
-  ```objc
-  StockChartView *chartView = landscapeViewController.chartView;
-  chartView.dateMarkerImage = [UIImage imageNamed:@"dateMarker"];
-  chartView.yAxisMarkerImage = [UIImage imageNamed:@"priceMarker"];
-  ```
 
 #### `style` 以外で決まっている見た目
 
@@ -960,6 +942,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 設定画面の左リスト(項目・見出しの色・文字の大きさ) | [`ChartSettingsView.swift`](ChartTest/StockChart/SettingsScreen/ChartSettingsView.swift) | `headerColor`・`selectedRowColor`、`applyCellStyle` / `viewForHeaderInSection` 内のフォント |
 | テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/TechnicalMenu/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
 | 「テクニカル」「設定」タブ | [`LandscapeChartViewController+Panels.swift`](ChartTest/StockChart/LandscapeScreen/LandscapeChartViewController+Panels.swift) | `configureTabButton` |
+| 4本値(十字線の色、マーカーの画像、薄くするまでの秒数・薄くしたときの濃さ) | [`CrosshairOverlayView.swift`](ChartTest/StockChart/View/Crosshair/CrosshairOverlayView.swift) | 先頭の「見た目」(`lineColor`・`fadeDelay`・`fadedAlpha`・`fadedLineAlpha`)と「部品」(`valueMarker`・`dateMarker`・`yAxisMarker`) |
 | 4本値の枠(文字の大きさ・背景) | [`OHLCInfoView.swift`](ChartTest/StockChart/View/Crosshair/OHLCInfoView.swift) | 先頭の「見た目」(余白・行間・角の丸み・フォント) |
 | 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartNumberFormatter.swift`](ChartTest/StockChart/View/Chart/ChartNumberFormatter.swift) | `ChartNumberFormatter` |
 | 凡例の文言(「短期移動平均(5)」など) | 指標ごとのファイル([`Model/Indicators/Main/`](ChartTest/StockChart/Model/Indicators/Main)・[`Model/Indicators/Sub/`](ChartTest/StockChart/Model/Indicators/Sub)) | 各指標の `label` / `legendTitle` |
@@ -971,7 +954,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 部品 | 両方から使える | Swift だけ |
 |---|---|---|
 | `StockCandle` | 作成(`init(date:open:high:low:close:volume:)`)、各値の読み取り | ― |
-| `StockChartView` | `setCandles`(3種類)、`setCandles:indicatorValues:`、`indicatorPeriods`、`effectiveChartType`・`effectiveMainIndicator`・`effectiveSubIndicator`、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels`、`crosshairFadeDelay`、`crosshairFadedAlpha`、`dateMarkerImage`、`yAxisMarkerImage` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
+| `StockChartView` | `setCandles`(3種類)、`setCandles:indicatorValues:`、`indicatorPeriods`、`effectiveChartType`・`effectiveMainIndicator`・`effectiveSubIndicator`、`clear`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`visibleCount`、`minimumVisibleCount`、`maximumVisibleCount`、`priceHeightRatio`、`increasingColor`、`decreasingColor`、`dateFormat`、`noDataMessage`、`legendFont`、`xAxisFont`、`yAxisFont`、`legendTopInset`、`showsHighLowLabels` | `style`(すべての見た目)、`displayOptions`、`display(candles:main:sub:)`、パラメータを指定する `setCandles(_:mainIndicator:subIndicator:parameters:)` |
 | `LandscapeChartViewController` | `instantiate`、`setCandles`(足種の指定あり/なし)、`setCandles:period:indicatorValues:`、`indicatorPeriods`、`updatePriceInfo`、`period`、`market`、`chartType`、`mainIndicator`、`subIndicator`、`chartInsets`、`chartView`、`onPeriodSelect`、`onChartTypeSelect`、`onReload`、`onRotate`、`closePanels`、`shortMAPeriod` / `longMAPeriod` / `volumeMAPeriod`、`isMainYAxisFixed` / `isSubYAxisFixed`、`showsOHLC` | `parameters`(表示中の足種の指標の期間など)、`setParameters(_:for:)`(足種を指定)、`updateParametersForAllPeriods`(すべての足種)、`displayOptions`、`onPanelVisibilityChange` |
 | `SampleData` | `candles(for:)`(Objective-C: `candlesForPeriod:`)、`nikkeiLike(days:)`(Objective-C: `nikkeiLikeWithDays:`) | ― |
 
@@ -1306,8 +1289,9 @@ ChartTest/
    │   │       ├─ AlignedYAxisRenderer.swift        価格ラベルの揃え方
    │   │       └─ SafePinchCombinedChartView.swift  ピンチのクラッシュ対策
    │   └─ Crosshair/                        4本値(十字線)
-   │       ├─ StockChartView+Crosshair.swift    十字線の操作・配置
-   │       ├─ ChartCrosshairViews.swift         十字線・マーカーの部品
+   │       ├─ StockChartView+Crosshair.swift    十字線を動かす操作
+   │       ├─ CrosshairOverlayView.swift        十字線・マーカー・4本値の枠の表示と配置
+   │       ├─ CrosshairMarkerLabel.swift        マーカーの部品
    │       └─ OHLCInfoView.swift                4本値の枠
    │
    ├─ TechnicalMenu/                    テクニカルのメニュー(テクニカルタブ)だけで使うもの
@@ -1358,7 +1342,7 @@ docs/images/                            README の画像
 | API のレスポンスのキーの名前・日付の形式を合わせたい | `Response/StockCandleResponseParser.swift` |
 | 設定画面に並べる項目・値の範囲を変えたい | `SettingsScreen/ChartSettingsCatalog.swift` |
 | 設定画面・下の帯の配置を変えたい | `SettingsScreen/ChartSettingsView.xib`(行は `ChartSettingsToggleRow.xib`・`ChartSettingsStepperRow.xib`)・`LandscapeScreen/ChartFooterView.xib`(Interface Builder で開く) |
-| 4本値(十字線)の動きを変えたい | `View/Crosshair/StockChartView+Crosshair.swift` |
+| 4本値(十字線)の動きを変えたい | `View/Crosshair/StockChartView+Crosshair.swift`(どこを触ったらどの線を動かすか)・`View/Crosshair/CrosshairOverlayView.swift`(表示・配置・薄くする処理) |
 | テクニカル/設定パネルの開き方を変えたい | `LandscapeScreen/LandscapeChartViewController+Panels.swift` |
 | テクニカルを押したとき・指標を選んだときの動きを変えたい | `LandscapeScreen/LandscapeChartViewController+TechnicalMenu.swift` |
 | 横画面の下の帯のボタンの動きを変えたい | `LandscapeScreen/LandscapeChartViewController+Footer.swift` |
@@ -1399,8 +1383,9 @@ docs/images/                            README の画像
 | | `LatestAlignedXAxisRenderer.swift` | 日付(X軸)ラベルを並べる描画処理 |
 | | `AlignedYAxisRenderer.swift` | 価格(Y軸)ラベルの中央揃え・枠内に収める描画処理 |
 | | `SafePinchCombinedChartView.swift` | ピンチ開始時のクラッシュ(DGCharts の不具合)を防いだチャート |
-| `Crosshair/` | `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線・4本値の表示・操作 |
-| | `ChartCrosshairViews.swift` | 十字線・マーカーの部品 |
+| `Crosshair/` | `StockChartView+Crosshair.swift` | 表示オプションの反映と、十字線を動かす操作(どこを触ったらどの線を動かすか) |
+| | `CrosshairOverlayView.swift` | 十字線・マーカー・4本値の枠の表示と配置、十字線の位置・薄くする処理(4本値は横画面でしか使わないので、色・秒数・濃さもここで決める) |
+| | `CrosshairMarkerLabel.swift` | マーカーの部品 |
 | | `OHLCInfoView.swift` | 4本値の枠(日付・始値・高値・安値・終値) |
 
 ### 設定画面(`StockChart/SettingsScreen/`)

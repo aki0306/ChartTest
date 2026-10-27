@@ -47,8 +47,9 @@
 //  ・CloudCombinedRenderer.swift         … 一目均衡表の雲の塗りつぶし
 //  ・SafePinchCombinedChartView.swift    … ピンチ操作のクラッシュ対策をしたチャート
 //  Crosshair/(4本値)
-//  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線・4本値の表示・操作
-//  ・ChartCrosshairViews.swift           … 十字線・マーカーの部品
+//  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線を動かす操作
+//  ・CrosshairOverlayView.swift          … 十字線・マーカー・4本値の枠の表示と、十字線の位置・薄くする処理
+//  ・CrosshairMarkerLabel.swift          … マーカーの部品
 //  ・OHLCInfoView.swift                  … 4本値の枠
 //  初めて読む場合は、このファイル → Layout → Rendering → AxisRange → Crosshair の順がおすすめ。
 //
@@ -56,8 +57,8 @@
 //   display(...) で内容を受け取る
 //     → render()               (Rendering) DGCharts のデータを作ってチャートに渡す
 //     → updateAxisRanges(...)  (AxisRange) 見えている範囲の値に合わせてY軸の上限・下限を決める
-//     → updateCrosshair()      (Crosshair) 4本値がオンなら十字線を置き直す
-//   スクロール・ズームのたびに、updateAxisRanges → updateCrosshair が呼ばれる
+//     → crosshairView.update() (CrosshairOverlayView) 4本値がオンなら十字線を置き直す
+//   スクロール・ズームのたびに、updateAxisRanges → crosshairView.update() が呼ばれる
 //
 //  【ラベルの種類と位置】
 //  ・凡例(priceLegendLabel / subLegendLabel)
@@ -242,25 +243,10 @@ final class StockChartView: UIView {
 
     // MARK: - 部品(4本値の表示用)
 
-    /// 十字線(4本値がオンのときに表示)
+    /// 十字線・マーカー・4本値の枠(4本値がオンのときに表示)。十字線の位置や薄くする処理も、この中で持つ
     let crosshairView = CrosshairOverlayView()
-    /// 選択中の足の4本値の枠
-    let ohlcInfoView = OHLCInfoView()
-    /// 十字線の横線の位置の値を表示するマーカー(外枠の左端寄り・グレーの六角形)
-    let valueMarker = CrosshairMarkerLabel(shape: .hexagon)
-    /// 十字線の縦線の位置を示すマーカー(X軸・赤い上向き矢印。文字なし)
-    let dateMarker = CrosshairMarkerLabel(shape: .arrowUp)
-    /// 十字線の横線の位置を示すマーカー(Y軸側の右端・赤い左向き矢印)
-    let yAxisMarker = CrosshairMarkerLabel(shape: .arrowLeft)
     /// 十字線を動かすジェスチャー(タップ・1本指ドラッグ)。メイン・サブそれぞれに付ける
     var crosshairRecognizers: [UIGestureRecognizer] = []
-    /// 十字線の位置(このViewの座標)。指の位置に合わせて動く(縦線も足の中心には合わせない。4本値はこの X に一番近い足)。
-    /// nil の場合は次回表示時に、メインチャートの描画領域の中央に置く
-    var crosshairPoint: CGPoint?
-    /// ドラッグ中に動かす十字線の線(なぞり始めた場所で決める。nil = ドラッグしていない・動かさない)
-    var crosshairDragTarget: CrosshairMoveTarget?
-    /// 4本値を薄く表示する予約(一定時間動かさなかったら実行する。動かすと取り消して予約し直す)
-    var crosshairFadeWorkItem: DispatchWorkItem?
 
     // MARK: - レイアウトの制約(スタイル・サブチャートの有無によって変わるもの)
 
@@ -422,7 +408,7 @@ final class StockChartView: UIView {
 
         // データ件数が変わったら(別のデータになったら)十字線の位置はリセットする
         if candles.count != self.candles.count {
-            self.crosshairPoint = nil
+            self.crosshairView.reset()
         }
 
         self.candles = candles
@@ -469,7 +455,7 @@ final class StockChartView: UIView {
         self.subContent = nil
         self.leadingDates = []
         self.trailingDates = []
-        self.crosshairPoint = nil
+        self.crosshairView.reset()
         self.showsNoDataMessage = false
         self.render(keepingMatrix: nil)
     }
@@ -536,13 +522,13 @@ final class StockChartView: UIView {
             }
         }
 
-        // 十字線の位置はこの View の座標で覚えているので、サイズが変わると(画面の回転など)外枠の外を指してしまう。
-        // サイズが変わったら、最新の足の位置から置き直す(次の updateCrosshair で決め直される)
+        // 十字線の位置は crosshairView がこの View の座標で覚えているので、サイズが変わると(画面の回転など)外枠の外を指してしまう。
+        // サイズが変わったら、最初の位置から置き直す(次の crosshairView.update() で決め直される)
         let sizeChanged = widthChanged || heightChanged
         if sizeChanged {
-            self.crosshairPoint = nil
+            self.crosshairView.reset()
         }
-        self.updateCrosshair()
+        self.crosshairView.update()
     }
 
     /// 今見えている X軸の範囲(何本目〜何本目)。まだ表示していない・レイアウト前なら nil
@@ -978,58 +964,6 @@ extension StockChartView {
         }
         set {
             self.style.legendTopInset = newValue
-        }
-    }
-
-    // MARK: 4本値
-
-    /// 4本値を動かしてから、薄く表示するまでの秒数(0 以下なら薄くしない)
-    @objc var crosshairFadeDelay: TimeInterval {
-        get {
-            return self.style.crosshairFadeDelay
-        }
-        set {
-            self.style.crosshairFadeDelay = newValue
-        }
-    }
-
-    /// 4本値を薄く表示するときの、4本値の枠・値のマーカー・矢印の不透明度(0 〜 1。既定 0.5)
-    @objc var crosshairFadedAlpha: CGFloat {
-        get {
-            return self.style.crosshairFadedAlpha
-        }
-        set {
-            self.style.crosshairFadedAlpha = newValue
-        }
-    }
-
-    /// 4本値を薄く表示するときの、十字線(縦線・横線)の不透明度(0 〜 1。既定 0.3)
-    @objc var crosshairFadedLineAlpha: CGFloat {
-        get {
-            return self.style.crosshairFadedLineAlpha
-        }
-        set {
-            self.style.crosshairFadedLineAlpha = newValue
-        }
-    }
-
-    /// 4本値の日付のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
-    @objc var dateMarkerImage: UIImage? {
-        get {
-            return self.style.dateMarkerImage
-        }
-        set {
-            self.style.dateMarkerImage = newValue
-        }
-    }
-
-    /// 4本値の価格のマーカーの画像(nil なら赤い矢印の形を塗る。画像はそのままの大きさで表示する)
-    @objc var yAxisMarkerImage: UIImage? {
-        get {
-            return self.style.yAxisMarkerImage
-        }
-        set {
-            self.style.yAxisMarkerImage = newValue
         }
     }
 }

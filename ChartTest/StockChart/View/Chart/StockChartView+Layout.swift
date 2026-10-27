@@ -8,7 +8,7 @@
 //  ・applyStyle()               … style が変わるたび。色・フォント・軸の設定と、スタイルに依存する制約
 //  ・updateSubChartVisibility() … サブチャートの有無が変わるたび。制約と描画領域を切り替える
 //
-//  【部品の重なり順】(奥から手前へ。arrangeSubviewOrder で決める)
+//  【部品の重なり順】(奥から手前へ。追加する順で決める。4本値の部品は CrosshairOverlayView が親に追加する)
 //   1. dateMarker(日付の赤い矢印)      … チャートより奥。透明なチャートが描く日付ラベルが矢印の上に重なって見える
 //   2. priceChartView / subChartView(チャート本体)
 //   3. crosshairView(十字線)
@@ -29,23 +29,11 @@ extension StockChartView {
     /// 部品の追加と、スタイルに依存しない制約の設定を行う(初期化時に1回だけ呼ばれる)
     func setup() {
         self.addCharts()
-        self.addCrosshairParts()
         self.addCrosshairGestures()
         self.addOverlays()
-        self.arrangeSubviewOrder()
+        self.addCrosshair()
         self.activateFixedConstraints()
         self.applyStyle()
-    }
-
-    /// 部品の重なり順を整える(追加した順に手前に重なるので、追加後に一部だけ入れ替える)
-    private func arrangeSubviewOrder() {
-        // 4本値の枠・マーカーは、最高値・最安値の文字や凡例より手前に表示する
-        for view in [self.ohlcInfoView, self.valueMarker, self.yAxisMarker] {
-            self.bringSubviewToFront(view)
-        }
-        // 日付のマーカー(矢印)は、チャートより奥に置く。
-        // チャートの背景は透明なので、矢印の上にチャートが描く日付ラベルの文字が重なって見える
-        self.sendSubviewToBack(self.dateMarker)
     }
 
     /// チャート本体(メイン・サブ)を追加する
@@ -66,17 +54,12 @@ extension StockChartView {
         self.subChartView.rightYAxisRenderer = self.subYAxisRenderer
     }
 
-    /// 4本値表示用の十字線・マーカー・枠を追加する(チャートの上に重ねる)。
-    /// 位置は Auto Layout ではなく updateCrosshair で frame を直接設定する
-    private func addCrosshairParts() {
-        for view in [self.crosshairView, self.ohlcInfoView, self.valueMarker, self.dateMarker, self.yAxisMarker] {
-            self.addSubview(view)
-        }
-        // マーカーと4本値の枠は、4本値がオンになるまで隠しておく
-        // (十字線は線を描かないことで隠れるので、isHidden にはしない)
-        for view in [self.ohlcInfoView, self.valueMarker, self.dateMarker, self.yAxisMarker] {
-            view.isHidden = true
-        }
+    /// 4本値の十字線・マーカー・枠を追加する(ほかの部品をすべて追加し終えてから呼ぶ)。
+    /// 十字線はチャートのすぐ上に置く。マーカーと4本値の枠は、追加されたときに CrosshairOverlayView が
+    /// この View に直接追加する(日付の矢印は一番奥、それ以外は一番手前)。
+    /// 位置は Auto Layout ではなく crosshairView.update() で frame を直接設定する
+    private func addCrosshair() {
+        self.insertSubview(self.crosshairView, aboveSubview: self.subChartView)
     }
 
     /// 十字線を動かすジェスチャーを、メイン・サブそれぞれのチャートに付ける。
@@ -251,20 +234,13 @@ extension StockChartView {
         self.updateSubChartVisibility()
     }
 
-    /// 外枠・区切り線・十字線・マーカーの色と線幅を設定する
+    /// 外枠・区切り線・凡例の背景の色と線幅を設定する
     private func applyColors() {
         self.frameView.layer.borderColor = self.style.borderColor.cgColor
         self.frameView.layer.borderWidth = self.style.borderWidth
         self.dividerView.backgroundColor = self.style.dividerColor
         self.priceLegendLabel.backgroundColor = self.style.legendBackgroundColor
         self.subLegendLabel.backgroundColor = self.style.legendBackgroundColor
-        self.crosshairView.lineColor = self.style.textColor
-        self.valueMarker.fillColor = UIColor(resource: .chartValueMarkerFill)
-        self.dateMarker.fillColor = self.style.increasingColor
-        self.yAxisMarker.fillColor = self.style.increasingColor
-        // 画像が設定されていれば、形を塗る代わりに画像を描く
-        self.dateMarker.backgroundImage = self.style.dateMarkerImage
-        self.yAxisMarker.backgroundImage = self.style.yAxisMarkerImage
 
         // データが0件のときのメッセージ(凡例と同じ文字の大きさ・色)
         self.noDataLabel.text = self.style.noDataMessage
