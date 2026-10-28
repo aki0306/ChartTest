@@ -16,6 +16,8 @@
 //
 //  ・keepsLabelsInside(枠内に収める): 描画領域の下端からはみ出すラベルを内側にずらして描き、上端からはみ出すラベルは描かない
 //    (サブチャートの「0」が X軸ラベルの領域にはみ出さないようにする)
+//  ・hidesLabelsAboveView(上端で切れるラベルを描かない): チャートViewの上端より上にはみ出すラベルは描かない
+//    (メインチャートの上の余白 style.priceTopInset を 0 にしたとき、一番上のラベルが半分切れて見えないようにする)
 //
 //  ※ 継承元の YAxisRenderer はアクター分離なしで宣言されているため、クラスを nonisolated にして
 //    override できるようにしている(LatestAlignedXAxisRenderer と同じ)。描画は常にメインスレッドで行われる。
@@ -32,6 +34,9 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
     /// 描画領域の上端・下端からはみ出すラベルを、内側にずらして描くか。
     /// メインスレッドからのみ読み書きする
     nonisolated(unsafe) var keepsLabelsInside = false
+    /// チャートViewの上端より上にはみ出すラベルを描かないか(はみ出した部分は切れて見えなくなるため)。
+    /// メインスレッドからのみ読み書きする
+    nonisolated(unsafe) var hidesLabelsAboveView = false
 
     /// Y軸ラベルを描く。DGCharts が描画のたびに呼ぶ
     /// - Parameters:
@@ -41,8 +46,11 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
     ///   - textAlign: 揃え方(右のY軸を外側に描く場合は左揃え)
     override func drawYLabels(context: CGContext, fixedPosition: CGFloat, positions: [CGPoint],
                               offset: CGFloat, textAlign: TextAlignment) {
-        // どちらの調整もしない場合は、DGCharts 標準の描き方にする
-        let needsAdjustment = self.centersLabels || self.keepsLabelsInside
+        // どの調整もしない場合は、DGCharts 標準の描き方にする
+        var needsAdjustment = self.centersLabels || self.keepsLabelsInside
+        if self.hidesLabelsAboveView {
+            needsAdjustment = true
+        }
         if !needsAdjustment {
             super.drawYLabels(context: context, fixedPosition: fixedPosition, positions: positions,
                               offset: offset, textAlign: textAlign)
@@ -89,6 +97,12 @@ nonisolated final class AlignedYAxisRenderer: YAxisRenderer {
             //   70,000 ← 間隔が狭い      70,000
             //   60,000                  60,000
             var y = positions[entry].y + offset
+            // チャートViewの上端より上にはみ出すラベルは、切れて見えるので描かない
+            if self.hidesLabelsAboveView {
+                if y < 0 {
+                    continue
+                }
+            }
             if self.keepsLabelsInside {
                 if y < self.viewPortHandler.contentTop {
                     continue

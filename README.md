@@ -334,6 +334,7 @@ final class MyChartViewController: UIViewController {
 テクニカル/設定を開いている間は、パネルを画面の上端〜セーフエリアの下端まで広げ、後ろの画面(チャート・下のボタン)をグレーにします。グレーの部分をタップするとパネルが閉じます(設定画面で「決定」していない変更は捨てます)。
 
 チャート本体の位置は `chartInsets`(セーフエリアの端からの余白)で決め、下の帯の分は `chartInsets.bottom` で空けています。
+上は `chartInsets.top` を 0 にし、チャートの中の上の余白(`style.priceTopInset`)も 0 にして、チャートを画面の上端まで伸ばしています。
 パネルは画面の上端〜セーフエリアの下端、背景のグレーは下の帯の上も含めて画面いっぱいに表示されます。
 
 ### 横画面の下の帯
@@ -921,6 +922,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | 凡例とチャートの線の間隔 | `legendBottomSpacing` | 4pt |
 | 右側の価格ラベル欄の幅 | `rightAxisWidth` | 65pt |
 | 下側の日付ラベル欄の高さ | `xAxisLabelHeight` | 20pt |
+| メインチャートの上の余白 | `priceTopInset`(このViewの上端から外枠の上の線まで。一番上の価格ラベルの上半分がはみ出す分。8pt より小さくすると、上端で切れる価格ラベルは描かない) | 8pt(横画面では 0) |
 | 日付ラベルを置く時刻(分の倍数) | `xAxisLabelMinuteMultiple`(5 なら、5分ちょうどの足を左から順に重ならない位置に置く。足種ごとの値は `ChartPeriod.xAxisLabelMinuteMultiple`) | 1分足・日中足は 5、それ以外は nil |
 | メインとサブの高さの比 | `priceHeightRatio`(メイン : サブ = この値 : 1) | 1.5(= 60 : 40) |
 | 初期表示の本数 | `visibleCount`(nil で全件。足種ごとの値は `ChartPeriod.visibleCount`) | 55 |

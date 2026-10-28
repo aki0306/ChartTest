@@ -195,7 +195,7 @@ final class StockChartView: UIView {
 
     // MARK: - 定数
 
-    /// 各チャートの描画領域の上下に確保する余白。
+    /// 各チャートの描画領域の上下に確保する余白(メインチャートの上だけは style.priceTopInset)。
     /// 描画領域の端ちょうどにあるY軸ラベルは文字の半分が領域外にはみ出すため、
     /// その部分がチャートViewの境界で切れないように余白を取っておく。
     /// (メインとサブはこの余白ぶん重ねて配置するので、見た目上の隙間にはならない)
@@ -257,6 +257,8 @@ final class StockChartView: UIView {
     /// 凡例の左端(style.legendLeadingInset。メイン・サブ・データなしのメッセージ)
     var legendLeadingConstraints: [NSLayoutConstraint] = []
 
+    /// 外枠の上端(メインチャートの描画領域の上端。style.priceTopInset)を決める制約
+    var frameTopConstraint: NSLayoutConstraint?
     /// サブチャートを区切り線の位置まで重ねるための制約
     var subTopConstraint: NSLayoutConstraint?
     /// 外枠の右端(Y軸ラベル領域の左端)を決める制約

@@ -309,7 +309,7 @@ final class LandscapeChartViewController: UIViewController {
     /// チャート(とテクニカル/設定タブ)を、この画面のセーフエリアの端からどれだけ内側に置くか。
     /// 下は帯(セーフエリアの下端から 44pt。LandscapeChartViewController.storyboard)と、その上の間隔 4pt の分を空ける。
     /// テクニカル/設定のパネルと背景のグレーは、この余白に関係なく、画面の上端〜下端いっぱいに表示する
-    @objc var chartInsets = UIEdgeInsets(top: 8, left: 0, bottom: 44 + 4, right: 8) {
+    @objc var chartInsets = UIEdgeInsets(top: 0, left: 0, bottom: 44 + 4, right: 8) {
         didSet {
             self.applyChartInsets()
         }
@@ -434,6 +434,9 @@ final class LandscapeChartViewController: UIViewController {
 
         // 表示中の範囲の最高値・最安値を、ローソク足の上・下に表示する
         self.chartView.showsHighLowLabels = true
+        // チャートを画面の上端まで伸ばす(chartInsets.top も 0)。外枠の上にラベルの分の余白を取らず、
+        // 上端からはみ出す価格ラベルは描かない(StockChartStyle.priceTopInset)
+        self.chartView.style.priceTopInset = 0
 
         // 必要に応じて設定を変更できる(例)
         // self.mainIndicator = .bollingerBands     // メインチャートの指標

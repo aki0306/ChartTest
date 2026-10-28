@@ -157,9 +157,8 @@ extension StockChartView {
             self.subChartView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
             self.subChartView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
 
-            // 外枠: 上端 = メインチャート描画領域の上端、左端 = このViewの左端
-            //       (右端・下端は applyLayoutConstraints で設定)
-            self.frameView.topAnchor.constraint(equalTo: self.priceChartView.topAnchor, constant: self.labelOverflowInset),
+            // 外枠: 左端 = このViewの左端
+            //       (上端・右端・下端は applyLayoutConstraints で設定)
             self.frameView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
 
             // 区切り線: メインチャート描画領域の下端に、外枠と同じ幅で配置する
@@ -221,6 +220,8 @@ extension StockChartView {
             renderer.centersLabels = self.style.centersYAxisLabels
             renderer.keepsLabelsInside = self.style.keepsYAxisLabelsInside
         }
+        // メインチャートの上の余白が、ラベルのはみ出す分より小さい場合は、上端で切れるラベルを描かない
+        self.priceYAxisRenderer.hidesLabelsAboveView = self.style.priceTopInset < self.labelOverflowInset
 
         // メインチャートのY軸: 区切り線付近のラベルがサブチャートの最上段ラベルと重ならないよう、
         // 下端付近(値幅の下から 6% 以内)のラベルは表示しない
@@ -338,13 +339,17 @@ extension StockChartView {
 
         // 既存の制約を無効化してから作り直す
         let oldConstraints = [
-            self.subTopConstraint, self.frameTrailingConstraint, self.dividerHeightConstraint,
+            self.frameTopConstraint, self.subTopConstraint, self.frameTrailingConstraint, self.dividerHeightConstraint,
             self.priceHeightConstraint, self.frameBottomWithSubConstraint,
             self.priceBottomConstraint, self.frameBottomWithoutSubConstraint,
         ]
         for constraint in oldConstraints {
             constraint?.isActive = false
         }
+
+        // 外枠の上端 = メインチャートの描画領域の上端(このViewの上端から style.priceTopInset 下)
+        let priceTopInset = self.style.priceTopInset
+        self.frameTopConstraint = self.frameView.topAnchor.constraint(equalTo: self.priceChartView.topAnchor, constant: priceTopInset)
 
         // サブチャートの上端: メインチャートの描画領域下端(= 区切り線)から、さらに inset 分上に重ねる。
         // こうするとサブチャートの描画領域上端(View上端 + inset)が区切り線とちょうど一致する
@@ -365,15 +370,15 @@ extension StockChartView {
         self.dividerHeightConstraint = self.dividerView.heightAnchor.constraint(equalToConstant: self.style.borderWidth)
 
         // [サブあり] メイン/サブの「描画領域」の高さ比を ratio : 1 にする。
-        //   メイン描画領域の高さ P' = P - inset * 2           (上下に inset)
-        //   サブ描画領域の高さ   V' = V - inset - xLabelHeight (上に inset、下にX軸ラベル)
+        //   メイン描画領域の高さ P' = P - priceTopInset - inset (上に priceTopInset、下に inset)
+        //   サブ描画領域の高さ   V' = V - inset - xLabelHeight   (上に inset、下にX軸ラベル)
         //   P' = ratio * V'  を P について解くと
-        //   P = ratio * V + (inset * 2 - ratio * (inset + xLabelHeight))
+        //   P = ratio * V + (priceTopInset + inset - ratio * (inset + xLabelHeight))
         let ratio = self.style.priceHeightRatio
         self.priceHeightConstraint = self.priceChartView.heightAnchor.constraint(
             equalTo: self.subChartView.heightAnchor,
             multiplier: ratio,
-            constant: inset * 2 - ratio * (inset + self.style.xAxisLabelHeight))
+            constant: priceTopInset + inset - ratio * (inset + self.style.xAxisLabelHeight))
 
         // [サブあり] 外枠の下端 = サブチャートのX軸ラベル領域の上端
         self.frameBottomWithSubConstraint = self.frameView.bottomAnchor.constraint(
@@ -386,6 +391,7 @@ extension StockChartView {
 
         // サブあり/なしに関係なく使う制約だけ、ここで有効にする。
         // サブあり/なしで切り替わる制約は updateSubChartVisibility で有効にする
+        self.frameTopConstraint?.isActive = true
         self.subTopConstraint?.isActive = true
         self.frameTrailingConstraint?.isActive = true
         self.dividerHeightConstraint?.isActive = true
@@ -433,7 +439,8 @@ extension StockChartView {
         } else {
             priceBottomOffset = self.style.xAxisLabelHeight
         }
-        self.priceChartView.setViewPortOffsets(left: 0, top: inset, right: self.style.rightAxisWidth,
+        // メインチャートの上側の余白は style.priceTopInset(横画面では 0 にして、外枠をこのViewの上端まで上げる)
+        self.priceChartView.setViewPortOffsets(left: 0, top: self.style.priceTopInset, right: self.style.rightAxisWidth,
                                                bottom: priceBottomOffset)
         self.subChartView.setViewPortOffsets(left: 0, top: inset, right: self.style.rightAxisWidth,
                                              bottom: self.style.xAxisLabelHeight)

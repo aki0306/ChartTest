@@ -91,6 +91,10 @@ struct StockChartStyle: Equatable {
     var rightAxisWidth: CGFloat = 65
     /// 下側のX軸(日付)ラベル領域の高さ
     var xAxisLabelHeight: CGFloat = 20
+    /// メインチャートの上の余白(このViewの上端から外枠の上の線まで)。8pt。
+    /// 外枠の上の線の高さにある価格ラベルは、文字の上半分が外枠より上にはみ出すので、その分を空けている。
+    /// 8pt より小さくすると(横画面では 0)、はみ出した部分がこのViewの上端で切れるラベルは描かない
+    var priceTopInset: CGFloat = 8
     /// 外枠・区切り線の線幅
     var borderWidth: CGFloat = 1
 
