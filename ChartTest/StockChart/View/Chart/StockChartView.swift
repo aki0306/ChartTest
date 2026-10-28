@@ -50,7 +50,7 @@
 //  ・StockChartView+Crosshair.swift      … 表示オプションの反映と、十字線を動かす操作
 //  ・CrosshairOverlayView.swift          … 十字線・マーカー・4本値の枠の表示と、十字線の位置・薄くする処理
 //  ・CrosshairMarkerLabel.swift          … マーカーの部品
-//  ・OHLCInfoView.swift                  … 4本値の枠
+//  ・OHLCInfoView.swift / .xib           … 4本値の枠(配置は XIB)
 //  初めて読む場合は、このファイル → Layout → Rendering → AxisRange → Crosshair の順がおすすめ。
 //
 //  【描画の流れ】

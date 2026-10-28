@@ -856,7 +856,7 @@ Xcode で色セットを選び、右側の **Attributes インスペクタ**(⌥
 | フォルダ | 色セット | 使う場所 |
 |---|---|---|
 | `Chart` | `ChartIncreasing`・`ChartLine0`〜`ChartLine4`・`ChartGrid` など | `StockChartStyle` の各色の初期値(名前は下の表の項目名に対応) |
-| `Crosshair` | `ChartCrosshairLine`・`ChartOHLCBackground`・`ChartOHLCText`・`ChartMarkerText`、画像 `ChartValueMarker`・`ChartDateMarker`・`ChartYAxisMarker` | 十字線・4本値の枠・マーカー(マーカーの形は画像。値のマーカーは文字の長さに合わせて真ん中を伸ばす) |
+| `Crosshair` | `ChartCrosshairLine`・`ChartOHLCText`・`ChartMarkerText`、画像 `ChartOHLCInfoBackground`・`ChartValueMarker`・`ChartDateMarker`・`ChartYAxisMarker` | 十字線・4本値の枠・マーカー(枠とマーカーの形は画像で、その上に文字を載せる。画像は文字の長さに合わせて伸ばす) |
 | `Panel` | `ChartPanelTab`・`ChartPanelTabText`・`ChartDimming` | 「テクニカル」「設定」タブと、パネルを開いたときの後ろの暗さ |
 | `Menu` | `ChartMenuHeader`・`ChartMenuRow`・`ChartMenuSelectedRow` など | 設定画面の左リストとテクニカルのメニュー(両方で同じ色セットを使う)・設定画面のボタンの枠線 |
 | `PeriodTab` | `ChartPeriodTabSelected`・`ChartPeriodTabNormal`・`ChartPeriodTabDisabled` など | 設定画面の足種タブ |
@@ -943,7 +943,7 @@ chartView.increasingColor = UIColor.systemRedColor;
 | テクニカルのメニュー(見出しの色・文字の大きさ) | [`TechnicalMenuView.swift`](ChartTest/StockChart/TechnicalMenu/TechnicalMenuView.swift) | `headerColor`・`selectedRowColor`、`makeColumn` / `applyRowStyle` 内のフォント |
 | 「テクニカル」「設定」タブ | [`LandscapeChartViewController+Panels.swift`](ChartTest/StockChart/LandscapeScreen/LandscapeChartViewController+Panels.swift) | `configureTabButton` |
 | 4本値(十字線の色、マーカーの画像、薄くするまでの秒数・薄くしたときの濃さ) | [`CrosshairOverlayView.swift`](ChartTest/StockChart/View/Crosshair/CrosshairOverlayView.swift) | 先頭の「見た目」(`lineColor`・`fadeDelay`・`fadedAlpha`・`fadedLineAlpha`)と「部品」(`valueMarker`・`dateMarker`・`yAxisMarker`) |
-| 4本値の枠(文字の大きさ・背景) | [`OHLCInfoView.swift`](ChartTest/StockChart/View/Crosshair/OHLCInfoView.swift) | 先頭の「見た目」(余白・行間・角の丸み・フォント) |
+| 4本値の枠(文字の大きさ・配置) | [`OHLCInfoView.xib`](ChartTest/StockChart/View/Crosshair/OHLCInfoView.xib) | Interface Builder で開いて編集する(Content View = 枠全体。余白・日付の欄の高さ・行間・フォント・文字の色)。File's Owner は `OHLCInfoView`。背景は画像 `ChartOHLCInfoBackground`(伸ばさない部分は Assets の Slicing) |
 | 凡例・Y軸の数値の書式(桁区切り・小数の桁数) | [`ChartNumberFormatter.swift`](ChartTest/StockChart/View/Chart/ChartNumberFormatter.swift) | `ChartNumberFormatter` |
 | 凡例の文言(「短期移動平均(5)」など) | 指標ごとのファイル([`Model/Indicators/Main/`](ChartTest/StockChart/Model/Indicators/Main)・[`Model/Indicators/Sub/`](ChartTest/StockChart/Model/Indicators/Sub)) | 各指標の `label` / `legendTitle` |
 
@@ -1292,7 +1292,8 @@ ChartTest/
    │       ├─ StockChartView+Crosshair.swift    十字線を動かす操作
    │       ├─ CrosshairOverlayView.swift        十字線・マーカー・4本値の枠の表示と配置
    │       ├─ CrosshairMarkerLabel.swift        マーカーの部品
-   │       └─ OHLCInfoView.swift                4本値の枠
+   │       ├─ OHLCInfoView.swift                4本値の枠
+   │       └─ OHLCInfoView.xib                  4本値の枠の配置(Interface Builder)
    │
    ├─ TechnicalMenu/                    テクニカルのメニュー(テクニカルタブ)だけで使うもの
    │   └─ TechnicalMenuView.swift           指標の選択メニュー
@@ -1387,6 +1388,7 @@ docs/images/                            README の画像
 | | `CrosshairOverlayView.swift` | 十字線・マーカー・4本値の枠の表示と配置、十字線の位置・薄くする処理(4本値は横画面でしか使わないので、色・秒数・濃さもここで決める) |
 | | `CrosshairMarkerLabel.swift` | マーカーの部品 |
 | | `OHLCInfoView.swift` | 4本値の枠(日付・始値・高値・安値・終値) |
+| | `OHLCInfoView.xib` | 4本値の枠の配置(背景の画像と、日付・4本値のラベル) |
 
 ### 設定画面(`StockChart/SettingsScreen/`)
 

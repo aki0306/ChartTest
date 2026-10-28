@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="25098" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_12" orientation="landscape" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="25073"/>
+        <capability name="Named colors" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner" customClass="OHLCInfoView" customModule="ChartTest" customModuleProvider="target">
+            <connections>
+                <outlet property="closeLabel" destination="oLb-00-005" id="oOt-00-006"/>
+                <outlet property="contentView" destination="oVw-00-001" id="oOt-00-001"/>
+                <outlet property="dateLabel" destination="oLb-00-001" id="oOt-00-002"/>
+                <outlet property="highLabel" destination="oLb-00-004" id="oOt-00-005"/>
+                <outlet property="lowLabel" destination="oLb-00-003" id="oOt-00-004"/>
+                <outlet property="openLabel" destination="oLb-00-002" id="oOt-00-003"/>
+            </connections>
+        </placeholder>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="oVw-00-001" userLabel="Content View">
+            <rect key="frame" x="0.0" y="0.0" width="140" height="63"/>
+            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+            <subviews>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" image="ChartOHLCInfoBackground" translatesAutoresizingMaskIntoConstraints="NO" id="oIm-00-001" userLabel="Background Image">
+                    <rect key="frame" x="0.0" y="0.0" width="140" height="63"/>
+                </imageView>
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="2026/04/06" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="oLb-00-001" userLabel="Date Label">
+                    <rect key="frame" x="10" y="0.0" width="120" height="22"/>
+                    <constraints>
+                        <constraint firstAttribute="height" constant="22" id="oLc-00-001"/>
+                    </constraints>
+                    <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="13"/>
+                    <color key="textColor" name="ChartOHLCText"/>
+                    <nil key="highlightedColor"/>
+                </label>
+                <stackView opaque="NO" contentMode="scaleToFill" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="oSt-00-001" userLabel="Value Stack">
+                    <rect key="frame" x="10" y="26" width="120" height="31"/>
+                    <subviews>
+                        <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="2" translatesAutoresizingMaskIntoConstraints="NO" id="oSt-00-002" userLabel="Left Column">
+                            <rect key="frame" x="0.0" y="0.0" width="59.333333333333336" height="31"/>
+                            <subviews>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="始値：116" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" horizontalHuggingPriority="251" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="oLb-00-002" userLabel="Open Label">
+                                    <rect key="frame" x="0.0" y="0.0" width="59.333333333333336" height="14.666666666666666"/>
+                                    <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                    <color key="textColor" name="ChartOHLCText"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="安値：115" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" horizontalHuggingPriority="251" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="oLb-00-003" userLabel="Low Label">
+                                    <rect key="frame" x="0.0" y="16.666666666666664" width="59.333333333333336" height="14.333333333333336"/>
+                                    <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                    <color key="textColor" name="ChartOHLCText"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                            </subviews>
+                        </stackView>
+                        <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" spacing="2" translatesAutoresizingMaskIntoConstraints="NO" id="oSt-00-003" userLabel="Right Column">
+                            <rect key="frame" x="67.333333333333329" y="0.0" width="52.666666666666671" height="31"/>
+                            <subviews>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="高値：118" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="oLb-00-004" userLabel="High Label">
+                                    <rect key="frame" x="0.0" y="0.0" width="52.666666666666664" height="14.666666666666666"/>
+                                    <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                    <color key="textColor" name="ChartOHLCText"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="終値：115" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" horizontalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="oLb-00-005" userLabel="Close Label">
+                                    <rect key="frame" x="0.0" y="16.666666666666664" width="52.666666666666664" height="14.333333333333336"/>
+                                    <fontDescription key="fontDescription" type="system" pointSize="12"/>
+                                    <color key="textColor" name="ChartOHLCText"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                            </subviews>
+                        </stackView>
+                    </subviews>
+                </stackView>
+            </subviews>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+            <constraints>
+                <constraint firstItem="oIm-00-001" firstAttribute="top" secondItem="oVw-00-001" secondAttribute="top" id="oCt-00-001"/>
+                <constraint firstAttribute="bottom" secondItem="oIm-00-001" secondAttribute="bottom" id="oCt-00-002"/>
+                <constraint firstItem="oIm-00-001" firstAttribute="leading" secondItem="oVw-00-001" secondAttribute="leading" id="oCt-00-003"/>
+                <constraint firstAttribute="trailing" secondItem="oIm-00-001" secondAttribute="trailing" id="oCt-00-004"/>
+                <constraint firstItem="oLb-00-001" firstAttribute="top" secondItem="oVw-00-001" secondAttribute="top" id="oCt-00-005"/>
+                <constraint firstItem="oLb-00-001" firstAttribute="leading" secondItem="oVw-00-001" secondAttribute="leading" constant="10" id="oCt-00-006"/>
+                <constraint firstItem="oLb-00-001" firstAttribute="trailing" secondItem="oSt-00-001" secondAttribute="trailing" id="oCt-00-007"/>
+                <constraint firstItem="oSt-00-001" firstAttribute="top" secondItem="oLb-00-001" secondAttribute="bottom" constant="4" id="oCt-00-008"/>
+                <constraint firstItem="oSt-00-001" firstAttribute="leading" secondItem="oVw-00-001" secondAttribute="leading" constant="10" id="oCt-00-009"/>
+                <constraint firstAttribute="trailing" secondItem="oSt-00-001" secondAttribute="trailing" priority="999" constant="10" id="oCt-00-010"/>
+                <constraint firstAttribute="bottom" secondItem="oSt-00-001" secondAttribute="bottom" priority="999" constant="6" id="oCt-00-011"/>
+            </constraints>
+            <nil key="simulatedTopBarMetrics"/>
+            <nil key="simulatedBottomBarMetrics"/>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <point key="canvasLocation" x="138" y="100"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="ChartOHLCInfoBackground" width="40" height="50"/>
+        <namedColor name="ChartOHLCText">
+            <color red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+        </namedColor>
+    </resources>
+</document>

@@ -1,0 +1,50 @@
+{
+  "images" : [
+    {
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "ChartOHLCInfoBackground@2x.png",
+      "idiom" : "universal",
+      "resizing" : {
+        "cap-insets" : {
+          "bottom" : 20,
+          "left" : 20,
+          "right" : 20,
+          "top" : 60
+        },
+        "center" : {
+          "height" : 20,
+          "mode" : "stretch",
+          "width" : 40
+        },
+        "mode" : "9-part"
+      },
+      "scale" : "2x"
+    },
+    {
+      "filename" : "ChartOHLCInfoBackground@3x.png",
+      "idiom" : "universal",
+      "resizing" : {
+        "cap-insets" : {
+          "bottom" : 30,
+          "left" : 30,
+          "right" : 30,
+          "top" : 90
+        },
+        "center" : {
+          "height" : 30,
+          "mode" : "stretch",
+          "width" : 60
+        },
+        "mode" : "9-part"
+      },
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
