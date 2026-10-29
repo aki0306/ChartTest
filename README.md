@@ -415,8 +415,21 @@ landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES complet
 
 | 画面 | 動き |
 |---|---|
-| チャートだけ(`StockChartView`) | `chartType` の値に関係なく、終値の折線 + 移動平均線(短期・長期)で描く。サブチャート(出来高など)と現在値の破線は描かない(`isLineChartOnly` が true になり、`effectiveChartType` が折線チャートになる。`chartType` は変えないので、ほかの銘柄にすると元の種類で描く) |
-| 横画面(`LandscapeChartViewController`) | 折線チャートで描き、下の帯のチャートの種類のメニューには折線チャートだけを出す。覚えておくチャートの種類(`ChartStateStore`)は上書きしないので、ほかの海外の銘柄を開くと、前回選んでいた種類に戻る |
+| チャートだけ(`StockChartView`) | 終値の折線 + 移動平均線(短期・長期)で描く。サブチャート(出来高など)と現在値の破線は描かない |
+| 横画面(`LandscapeChartViewController`) | 終値の折線 + 移動平均線で描き、下の帯のチャートの種類のメニューには折線チャートだけを出す |
+
+どちらの画面も `chartType` は書き換えず、描くときだけ折線チャートにします(`effectiveChartType`)。そのため、ほかの銘柄にすると、前に選んでいた種類で描きます。
+
+この機能のコードは、次の場所にあります。
+
+| 何をするか | 場所 |
+|---|---|
+| 対象の銘柄コードの一覧と、対象かどうかの判定 | `LineChartOnlyCodes.swift`(`codes`・`contains(_:market:)`) |
+| 縦画面: 対象か・描く種類 | `StockChartView.swift`(`isLineChartOnly`・`effectiveChartType`) |
+| 縦画面: 現在値の破線を引かない | `StockChartView.swift`(`render` で `showsOverseasCurrentPrice` を渡す)・`ChartContentBuilder.swift`(`content(for:…)`) |
+| 横画面: 対象か・描く種類 | `LandscapeChartViewController.swift`(`qCode`・`isLineChartOnly`・`effectiveChartType`・`chartTypeChoices`) |
+| 横画面: 下の帯のメニュー | `LandscapeChartViewController+Footer.swift`(`updateChartTypeMenu`) |
+| テスト | `ChartTestTests/LineChartOnlyTests.swift` |
 
 アプリの起動時に一覧を一度だけ設定し、それぞれの画面には、データを渡す前に `market` と `qCode` を設定します。
 

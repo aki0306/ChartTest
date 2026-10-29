@@ -173,26 +173,35 @@ final class LandscapeChartViewController: UIViewController {
         }
     }
 
-    /// 銘柄コード(Objective-C では NSString *。nil = 未設定)。
-    /// 折線チャートだけで表示する銘柄(LineChartOnlyCodes)なら、折線チャートで描き、チャートの種類のメニューには折線チャートだけを出す。
-    /// market と一緒に、データを渡す前に設定する
+    /// 銘柄コード(Objective-C では NSString *。nil = 未設定)。market と一緒に、データを渡す前に設定する。
+    /// 折線チャートだけで表示する銘柄(LineChartOnlyCodes)なら、chartType に関係なく折線チャートで描き、
+    /// チャートの種類のメニューには折線チャートだけを出す(effectiveChartType)
     @objc var qCode: String? {
         didSet {
             guard self.qCode != oldValue else {
                 return
             }
             self.loadViewIfNeeded()
-            self.applyLineChartOnly()
+            // 描くチャートの種類(effectiveChartType)が変わることがあるので、描き直して下の帯のボタンも合わせる
+            self.applyDisplayOptionsToChart()
+            self.reloadChart(keepsViewport: true)
+            self.updateChartTypeMenu()
+            self.updatePeriodMenu()
         }
     }
-
-    /// 折線チャートだけで表示する銘柄を表示しているか(applyLineChartOnly で合わせる)。
-    /// 対象の銘柄から外れたときに、覚えているチャートの種類に戻すのに使う
-    private var isShowingLineChartOnly = false
 
     /// 折線チャートだけで表示する銘柄か(海外指数で、qCode が LineChartOnlyCodes に入っている)
     var isLineChartOnly: Bool {
         return LineChartOnlyCodes.contains(self.qCode, market: self.market)
+    }
+
+    /// 実際に描くチャートの種類。折線チャートだけで表示する銘柄は、chartType に関係なく折線チャートにする
+    /// (縦画面の StockChartView.effectiveChartType と同じ。chartType は変えないので、ほかの銘柄にすると元の種類で描く)
+    var effectiveChartType: ChartType {
+        if self.isLineChartOnly {
+            return .lineChart
+        }
+        return self.chartType
     }
 
     /// 選べるチャートの種類(下の帯のメニューに並べる順)。折線チャートだけで表示する銘柄は、折線チャートだけ
@@ -251,10 +260,6 @@ final class LandscapeChartViewController: UIViewController {
     /// 下の帯のメニューで選んだときは、使えない足種なら使える足種に切り替える。+Footer.swift の switchPeriodIfUnavailable)
     @objc var chartType: ChartType = LandscapeChartViewController.initialState.chartType {
         didSet {
-            // 折線チャートだけで表示する銘柄は、ほかの種類にしない(didSet の中で代入しても、didSet はもう一度呼ばれない)
-            if self.isLineChartOnly {
-                self.chartType = .lineChart
-            }
             guard self.chartType != oldValue else {
                 return
             }
@@ -720,23 +725,25 @@ final class LandscapeChartViewController: UIViewController {
         let slots = CandleSlots(self.candles)
         var builder = ChartContentBuilder(candles: slots.candles, parameters: self.parameters)
         builder.precomputed = self.indicatorValues
-        let content = builder.content(for: self.chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
+        // 折線チャートだけで表示する銘柄は、chartType に関係なく折線チャートで描く
+        let chartType = self.effectiveChartType
+        let content = builder.content(for: chartType, mainIndicator: self.mainIndicator, subIndicator: self.subIndicator,
                                       market: self.market, period: self.period)
         // 足種・指数の種類・チャートの種類が前回と同じなら、データの更新として直前の表示範囲を引き継ぐ
-        let rangeKey = VisibleRangeKey(period: self.period, market: self.market, chartType: self.chartType)
+        let rangeKey = VisibleRangeKey(period: self.period, market: self.market, chartType: chartType)
         self.chartView.display(candles: content.candles,
                                main: content.main,
                                sub: content.sub,
                                keepsViewport: keepsViewport,
-                               leadingDates: StockChartView.leadingDates(of: slots, chartType: self.chartType),
-                               trailingDates: StockChartView.trailingDates(of: slots, chartType: self.chartType),
+                               leadingDates: StockChartView.leadingDates(of: slots, chartType: chartType),
+                               trailingDates: StockChartView.trailingDates(of: slots, chartType: chartType),
                                rangeKey: rangeKey)
     }
 
     /// 表示オプションをチャートに反映する。
     /// どのオプションが効くか(ローソク足以外では4本値を出さない など)は Model の ChartDisplayOptions.effective が決める
     func applyDisplayOptionsToChart() {
-        self.chartView.displayOptions = self.displayOptions.effective(for: self.chartType, market: self.market)
+        self.chartView.displayOptions = self.displayOptions.effective(for: self.effectiveChartType, market: self.market)
         self.saveState()
     }
 
@@ -752,18 +759,12 @@ final class LandscapeChartViewController: UIViewController {
                               displayOptions: self.displayOptions)
     }
 
-    /// 今の状態を、今の market の種類(国内/海外)として覚える。状態を戻している最中は覚えない。
-    /// 折線チャートだけで表示する銘柄のときは、チャートの種類は覚えているものを残す
-    /// (折線チャートで覚えると、ほかの海外の銘柄を開いたときも折線チャートになるため)
+    /// 今の状態を、今の market の種類(国内/海外)として覚える。状態を戻している最中は覚えない
     private func saveState() {
         guard !self.isRestoringState else {
             return
         }
-        var state = self.currentState
-        if self.isLineChartOnly {
-            state.chartType = ChartStateStore.state(for: self.market).chartType
-        }
-        ChartStateStore.save(state, for: self.market)
+        ChartStateStore.save(self.currentState, for: self.market)
     }
 
     /// 指定した種類(国内/海外)で覚えている状態に戻す(描き直しは呼び出し側で行う)
@@ -811,9 +812,10 @@ final class LandscapeChartViewController: UIViewController {
         self.menuView.allowsOnlyNone = !self.chartType.usesTechnicalIndicators(in: self.market)
         self.applyIndicatorChoices()
 
-        // 折線チャートだけで表示する銘柄なら折線チャートにし、選べない種類だった場合は、その指数の既定の種類にする
-        // (それぞれの didSet でも描き直すが、最後にまとめて描き直す)
-        self.applyChartTypeChoices()
+        // 選べない種類だった場合は、その指数の既定の種類にする(それぞれの didSet でも描き直すが、最後にまとめて描き直す)
+        if !ChartType.choices(for: self.market).contains(self.chartType) {
+            self.chartType = ChartType.defaultType(for: self.market)
+        }
 
         self.applyDisplayOptionsToChart()
         self.reloadChart(keepsViewport: true)
@@ -826,38 +828,6 @@ final class LandscapeChartViewController: UIViewController {
         // 下の帯のボタンの表示も合わせる(足種は、国内/海外ごとに前回選んでいた足種に変わっていることがある)
         self.updateChartTypeMenu()
         self.updatePeriodMenu()
-    }
-}
-
-// MARK: - 折線チャートだけで表示する銘柄
-
-extension LandscapeChartViewController {
-
-    /// 銘柄コード(qCode)が変わったとき。折線チャートだけで表示する銘柄かどうかに合わせて、チャートの種類とメニューを切り替える
-    func applyLineChartOnly() {
-        self.applyChartTypeChoices()
-        // チャートの種類が変わらなくても、メニューに並べる種類は変わる
-        self.updateChartTypeMenu()
-    }
-
-    /// チャートの種類を、選べる種類(chartTypeChoices)に合わせる。
-    ///   ・折線チャートだけで表示する銘柄: 折線チャートにする
-    ///   ・対象の銘柄から外れたとき: 覚えているチャートの種類(ChartStateStore)に戻す
-    ///   ・この指数で選べない種類だったとき: その指数の既定の種類にする
-    func applyChartTypeChoices() {
-        let isLineChartOnly = self.isLineChartOnly
-        let wasLineChartOnly = self.isShowingLineChartOnly
-        self.isShowingLineChartOnly = isLineChartOnly
-        if isLineChartOnly {
-            self.chartType = .lineChart
-            return
-        }
-        if wasLineChartOnly {
-            self.chartType = ChartStateStore.state(for: self.market).chartType
-        }
-        if !ChartType.choices(for: self.market).contains(self.chartType) {
-            self.chartType = ChartType.defaultType(for: self.market)
-        }
     }
 }
 

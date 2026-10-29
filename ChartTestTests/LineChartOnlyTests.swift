@@ -4,7 +4,7 @@
 //
 //  折線チャートだけで表示する銘柄(LineChartOnlyCodes)のテスト。
 //  ・縦画面(StockChartView): 対象の銘柄は、chartType に関係なく折線チャートで描く
-//  ・横画面(LandscapeChartViewController): 対象の銘柄は折線チャートだけを選べ、覚えておくチャートの種類は上書きしない
+//  ・横画面(LandscapeChartViewController): 対象の銘柄は折線チャートで描き、折線チャートだけを選べる。chartType は変えない
 //
 //  ChartStateStore・LineChartOnlyCodes はアプリ全体で1つなので、テストの中で毎回最初の状態にする
 //  (init で行うと、ほかのテストが init と本体の間に動くことがあるため)
@@ -77,8 +77,8 @@ struct LineChartOnlyTests {
 
     // MARK: - 横画面
 
-    /// 海外の対象の銘柄は折線チャートになり、メニューも折線チャートだけになる。
-    /// 対象から外れると、覚えているチャートの種類(ローソク足)に戻る
+    /// 海外の対象の銘柄は折線チャートで描き、メニューも折線チャートだけになる。
+    /// chartType(覚えておく種類)は変えないので、対象から外れると元の種類(ローソク足)で描く
     @Test
     func testLandscapeOverseasLineOnlyCode() {
         self.reset()
@@ -88,32 +88,31 @@ struct LineChartOnlyTests {
         viewController.setCandles(SampleData.candles(for: viewController.period), period: viewController.period)
 
         viewController.qCode = self.lineOnlyCode
-        #expect(viewController.chartType == .lineChart)
+        #expect(viewController.effectiveChartType == .lineChart)
         #expect(viewController.chartTypeChoices == [.lineChart])
+        // 描いているのは折線チャート(ローソク足は描かない)
+        #expect(viewController.chartView.mainContent.priceStyle == .hidden)
 
-        // コードからほかの種類にしても、折線チャートのまま
-        viewController.chartType = .candlestick
-        #expect(viewController.chartType == .lineChart)
-
-        // 覚えておくチャートの種類は、折線チャートで上書きしない
+        // chartType と、覚えておくチャートの種類は変えない
+        #expect(viewController.chartType == .candlestick)
         #expect(ChartStateStore.state(for: .overseasDaily).chartType == .candlestick)
 
         viewController.qCode = self.otherCode
-        #expect(viewController.chartType == .candlestick)
+        #expect(viewController.effectiveChartType == .candlestick)
         #expect(viewController.chartTypeChoices == ChartType.choices(for: .overseasDaily))
     }
 
-    /// 対象の銘柄のまま国内に切り替えると、国内で覚えている種類に戻り、すべての種類を選べる
+    /// 対象の銘柄のまま国内に切り替えると、国内で覚えている種類で描き、すべての種類を選べる
     @Test
     func testLandscapeSwitchToDomestic() {
         self.reset()
         let viewController = LandscapeChartViewController.instantiate()
         viewController.market = .overseasDaily
         viewController.qCode = self.lineOnlyCode
-        #expect(viewController.chartType == .lineChart)
+        #expect(viewController.effectiveChartType == .lineChart)
 
         viewController.market = .japanIndex
-        #expect(viewController.chartType == .candlestick)
+        #expect(viewController.effectiveChartType == .candlestick)
         #expect(viewController.chartTypeChoices == ChartType.choices(for: .japanIndex))
     }
 }

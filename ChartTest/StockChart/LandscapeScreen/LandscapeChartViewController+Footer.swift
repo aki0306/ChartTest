@@ -72,7 +72,7 @@ extension LandscapeChartViewController {
                 completion([])
                 return
             }
-            let selectedType = self.chartType
+            let selectedType = self.effectiveChartType
             var actions: [UIAction] = []
             for chartType in self.chartTypeChoices {
                 let action = UIAction(title: chartType.title) { [weak self] _ in
@@ -87,13 +87,15 @@ extension LandscapeChartViewController {
         }
         // ボタンの幅は、すべての種類の名前のうち一番長いもの(「折線チャート」など)が1行で入る幅にする
         let candidates = ChartType.allCases.map { chartType in chartType.title }
-        self.footerView.setChartTypeMenu(title: self.chartType.title, candidates: candidates, menu: UIMenu(children: [items]))
+        self.footerView.setChartTypeMenu(title: self.effectiveChartType.title, candidates: candidates,
+                                         menu: UIMenu(children: [items]))
     }
 
     /// チャートの種類のメニューで種類が選ばれたとき(流れの②)
     private func chartTypeMenuSelected(_ chartType: ChartType) {
         // 選んでいる種類をもう一度選んだときは、何もしない
-        guard chartType != self.chartType else {
+        // (折線チャートだけで表示する銘柄は、メニューに折線チャートしかないので、いつもここで終わる)
+        guard chartType != self.effectiveChartType else {
             return
         }
         // 1. 種類を変える(didSet でチャートを描き直し、ボタンの文字も合わせる)
@@ -160,7 +162,7 @@ extension LandscapeChartViewController {
 
     /// 今のチャートの種類・指数の種類で選べる足種(VWAP は 日中足 だけ、新値足・折線チャートは 1分足 を除く)
     private var availablePeriods: [ChartPeriod] {
-        return self.chartType.periods(in: self.market)
+        return self.effectiveChartType.periods(in: self.market)
     }
 
     /// 表示中の足種が今のチャートの種類では選べない場合(1分足のまま新値足・折線チャートにした・日足のまま VWAP にした など)、

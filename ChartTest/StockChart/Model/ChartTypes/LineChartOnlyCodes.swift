@@ -4,15 +4,24 @@
 //
 //  【Model】折線チャートだけで表示する海外の銘柄コードの一覧(終値しかない指数など)。
 //
-//  アプリの起動時に、呼び出し側が一度だけ設定する。縦画面(StockChartView)・横画面(LandscapeChartViewController)の両方で使う。
-//  一覧に入っている銘柄コード(qCode)を海外指数で表示すると:
-//    ・縦画面: chartType の値に関係なく、終値の折線 + 移動平均線(短期・長期)で描く。
-//             サブチャート(出来高など)と、現在値の破線は描かない(StockChartView.isLineChartOnly)
-//    ・横画面: 折線チャートで描き、下の帯のチャートの種類のメニューには折線チャートだけを出す
+//  【使い方】
+//   1. アプリの起動時に一度だけ、対象の銘柄コードを入れる
+//        Swift:        LineChartOnlyCodes.codes = ["XXXX", "YYYY"]
+//        Objective-C:  LineChartOnlyCodes.codes = @[@"XXXX", @"YYYY"];
+//   2. チャートを表示するときは、データを渡す前に market(海外)と qCode(銘柄コード)を設定する
+//        self.chartView.market = IndexMarketOverseasDaily;
+//        self.chartView.qCode = qCode;
+//
+//  【どう表示されるか】(海外の銘柄で、qCode が一覧に入っているとき)
+//    ・縦画面: 終値の折線 + 移動平均線(短期・長期)。サブチャート(出来高など)と、現在値の破線は描かない
+//    ・横画面: 終値の折線 + 移動平均線。下の帯のチャートの種類のメニューには、折線チャートだけを出す
 //  国内(日本株・日本株価指数)の銘柄コードは、一覧に入っていても対象にしない。
 //
-//    Swift:        LineChartOnlyCodes.codes = ["XXXX", "YYYY"]
-//    Objective-C:  LineChartOnlyCodes.codes = @[@"XXXX", @"YYYY"];
+//  【しくみ】(chartType は書き換えない。描くときだけ折線チャートにする)
+//    contains(_:market:) で対象か決める
+//      → StockChartView.isLineChartOnly / LandscapeChartViewController.isLineChartOnly
+//      → それぞれの effectiveChartType が .lineChart になり、描画(render / reloadChart)はこれを使う
+//    縦画面の破線は、StockChartView.render が ChartContentBuilder.content の showsOverseasCurrentPrice で止める
 //
 
 import Foundation
