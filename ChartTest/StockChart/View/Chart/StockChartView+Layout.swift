@@ -128,7 +128,6 @@ extension StockChartView {
             view.isUserInteractionEnabled = false  // タッチは下のチャートに届ける
             self.addSubview(view)
         }
-        self.frameView.backgroundColor = .clear  // 外枠は線(layer.border)だけを描く
 
         // データが0件のときのメッセージ。表示するのは空のデータを渡されたときだけ(render で切り替える)
         self.noDataLabel.numberOfLines = 0  // 幅が足りないときは折り返す
@@ -237,8 +236,9 @@ extension StockChartView {
 
     /// 外枠・区切り線・凡例の背景の色と線幅を設定する
     private func applyColors() {
-        self.frameView.layer.borderColor = self.style.borderColor.cgColor
-        self.frameView.layer.borderWidth = self.style.borderWidth
+        self.frameView.lineColor = self.style.borderColor
+        self.frameView.lineWidth = self.style.borderWidth
+        self.frameView.edges = self.style.borderEdges
         self.dividerView.backgroundColor = self.style.dividerColor
         self.priceLegendLabel.backgroundColor = self.style.legendBackgroundColor
         self.subLegendLabel.backgroundColor = self.style.legendBackgroundColor
