@@ -437,6 +437,8 @@ final class LandscapeChartViewController: UIViewController {
         // チャートを画面の上端まで伸ばす(chartInsets.top も 0)。外枠の上にラベルの分の余白を取らず、
         // 上端からはみ出す価格ラベルは描かない(StockChartStyle.priceTopInset)
         self.chartView.style.priceTopInset = 0
+        // 外枠の左と上の線は描かない(右と下の線だけ)
+        self.chartView.style.borderEdges = [.right, .bottom]
 
         // 必要に応じて設定を変更できる(例)
         // self.mainIndicator = .bollingerBands     // メインチャートの指標

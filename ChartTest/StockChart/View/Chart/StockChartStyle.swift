@@ -97,6 +97,8 @@ struct StockChartStyle: Equatable {
     var priceTopInset: CGFloat = 8
     /// 外枠・区切り線の線幅
     var borderWidth: CGFloat = 1
+    /// 外枠の線を描く辺(横画面では左と上を描かない)
+    var borderEdges: UIRectEdge = .all
 
     // MARK: - X軸ラベル(日付)
 

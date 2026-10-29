@@ -227,7 +227,7 @@ final class StockChartView: UIView {
         viewPortHandler: self.subChartView.viewPortHandler, axis: self.subChartView.xAxis,
         transformer: self.subChartView.getTransformer(forAxis: .left))
     /// メイン・サブ全体を囲む外枠(チャートの上に重ねて表示)
-    let frameView = UIView()
+    let frameView = ChartFrameView()
     /// メインとサブの間の区切り線
     let dividerView = UIView()
     /// メインチャートの凡例(例:「移動平均 短期移動平均(5) 長期移動平均(25)」)。外枠の内側・左上に重ねて表示する
