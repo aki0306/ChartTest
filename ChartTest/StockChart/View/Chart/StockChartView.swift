@@ -719,8 +719,10 @@ extension StockChartView {
         var builder = ChartContentBuilder(candles: slots.candles, parameters: self.period.indicatorParameters)
         builder.precomputed = indicatorValues
         let chartType = self.effectiveChartType
+        // 折線チャートだけで表示する銘柄は、終値の折線 + 移動平均線だけを描き、現在値の破線は引かない
         let content = builder.content(for: chartType, mainIndicator: self.effectiveMainIndicator,
-                                      subIndicator: self.effectiveSubIndicator, market: self.market, period: self.period)
+                                      subIndicator: self.effectiveSubIndicator, market: self.market, period: self.period,
+                                      showsOverseasCurrentPrice: !self.isLineChartOnly)
         // 足種・指数の種類・チャートの種類が前回と同じなら、データの更新として直前の表示範囲を引き継ぐ
         let rangeKey = VisibleRangeKey(period: self.period, market: self.market, chartType: chartType)
         self.display(candles: content.candles, main: content.main, sub: content.sub,
@@ -750,12 +752,18 @@ extension StockChartView {
         return ChartIndicatorPeriods(parameters: self.period.indicatorParameters)
     }
 
+    /// 折線チャートだけで表示する銘柄か(海外指数で、qCode が LineChartOnlyCodes に入っている)。
+    /// 対象の銘柄は、終値の折線 + 移動平均線で描く(サブチャート・現在値の破線なし)
+    @objc var isLineChartOnly: Bool {
+        return LineChartOnlyCodes.contains(self.qCode, market: self.market)
+    }
+
     /// 実際に描くチャートの種類。
     /// ・折線チャートだけで表示する銘柄(LineChartOnlyCodes)は、折線チャートにする
     /// ・指数の種類で選べない種類(海外指数の VWAP・新値足)はローソク足にする
     /// (横画面の LandscapeChartViewController.applyMarket と同じ)
     @objc var effectiveChartType: ChartType {
-        if LineChartOnlyCodes.contains(self.qCode, market: self.market) {
+        if self.isLineChartOnly {
             return .lineChart
         }
         guard ChartType.choices(for: self.market).contains(self.chartType) else {

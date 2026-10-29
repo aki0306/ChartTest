@@ -415,7 +415,7 @@ landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES complet
 
 | 画面 | 動き |
 |---|---|
-| チャートだけ(`StockChartView`) | `chartType` の値に関係なく、折線チャートで描く(`effectiveChartType` が折線チャートになる。`chartType` は変えないので、ほかの銘柄にすると元の種類で描く) |
+| チャートだけ(`StockChartView`) | `chartType` の値に関係なく、終値の折線 + 移動平均線(短期・長期)で描く。サブチャート(出来高など)と現在値の破線は描かない(`isLineChartOnly` が true になり、`effectiveChartType` が折線チャートになる。`chartType` は変えないので、ほかの銘柄にすると元の種類で描く) |
 | 横画面(`LandscapeChartViewController`) | 折線チャートで描き、下の帯のチャートの種類のメニューには折線チャートだけを出す。覚えておくチャートの種類(`ChartStateStore`)は上書きしないので、ほかの海外の銘柄を開くと、前回選んでいた種類に戻る |
 
 アプリの起動時に一覧を一度だけ設定し、それぞれの画面には、データを渡す前に `market` と `qCode` を設定します。

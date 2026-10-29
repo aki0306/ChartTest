@@ -40,12 +40,29 @@ struct LineChartOnlyTests {
         chartView.market = .overseasDaily
         chartView.chartType = .candlestick
         chartView.qCode = self.lineOnlyCode
+        #expect(chartView.isLineChartOnly)
         #expect(chartView.effectiveChartType == .lineChart)
         // chartType は変えない(ほかの銘柄にすると元の種類で描く)
         #expect(chartView.chartType == .candlestick)
 
         chartView.qCode = self.otherCode
+        #expect(!chartView.isLineChartOnly)
         #expect(chartView.effectiveChartType == .candlestick)
+    }
+
+    /// 縦画面の対象の銘柄は、終値の折線 + 移動平均線だけを描く(サブチャート・現在値の破線なし)
+    @Test
+    func testPortraitLineOnlyContent() {
+        self.reset()
+        let chartView = StockChartView(frame: CGRect(x: 0, y: 0, width: 375, height: 400))
+        chartView.market = .overseasDaily
+        chartView.qCode = self.lineOnlyCode
+        chartView.setCandles(SampleData.candles(for: .daily), period: .daily, market: .overseasDaily)
+
+        #expect(chartView.mainContent.priceStyle == .hidden)
+        #expect(chartView.mainContent.currentPrice == nil)
+        #expect(chartView.mainContent.legendTitle == "移動平均")
+        #expect(chartView.subContent == nil)
     }
 
     /// 国内は、一覧に入っている銘柄コードでも対象にしない
