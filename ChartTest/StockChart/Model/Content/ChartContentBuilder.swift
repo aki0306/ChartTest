@@ -92,11 +92,15 @@ struct ChartContentBuilder {
     ///   - chartType: チャートの種類
     ///   - mainIndicator: メインチャートの指標(ローソク足・海外指数の折線チャートのときだけ使う)
     ///   - subIndicator: サブチャートの指標(ローソク足のときだけ使う)
-    ///   - market: 指数の種類(海外指数の折線チャートは、終値の線にメイン指標を重ね、現在値の破線を引く)
+    ///   - market: 指数の種類(海外指数の折線チャートは、終値の線にメイン指標を重ねる)
     ///   - period: 足種(スクロールできる範囲の最小の本数を決めるのに使う。IndexMarket.minimumScrollCount)
+    ///   - showsOverseasCurrentPrice: 海外指数の折線チャートで、現在値の破線を引くか
+    ///     (縦画面の折線チャートだけで表示する銘柄(LineChartOnlyCodes)は引かない)
     func content(for chartType: ChartType, mainIndicator: MainChartIndicator,
-                 subIndicator: SubChartIndicator, market: IndexMarket, period: ChartPeriod) -> ChartContent {
-        var content = self.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator, market: market)
+                 subIndicator: SubChartIndicator, market: IndexMarket, period: ChartPeriod,
+                 showsOverseasCurrentPrice: Bool = true) -> ChartContent {
+        var content = self.content(for: chartType, mainIndicator: mainIndicator, subIndicator: subIndicator, market: market,
+                                   showsOverseasCurrentPrice: showsOverseasCurrentPrice)
         // 新値足は newPriceContent(NewPrice.swift)で決めている
         if content.main.minimumScrollCount == nil {
             content.main.minimumScrollCount = market.minimumScrollCount(for: period)
@@ -106,7 +110,8 @@ struct ChartContentBuilder {
 
     /// チャート種類に合わせて、表示する内容一式を作る(スクロールできる範囲の最小の本数は決めない)
     private func content(for chartType: ChartType, mainIndicator: MainChartIndicator,
-                         subIndicator: SubChartIndicator, market: IndexMarket) -> ChartContent {
+                         subIndicator: SubChartIndicator, market: IndexMarket,
+                         showsOverseasCurrentPrice: Bool) -> ChartContent {
         switch chartType {
         case .candlestick:
             return ChartContent(candles: self.candles,
@@ -123,7 +128,8 @@ struct ChartContentBuilder {
             case .japanStock, .japanIndex:
                 return self.requiringTwoValidCandles(self.lineChartContent())
             case .overseasRealtime, .overseasDaily:
-                return self.requiringTwoValidCandles(self.closeLineContent(with: mainIndicator, showsCurrentPrice: true))
+                return self.requiringTwoValidCandles(
+                    self.closeLineContent(with: mainIndicator, showsCurrentPrice: showsOverseasCurrentPrice))
             }
         }
     }

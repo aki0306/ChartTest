@@ -314,6 +314,9 @@
 /// 横画面のチャートを作り、データと下の帯のボタンの処理を設定して、全画面で表示する。
 /// 開くたびに作り直す(チャートの種類・指標・足種などは ChartStateStore が覚えているので、前回の状態で開く)。
 /// (サンプルなので SampleData から読み込む。実際のアプリでは API から取得して setCandles:period: で渡す)
+/// データは、API が足種を DGChartData で受け取る想定で取得する(candlesForChartData:)。足種の DGChartData は次の2通りで作れる
+///   ・横画面の chartData を読む(開くとき・種類を選んだとき・更新のとき)
+///   ・ChartPeriod から自分で変換する(足種のメニューで選んだとき。chartDataForPeriod:)
 - (void)presentLandscapeChart {
     LandscapeChartViewController *landscapeViewController = [LandscapeChartViewController instantiate];
 
@@ -322,8 +325,10 @@
     //   ・海外指数: テクニカルが 移動平均線・なし、チャートの種類が ローソク足・折線チャート だけ
     // market を設定すると、国内/海外ごとに前回選んでいた足種(初めてなら日足)が period に入るので、その足種のデータを渡す
     landscapeViewController.market = self.currentMarket;
+    // 縦画面の足種(portraitPeriod)ではなく、横画面の足種(前回横画面で選んでいた足種)のデータを渡す
     ChartPeriod initialPeriod = landscapeViewController.period;
-    [landscapeViewController setCandles:[SampleData candlesForPeriod:initialPeriod] period:initialPeriod];
+    DGChartData initialChartData = landscapeViewController.chartData;
+    [landscapeViewController setCandles:[self candlesForChartData:initialChartData] period:initialPeriod];
     [self updatePriceInfoOfLandscapeViewController:landscapeViewController];
 
     // ブロックはこの画面・横画面が持ち続けるので、中では weak で使う(循環参照を防ぐ)
@@ -331,16 +336,27 @@
     __weak LandscapeChartViewController *weakLandscapeViewController = landscapeViewController;
     // 足種が選ばれたら、その足種のデータを渡す(足種のボタンの表示も切り替わる)
     landscapeViewController.onPeriodSelect = ^(ChartPeriod period) {
-        [weakLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
+        // ブロックに渡される足種(ChartPeriod)を、自分で DGChartData に変換して取得する
+        DGChartData chartData = [strongSelf chartDataForPeriod:period];
+        [weakLandscapeViewController setCandles:[strongSelf candlesForChartData:chartData] period:period];
     };
     // チャートの種類が選ばれたら、表示中の足種のデータを渡す(チャートが消えているので、描き直す)
     landscapeViewController.onChartTypeSelect = ^(ChartType chartType) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+            return;
+        }
         LandscapeChartViewController *strongLandscapeViewController = weakLandscapeViewController;
         if (strongLandscapeViewController == nil) {
             return;
         }
         ChartPeriod period = strongLandscapeViewController.period;
-        [strongLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
+        DGChartData chartData = strongLandscapeViewController.chartData;
+        [strongLandscapeViewController setCandles:[strongSelf candlesForChartData:chartData] period:period];
     };
     // 更新: 表示中の足種のデータを読み込み直し、現在値も更新する
     landscapeViewController.onReload = ^{
@@ -353,7 +369,8 @@
             return;
         }
         ChartPeriod period = strongLandscapeViewController.period;
-        [strongLandscapeViewController setCandles:[SampleData candlesForPeriod:period] period:period];
+        DGChartData chartData = strongLandscapeViewController.chartData;
+        [strongLandscapeViewController setCandles:[strongSelf candlesForChartData:chartData] period:period];
         [strongSelf updatePriceInfoOfLandscapeViewController:strongLandscapeViewController];
     };
     // 縦画面に戻す: 閉じると、この画面の向き(縦)に戻る
@@ -382,6 +399,48 @@
             break;
     }
     [landscapeViewController updatePriceInfoWithName:name price:SampleData.latestPrice date:SampleData.latestDate];
+}
+
+// MARK: - DGChartData で足種を受け取るデータの取得
+
+/// 足種(DGChartData)のデータを取得する(API が足種を DGChartData で受け取る想定。サンプルなので SampleData から読み込む)
+- (NSArray<StockCandle *> *)candlesForChartData:(DGChartData)chartData {
+    ChartPeriod period = ChartPeriodDaily;
+    switch (chartData) {
+        case DGChartDataMin:
+            period = ChartPeriodOneMinute;
+            break;
+        case DGChartDataMidDay:
+            period = ChartPeriodIntraday;
+            break;
+        case DGChartDataDay:
+            period = ChartPeriodDaily;
+            break;
+        case DGChartDataWeek:
+            period = ChartPeriodWeekly;
+            break;
+        case DGChartDataMonth:
+            period = ChartPeriodMonthly;
+            break;
+    }
+    return [SampleData candlesForPeriod:period];
+}
+
+/// 足種(ChartPeriod)を DGChartData に変換する(横画面の chartData と同じ値になる)
+- (DGChartData)chartDataForPeriod:(ChartPeriod)period {
+    switch (period) {
+        case ChartPeriodOneMinute:
+            return DGChartDataMin;
+        case ChartPeriodIntraday:
+            return DGChartDataMidDay;
+        case ChartPeriodDaily:
+            return DGChartDataDay;
+        case ChartPeriodWeekly:
+            return DGChartDataWeek;
+        case ChartPeriodMonthly:
+            return DGChartDataMonth;
+    }
+    return DGChartDataDay;
 }
 
 // MARK: - Swift の enum のプロパティの代わり

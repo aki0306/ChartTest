@@ -15,10 +15,8 @@
 //    | chartData     | period(1分足〜月足)               |
 //    | qCodeType     | market(4つが1対1で対応。日本株 → .japanStock、日本株価指数 → .japanIndex、海外 R・D → .overseasRealtime・.overseasDaily) |
 //
-//  ・この enum を使わないアプリに持っていく場合は、このファイルと DGChartEnum.swift を削除すればよい
-//    (ほかのファイルはこの enum に依存しない)
-//  ・qCode(銘柄コード)は、ほかのプロパティと違って置き換え先がないので、このファイルの中で値を持つ
-//    (extension にはプロパティの値を置けないため、Objective-C の関連オブジェクト(objc_setAssociatedObject)で持つ)
+//  ・この enum を使わないアプリに持っていく場合は、DGChartEnum フォルダごと削除すればよい
+//    (ほかのファイルはこの enum に依存しない。横画面の chartData は LandscapeChartViewController+DGChartEnum.swift)
 //
 
 import Foundation
@@ -120,23 +118,7 @@ extension StockChartView {
     /// 足種(1分足〜月足)。設定すると、足種に合った見た目に切り替わる(period)
     @objc var chartData: DGChartData {
         get {
-            switch self.period {
-            case .oneMinute:
-                // 1分足
-                return .min
-            case .intraday:
-                // 日中足
-                return .midDay
-            case .daily:
-                // 日足
-                return .day
-            case .weekly:
-                // 週足
-                return .week
-            case .monthly:
-                // 月足
-                return .month
-            }
+            return DGChartData(period: self.period)
         }
         set {
             self.period = Self.period(for: newValue)
@@ -164,26 +146,6 @@ extension StockChartView {
         }
         set {
             self.market = Self.market(for: newValue)
-        }
-    }
-
-    /// 銘柄コード(Objective-C では NSString *。nil = 未設定)。チャートの描き方には使わず、持っておくだけ。
-    /// 呼び出し側が、データを取得するときなどに使う
-    ///
-    ///   Objective-C:
-    ///       self.chartView.qCode = qCode;
-    ///       NSString *code = self.chartView.qCode;
-    @objc var qCode: String? {
-        get {
-            return objc_getAssociatedObject(self, &AssociatedKeys.qCode) as? String
-        }
-        set {
-            // 銘柄が変わったら、次にデータを渡したときは直前の表示範囲を引き継がずに初期表示にする
-            if newValue != self.qCode {
-                self.resetVisibleRange()
-            }
-            // NSString の copy プロパティと同じく、コピーして持つ
-            objc_setAssociatedObject(self, &AssociatedKeys.qCode, newValue, .OBJC_ASSOCIATION_COPY_NONATOMIC)
         }
     }
 
@@ -304,10 +266,28 @@ extension StockChartView {
     }
 }
 
-// MARK: - 関連オブジェクトのキー
+// MARK: - StockChartView の enum → DGChartEnum の enum
 
-/// extension で値を持つための、関連オブジェクトのキー(変数のアドレスをキーに使う。値そのものは使わない)
-private enum AssociatedKeys {
-    /// qCode のキー
-    nonisolated(unsafe) static var qCode: UInt8 = 0
+extension DGChartData {
+
+    /// 足種 → チャートデータ(StockChartView・LandscapeChartViewController の chartData で使う)
+    init(period: ChartPeriod) {
+        switch period {
+        case .oneMinute:
+            // 1分足
+            self = .min
+        case .intraday:
+            // 日中足
+            self = .midDay
+        case .daily:
+            // 日足
+            self = .day
+        case .weekly:
+            // 週足
+            self = .week
+        case .monthly:
+            // 月足
+            self = .month
+        }
+    }
 }

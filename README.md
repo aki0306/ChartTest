@@ -409,6 +409,52 @@ landscape.onRotate = ^{ [weakLandscape dismissViewControllerAnimated:YES complet
 | 折線チャート | 終値を線で結んだチャート(ローソク足は描かない)。現在値に破線を引く。海外指数では移動平均線を重ねられる。足種は **日中足・日足・週足・月足** だけを選べる(1分足のまま折線チャートにすると、日中足に切り替える) |
 | 新値足 | 3本新値の新値足。陽線は枠だけ、陰線は塗りつぶしで、現在値に破線を引く。X軸は時間ではなく新値の本数で、50本分の幅で表示する(50本未満なら右寄せ)。表示中の足種の終値から作る。足種は **日中足・日足・週足・月足** だけを選べる(1分足は選べない。1分足のまま新値足にすると、日中足に切り替える) |
 
+### 折線チャートだけで表示する銘柄
+
+終値しかない指数など、ローソク足を描けない海外の銘柄は、銘柄コードを `LineChartOnlyCodes.codes` に入れておくと、折線チャートだけで表示します(国内の銘柄コードは、入れても対象になりません)。
+
+| 画面 | 動き |
+|---|---|
+| チャートだけ(`StockChartView`) | 終値の折線 + 移動平均線(短期・長期)で描く。サブチャート(出来高など)と現在値の破線は描かない |
+| 横画面(`LandscapeChartViewController`) | 終値の折線 + 移動平均線で描き、下の帯のチャートの種類のメニューには折線チャートだけを出す |
+
+どちらの画面も `chartType` は書き換えず、描くときだけ折線チャートにします(`effectiveChartType`)。そのため、ほかの銘柄にすると、前に選んでいた種類で描きます。
+
+この機能のコードは、次の場所にあります。
+
+| 何をするか | 場所 |
+|---|---|
+| 対象の銘柄コードの一覧と、対象かどうかの判定 | `LineChartOnlyCodes.swift`(`codes`・`contains(_:market:)`) |
+| 縦画面: 対象か・描く種類 | `StockChartView.swift`(`isLineChartOnly`・`effectiveChartType`) |
+| 縦画面: 現在値の破線を引かない | `StockChartView.swift`(`render` で `showsOverseasCurrentPrice` を渡す)・`ChartContentBuilder.swift`(`content(for:…)`) |
+| 横画面: 対象か・描く種類 | `LandscapeChartViewController.swift`(`qCode`・`isLineChartOnly`・`effectiveChartType`・`chartTypeChoices`) |
+| 横画面: 下の帯のメニュー | `LandscapeChartViewController+Footer.swift`(`updateChartTypeMenu`) |
+| テスト | `ChartTestTests/LineChartOnlyTests.swift` |
+
+アプリの起動時に一覧を一度だけ設定し、それぞれの画面には、データを渡す前に `market` と `qCode` を設定します。
+
+```swift
+// 起動時(AppDelegate など)
+LineChartOnlyCodes.codes = ["XXXX", "YYYY"]
+
+// 表示するとき
+chartView.market = .overseasDaily
+chartView.qCode = qCode
+chartView.setCandles(candles, period: .daily, market: .overseasDaily)
+
+landscapeViewController.market = .overseasDaily
+landscapeViewController.qCode = qCode
+```
+
+```objc
+LineChartOnlyCodes.codes = @[@"XXXX", @"YYYY"];
+
+self.chartView.qCode = qCode;
+landscapeViewController.qCode = qCode;
+```
+
+サンプルでは、海外(D) を仮の銘柄コード `SAMPLE_LINE_ONLY` で、折線チャートだけで表示する銘柄にしています(`AppDelegate`・`ViewController.qCode(for:)`)。
+
 ### サブチャート(出来高など)
 
 サブチャートは、メインチャート(ローソク足)の下にある小さい段です。**出来高は、サブチャートに出せる指標の1つ**です。
@@ -1044,7 +1090,7 @@ ChartPeriod period = landscapeViewController.period;      // この足種のデ�
 | RSI・ストキャスの値動きなし | 期間中まったく値動きがないとき、RSI は値なし(点を描かない)、ストキャスは 0 |
 | 新値足の計算 | 直近3本の線の最高値を上回ったら直前の線の高いほうから、最安値を下回ったら低いほうから線を引く。最初の線は、2本目の終値が1本目と同じでも引く |
 | 日付ラベルの並べ方 | 日足・週足・月足は「表示幅 ÷ 一番長い日付の幅 × 0.618」個を上限に本数おき(拡大・縮小のときだけ決め直す)、1分足・日中足は 5分ちょうどの足を左から重ならない位置に置く。右端ははみ出しても置く |
-| 海外指数のチャートの種類 | ローソク足・折線チャートから選べる(横画面は最初は折線チャート、チャートだけ(`StockChartView`)は最初からローソク足)。海外指数も4本値を読むので、国内と同じローソク足になる |
+| 海外指数のチャートの種類 | ローソク足・折線チャートから選べる(横画面は最初は折線チャート、チャートだけ(`StockChartView`)は最初からローソク足)。海外指数も4本値を読むので、国内と同じローソク足になる。`LineChartOnlyCodes` に入れた銘柄コードは、折線チャートだけで表示する |
 | チャートの種類を変えたときの指標 | VWAP・新値足・国内の折線チャートにすると、メイン・サブとも「なし」になる。ローソク足に戻しても「なし」のまま |
 | RSI・サイコロジカル・ストキャスの Y軸 | 0〜100 に固定せず表示中の値で決める(上に値幅の 20% の余白、下は余白なし)。底値・高値ラインは範囲に含めないので、値が届かないラインは見えない |
 | DMI の期間 | 14 で固定(設定画面には並べない) |
@@ -1325,6 +1371,7 @@ docs/images/                            README の画像
 | `TechnicalIndicators.swift` | 指標の計算の入れ物と、いくつもの指標で使う移動平均(`sma`・`ema`) |
 | `Indicators/Main/*.swift`・`Indicators/Sub/*.swift` | 指標ごとの計算(`TechnicalIndicators` の extension)と描く内容(`ChartContentBuilder` の extension)。1つの指標 = 1つのファイル |
 | `ChartType.swift` | チャートの種類(ローソク足・VWAP：線・VWAP：点・新値足・折線チャート) |
+| `ChartTypes/LineChartOnlyCodes.swift` | 折線チャートだけで表示する海外の銘柄コードの一覧(呼び出し側がアプリの起動時に設定する) |
 | `ChartTypes/*.swift` | ローソク足以外のチャートの種類ごとの描く内容(`ChartContentBuilder` の extension)。1つの種類 = 1つのファイル(`VWAP.swift`・`NewPrice.swift`・`LineChart.swift`)。新値足は計算(`TechnicalIndicators` の extension)も同じファイル |
 | `ChartIndicatorType.swift` | 指標の種類(メインチャート用 / サブチャート用) |
 | `ChartIndicatorValues.swift` | チャートの外(Objective-C など)で計算した指標の値(`ChartIndicatorValues`)と、計算に使う期間(`ChartIndicatorPeriods`)。値がある指標はチャートが計算しない |
@@ -1404,7 +1451,7 @@ docs/images/                            README の画像
 | ファイル | 内容 |
 |---|---|
 | `DGChartEnum.swift` | チャートの設定に使う enum(`DGMainChart`・`DGSubChart`・`DGChartCategory`・`DGChartData`・`DGChartMode`・`DGCodeType`)。Objective-C からも使える |
-| `StockChartView+DGChartEnum.swift` | `DGChartEnum` の enum で設定するプロパティ(`mainChart`・`subChart`・`chartCategory`・`chartData`・`qCodeType`)と銘柄コード `qCode` |
+| `StockChartView+DGChartEnum.swift` | `DGChartEnum` の enum で設定するプロパティ(`mainChart`・`subChart`・`chartCategory`・`chartData`・`qCodeType`) |
 
 ## データの流れ
 
